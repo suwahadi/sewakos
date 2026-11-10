@@ -31,7 +31,6 @@ export function ListingCard({
   className,
 }: {
   room: ListingCardRoom;
-  /** price_label carries no unit (API.md §3.3); the suffix depends on the search's rent_type filter. */
   rentType?: 1 | 2 | 3;
   className?: string;
 }) {

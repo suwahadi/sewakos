@@ -10,12 +10,10 @@ export interface BottomNavProps {
   role: NavRole;
 }
 
-/** Pages whose own StickyActionBar would stack with BottomNav (DESIGN.md §0.1-E's sticky-height budget). */
 export function hasOwnStickyActionBar(pathname: string): boolean {
   return /^\/kost\/[^/]+$/.test(pathname);
 }
 
-/** DESIGN.md §6.23 — hidden at ≥1024px (AppHeader's desktop nav takes over) and on pages with a StickyActionBar. */
 export function BottomNav({ role }: BottomNavProps) {
   const pathname = usePathname();
   const router = useRouter();
