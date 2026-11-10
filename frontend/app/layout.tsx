@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
+import type { ReactNode } from "react";
+import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -17,10 +19,13 @@ export const metadata: Metadata = {
   description: "Cari, pesan, dan bayar sewa kost secara online.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="id" className={poppins.variable}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }

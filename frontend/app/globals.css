@@ -54,6 +54,11 @@
   --shadow-overlay: 0 8px 24px rgb(22 22 28 / 0.14), 0 2px 6px rgb(22 22 28 / 0.08);
   --shadow-sheet: 0 -4px 24px rgb(22 22 28 / 0.12);
 
+  /* §3.9 names these alongside ease-standard/ease-exit but the doc's own CSS snapshot omitted
+     them; added so duration-fast/base/slow exist as real utilities instead of raw values. */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 280ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --animate-page-enter: page-enter 200ms var(--ease-standard) both;
@@ -117,3 +122,61 @@
 }
 
 @utility tabular { font-variant-numeric: tabular-nums; }
+
+/* DESIGN.md §5.3 — native <dialog> + @starting-style animation, bottom sheet and centered dialog. */
+@layer components {
+  dialog.sheet,
+  dialog.dialog-center {
+    border: none;
+    padding: 0;
+    background: transparent;
+    max-height: 90dvh;
+  }
+
+  dialog.sheet {
+    margin: auto auto 0 auto;
+    width: 100%;
+    max-width: 560px;
+    transition:
+      transform var(--duration-slow) var(--ease-standard),
+      overlay var(--duration-slow) allow-discrete,
+      display var(--duration-slow) allow-discrete;
+    transform: translateY(0);
+  }
+  dialog.sheet:not([open]) { transform: translateY(100%); }
+  @starting-style {
+    dialog.sheet[open] { transform: translateY(100%); }
+  }
+  dialog.sheet::backdrop {
+    background: rgb(22 22 28 / 0.48);
+    transition: opacity var(--duration-slow);
+    opacity: 1;
+  }
+  @starting-style {
+    dialog.sheet[open]::backdrop { opacity: 0; }
+  }
+
+  dialog.dialog-center {
+    margin: auto;
+    width: min(100% - 32px, 440px);
+    transition:
+      transform var(--duration-slow) var(--ease-standard),
+      opacity var(--duration-slow) var(--ease-standard),
+      overlay var(--duration-slow) allow-discrete,
+      display var(--duration-slow) allow-discrete;
+    transform: scale(1);
+    opacity: 1;
+  }
+  dialog.dialog-center:not([open]) { transform: scale(0.98); opacity: 0; }
+  @starting-style {
+    dialog.dialog-center[open] { transform: scale(0.98); opacity: 0; }
+  }
+  dialog.dialog-center::backdrop {
+    background: rgb(22 22 28 / 0.48);
+    transition: opacity var(--duration-slow);
+    opacity: 1;
+  }
+  @starting-style {
+    dialog.dialog-center[open]::backdrop { opacity: 0; }
+  }
+}

@@ -73,7 +73,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 - [x] **F0.2 BFF & klien API.** Route handler yang meneruskan ke backend dengan `x-api-client` + token dari cookie
   httpOnly; login/logout set/hapus cookie; parser envelope; pemetaan error DESIGN §8.2; `lib/labels.ts` (§8.1) dan
   helper format (§8.3). *Selesai bila:* test unit pemetaan setiap kode error & format.
-- [ ] **F0.3 Komponen dasar.** DESIGN §6.1–6.27 dan §6.48 + `ButtonPair` + Toaster. *Selesai bila:* test peran ARIA,
+- [x] **F0.3 Komponen dasar.** DESIGN §6.1–6.27 dan §6.48 + `ButtonPair` + Toaster. *Selesai bila:* test peran ARIA,
   navigasi keyboard, `ButtonPair` 50:50, toast (antre maks 3, jeda saat hover).
 - [ ] **F0.4 Kerangka layout.** AppHeader, BottomNav per role, `template.tsx`, guard route sesuai DESIGN §7.0,
   ErrorState 403/404.
