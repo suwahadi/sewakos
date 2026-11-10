@@ -8,7 +8,7 @@ if echo "$staged" | grep -Ev '(^|/)\.env\.example$' | grep -Eq '(^|/)\.env($|\.)
   exit 1
 fi
 
-if echo "$staged" | grep -q '^backend/.*\.go$'; then
+if echo "$staged" | grep -q '^backend/.*\.go$' && [ -f backend/go.mod ]; then
   unformatted="$(cd backend && gofmt -l .)"
   if [ -n "$unformatted" ]; then
     echo "pre-commit: run gofmt on:" >&2
@@ -18,6 +18,6 @@ if echo "$staged" | grep -q '^backend/.*\.go$'; then
   (cd backend && go vet ./... && go tool staticcheck ./...)
 fi
 
-if echo "$staged" | grep -q '^frontend/'; then
+if echo "$staged" | grep -q '^frontend/' && [ -f frontend/package.json ]; then
   (cd frontend && npm run typecheck && npm run lint)
 fi

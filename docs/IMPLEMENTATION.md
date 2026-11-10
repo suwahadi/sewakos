@@ -36,7 +36,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
   `.claude/settings.json` (cocokkan nama setting dengan dokumentasi Claude Code terbaru), `CLAUDE.md`,
   lalu `git config core.hooksPath .githooks` (lokal).
   *Selesai bila:* pesan berisi `Co-authored-by: Claude` ditolak hook (laporkan hasil uji), file `.env` ditolak pre-commit.
-- [ ] **R0.3 Lingkungan dev.** `docker-compose.yml` di root: Postgres, Redis, MinIO (+ pembuatan bucket dan lifecycle
+- [x] **R0.3 Lingkungan dev.** `docker-compose.yml` di root: Postgres, Redis, MinIO (+ pembuatan bucket dan lifecycle
   `uploads/` 1 hari), plus `backend/.env.example` dan `frontend/.env.example`.
   *Selesai bila:* `docker compose up -d` sehat dan semua layanan bisa dihubungi dari backend & frontend lokal.
 - [ ] **R0.4 Skrip deploy.** ⛔ menunggu pemilik (PRD §8 #5). `deploy/install.sh` milik pemilik; agent hanya membuat/mengubah
