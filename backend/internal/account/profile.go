@@ -6,12 +6,13 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/suwahadi/sewakos/backend/internal/authctx"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres/dbgen"
 	"github.com/suwahadi/sewakos/backend/internal/response"
 	"github.com/suwahadi/sewakos/backend/internal/validation"
 )
 
-func GetMeHandler(deps Deps, user AuthenticatedUser) http.HandlerFunc {
+func GetMeHandler(deps Deps, user authctx.User) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		row, err := deps.Store.GetUserByID(r.Context(), user.UserID)
 		if err != nil {
@@ -27,7 +28,7 @@ func GetMeHandler(deps Deps, user AuthenticatedUser) http.HandlerFunc {
 // PatchMeHandler's fields are both optional, but dbgen.UpdateUserProfileParams
 // always sets both columns, so an omitted field is filled in from the user's
 // current value before saving.
-func PatchMeHandler(deps Deps, user AuthenticatedUser) http.HandlerFunc {
+func PatchMeHandler(deps Deps, user authctx.User) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var body map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&body)

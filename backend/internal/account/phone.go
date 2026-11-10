@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/suwahadi/sewakos/backend/internal/auth"
+	"github.com/suwahadi/sewakos/backend/internal/authctx"
 	"github.com/suwahadi/sewakos/backend/internal/otp"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres/dbgen"
 	"github.com/suwahadi/sewakos/backend/internal/platform/ratelimit"
@@ -18,7 +19,7 @@ import (
 // response shape as auth.OTPRequestHandler. There's no channel choice in
 // this endpoint's body, unlike the general OTP flow, so it always sends
 // over SMS.
-func PhoneRequestHandler(deps Deps, user AuthenticatedUser) http.HandlerFunc {
+func PhoneRequestHandler(deps Deps, user authctx.User) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var body map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&body)
@@ -66,7 +67,7 @@ func PhoneRequestHandler(deps Deps, user AuthenticatedUser) http.HandlerFunc {
 	}
 }
 
-func PhoneVerifyHandler(deps Deps, user AuthenticatedUser) http.HandlerFunc {
+func PhoneVerifyHandler(deps Deps, user authctx.User) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var body map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&body)

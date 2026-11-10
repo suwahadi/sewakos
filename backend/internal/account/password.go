@@ -8,6 +8,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/suwahadi/sewakos/backend/internal/auth"
+	"github.com/suwahadi/sewakos/backend/internal/authctx"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres/dbgen"
 	"github.com/suwahadi/sewakos/backend/internal/response"
 	"github.com/suwahadi/sewakos/backend/internal/validation"
@@ -16,7 +17,7 @@ import (
 // PutPasswordHandler revokes every *other* device's session, keeping the one
 // making this request alive, unlike a forced reset (PasswordResetHandler)
 // which revokes everything.
-func PutPasswordHandler(deps Deps, user AuthenticatedUser) http.HandlerFunc {
+func PutPasswordHandler(deps Deps, user authctx.User) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var body map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&body)

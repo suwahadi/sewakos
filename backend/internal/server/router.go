@@ -12,6 +12,7 @@ import (
 
 	"github.com/suwahadi/sewakos/backend/internal/account"
 	"github.com/suwahadi/sewakos/backend/internal/auth"
+	"github.com/suwahadi/sewakos/backend/internal/authctx"
 	"github.com/suwahadi/sewakos/backend/internal/config"
 	"github.com/suwahadi/sewakos/backend/internal/otp"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres/dbgen"
@@ -93,13 +94,14 @@ func NewRouter(deps Deps) chi.Router {
 	return r
 }
 
-// withAuthedUser adapts an account handler (which doesn't depend on this
-// package, to avoid an import cycle) to a chi route: it reads the
-// already-authenticated user RequireAuth put in context and hands account
-// package only the two fields it needs.
-func withAuthedUser(deps account.Deps, handler func(account.Deps, account.AuthenticatedUser) http.HandlerFunc) http.HandlerFunc {
+// withAuthedUser adapts a feature package's handler (account, notification,
+// ...) to a chi route. Those packages don't depend on this one (server mounts
+// their routes, so the reverse import would cycle), so this reads the
+// already-authenticated user RequireAuth put in context and hands it over as
+// authctx.User instead.
+func withAuthedUser[Deps any](deps Deps, handler func(Deps, authctx.User) http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, _ := UserFromContext(r.Context())
-		handler(deps, account.AuthenticatedUser{UserID: user.ID, TokenID: user.TokenID})(w, r)
+		handler(deps, authctx.User{UserID: user.ID, TokenID: user.TokenID})(w, r)
 	}
 }
