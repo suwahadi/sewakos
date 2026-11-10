@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/suwahadi/sewakos/backend/internal/config"
@@ -22,6 +23,14 @@ import (
 )
 
 func newTestServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	srv, _ := newTestServerAndPool(t)
+	return srv
+}
+
+// newTestServerAndPool is newTestServer plus the pool, for tests that need to
+// seed data directly (e.g. notifications, which no endpoint creates yet).
+func newTestServerAndPool(t *testing.T) (*httptest.Server, *pgxpool.Pool) {
 	t.Helper()
 
 	databaseURL := envOr("TEST_DATABASE_URL", "postgres://kos:kos@localhost:5432/kos?sslmode=disable")
@@ -57,7 +66,7 @@ func newTestServer(t *testing.T) *httptest.Server {
 	})
 	srv := httptest.NewServer(router)
 	t.Cleanup(srv.Close)
-	return srv
+	return srv, pool
 }
 
 func envOr(key, fallback string) string {

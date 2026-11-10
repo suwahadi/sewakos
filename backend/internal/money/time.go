@@ -51,3 +51,11 @@ func daysInMonth(year int, month time.Month) int {
 	// Day 0 of the following month is the last day of this one.
 	return time.Date(year, month+1, 0, 0, 0, 0, 0, time.UTC).Day()
 }
+
+// FormatTimestamp renders t in UTC at microsecond precision
+// ("2006-01-02T15:04:05.000000Z"), the format every created_at/read_at field
+// uses. The trailing "Z" is a literal in this layout string, not a Go time
+// zone verb, which is correct here only because t is explicitly in UTC.
+func FormatTimestamp(t time.Time) string {
+	return t.UTC().Format("2006-01-02T15:04:05.000000Z")
+}

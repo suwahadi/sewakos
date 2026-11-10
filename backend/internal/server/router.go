@@ -14,6 +14,7 @@ import (
 	"github.com/suwahadi/sewakos/backend/internal/auth"
 	"github.com/suwahadi/sewakos/backend/internal/authctx"
 	"github.com/suwahadi/sewakos/backend/internal/config"
+	"github.com/suwahadi/sewakos/backend/internal/notification"
 	"github.com/suwahadi/sewakos/backend/internal/otp"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres/dbgen"
 	"github.com/suwahadi/sewakos/backend/internal/response"
@@ -65,6 +66,7 @@ func NewRouter(deps Deps) chi.Router {
 		MaxPerMinute: deps.Config.OTPMaxPerMinute,
 		DebugEcho:    deps.Config.OTPDebugEcho,
 	}
+	notificationDeps := notification.Deps{Store: queries}
 
 	r.Route("/api", func(api chi.Router) {
 		api.Use(ClientCheck(deps.Config.APIClientID))
@@ -85,10 +87,14 @@ func NewRouter(deps Deps) chi.Router {
 			authed.Put("/me/password", withAuthedUser(accountDeps, account.PutPasswordHandler))
 			authed.Post("/me/phone/request", withAuthedUser(accountDeps, account.PhoneRequestHandler))
 			authed.Post("/me/phone/verify", withAuthedUser(accountDeps, account.PhoneVerifyHandler))
+
+			authed.Get("/notifications", withAuthedUser(notificationDeps, notification.ListHandler))
+			authed.Get("/notifications/counter", withAuthedUser(notificationDeps, notification.CounterHandler))
+			authed.Patch("/notifications/{id}/read", withAuthedUser(notificationDeps, notification.MarkReadHandler))
 		})
-		// Remaining endpoint groups (notifications, area, search, booking,
-		// owner, admin, ...) mount here in later tasks (B2.3+), each behind
-		// the auth/role middleware it needs.
+		// Remaining endpoint groups (area, search, booking, owner, admin, ...)
+		// mount here in later tasks, each behind the auth/role middleware it
+		// needs.
 	})
 
 	return r

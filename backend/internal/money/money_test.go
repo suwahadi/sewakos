@@ -72,3 +72,11 @@ func TestTodayWIBMatchesCurrentWIBDate(t *testing.T) {
 		t.Errorf("TodayWIB() = %v, want midnight", got)
 	}
 }
+
+func TestFormatTimestamp(t *testing.T) {
+	in := time.Date(2026, time.November, 10, 17, 36, 44, 123000, WIB)
+	want := "2026-11-10T10:36:44.000123Z"
+	if got := FormatTimestamp(in); got != want {
+		t.Errorf("FormatTimestamp(%v) = %q, want %q", in, got, want)
+	}
+}
