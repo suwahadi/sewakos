@@ -74,6 +74,12 @@ Kode harus jelas dari **nama, tipe, dan struktur**. Komentar adalah pengecualian
 - Komentar yang mengulang isi kode (`// increment counter` di atas `count++`).
 - Pembatas section dekoratif (`// ======`, `// ---- Handlers ----`, `/* ***** */`).
 - Banner di awal file (nama file, penulis, tanggal, deskripsi umum).
+- Komentar yang hanya menyebutkan endpoint/rujukan dokumen yang diimplementasikan fungsi itu, mis.
+  `// OTPRequestHandler implements POST /auth/otp/request (API.md §2.2, SPEC-GO.md §6.3).` — nama fungsi,
+  signature, dan routing-nya sudah menjelaskan ini; rujukan dokumen taruh di pesan commit atau PR, bukan komentar.
+  **Pengecualian:** boleh di file test (menandai skenario kontrak yang sedang diuji) dan di file `.env`/`.env.example`
+  (menjelaskan variabel). Kode yang sudah terlanjur memakai pola ini tidak perlu dirapikan mundur; berlaku untuk
+  kode baru mulai sekarang.
 - `TODO` tanpa referensi issue. Format wajib: `// TODO(#123): alasan singkat`.
 - Kode yang dikomentari (dead code). Hapus; history ada di git.
 - Menghapus komentar secara massal dengan regex/`sed` global. Komentar dihapus satu per satu setelah dinilai.
