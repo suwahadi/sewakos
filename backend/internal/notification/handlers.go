@@ -53,7 +53,6 @@ func limitParam(r *http.Request) int32 {
 	return int32(n)
 }
 
-// ListHandler implements GET /notifications?category=&page=&limit=.
 func ListHandler(deps Deps, user authctx.User) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -100,7 +99,6 @@ func ListHandler(deps Deps, user authctx.User) http.HandlerFunc {
 	}
 }
 
-// CounterHandler implements GET /notifications/counter.
 func CounterHandler(deps Deps, user authctx.User) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		unread, err := deps.Store.CountUnreadNotifications(r.Context(), user.UserID)
@@ -112,8 +110,7 @@ func CounterHandler(deps Deps, user authctx.User) http.HandlerFunc {
 	}
 }
 
-// MarkReadHandler implements PATCH /notifications/{id}/read. Already-read is
-// left untouched (idempotent), not re-stamped (API.md §6, SPEC-GO.md §9.3).
+// Already-read is left untouched (idempotent), not re-stamped.
 func MarkReadHandler(deps Deps, user authctx.User) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
