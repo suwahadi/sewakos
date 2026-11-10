@@ -24,17 +24,24 @@ type Querier interface {
 	DeleteAllAccessTokensForUser(ctx context.Context, userID int64) error
 	DeleteOtherAccessTokensForUser(ctx context.Context, arg DeleteOtherAccessTokensForUserParams) error
 	EnqueueEmail(ctx context.Context, arg EnqueueEmailParams) (int64, error)
+	ExistsFavorite(ctx context.Context, arg ExistsFavoriteParams) (bool, error)
 	ExistsUserByEmail(ctx context.Context, email pgtype.Text) (bool, error)
 	ExistsUserByPhone(ctx context.Context, phone string) (bool, error)
 	GetAccessTokenForVerification(ctx context.Context, id int64) (GetAccessTokenForVerificationRow, error)
 	GetAreaByID(ctx context.Context, id int64) (GetAreaByIDRow, error)
+	GetListingProperty(ctx context.Context, id int64) (GetListingPropertyRow, error)
 	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
 	GetUserByPhone(ctx context.Context, phone string) (GetUserByPhoneRow, error)
 	GetUserNotification(ctx context.Context, id int64) (GetUserNotificationRow, error)
 	GetUserPasswordByID(ctx context.Context, id int64) (pgtype.Text, error)
+	IncrementPropertyView(ctx context.Context, id int64) (int64, error)
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (int64, error)
 	InsertLedgerEntry(ctx context.Context, arg InsertLedgerEntryParams) (int64, error)
 	ListAreasByType(ctx context.Context, arg ListAreasByTypeParams) ([]ListAreasByTypeRow, error)
+	ListGalleryRooms(ctx context.Context, propertyID int64) ([]ListGalleryRoomsRow, error)
+	ListListingPropertyPhotos(ctx context.Context, propertyID int64) ([]ListListingPropertyPhotosRow, error)
+	ListListingRoomPhotos(ctx context.Context, propertyID int64) ([]ListListingRoomPhotosRow, error)
+	ListListingRooms(ctx context.Context, propertyID int64) ([]ListListingRoomsRow, error)
 	ListUserNotifications(ctx context.Context, arg ListUserNotificationsParams) ([]ListUserNotificationsRow, error)
 	MarkUserNotificationRead(ctx context.Context, id int64) error
 	SearchRooms(ctx context.Context, arg SearchRoomsParams) ([]SearchRoomsRow, error)
@@ -52,6 +59,7 @@ type Querier interface {
 	UpdateUserPasswordAndVerify(ctx context.Context, arg UpdateUserPasswordAndVerifyParams) error
 	UpdateUserPhone(ctx context.Context, arg UpdateUserPhoneParams) error
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error
+	UpsertPropertyViewDaily(ctx context.Context, arg UpsertPropertyViewDailyParams) error
 	VerifyUserPhone(ctx context.Context, id int64) error
 }
 
