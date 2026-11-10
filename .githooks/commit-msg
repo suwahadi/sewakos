@@ -5,7 +5,7 @@ msg_file="$1"
 subject="$(head -n1 "$msg_file")"
 
 if grep -Eiq '^[[:space:]]*co-authored-by:.*(claude|anthropic|chatgpt|openai|copilot|gemini|cursor|codeium|windsurf|\bai\b)' "$msg_file" \
-  || grep -Eiq 'generated (with|by)|noreply@anthropic\.com' "$msg_file"; then
+  || grep -Eiq 'generated (with|by)|noreply@anthropic\.com|claude-session:|claude\.ai' "$msg_file"; then
   echo "commit-msg: AI attribution is not allowed in commit messages (see AGENT.md §7)." >&2
   exit 1
 fi
