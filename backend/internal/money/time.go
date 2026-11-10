@@ -59,3 +59,8 @@ func daysInMonth(year int, month time.Month) int {
 func FormatTimestamp(t time.Time) string {
 	return t.UTC().Format("2006-01-02T15:04:05.000000Z")
 }
+
+// time.RFC3339 would print the UTC offset as "Z" here, not "+00:00".
+func FormatExpiresAt(t time.Time) string {
+	return t.UTC().Format("2006-01-02T15:04:05-07:00")
+}

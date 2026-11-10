@@ -117,6 +117,14 @@ func NewRouter(deps Deps) chi.Router {
 			authed.Get("/notifications", withAuthedUser(notificationDeps, notification.ListHandler))
 			authed.Get("/notifications/counter", withAuthedUser(notificationDeps, notification.CounterHandler))
 			authed.Patch("/notifications/{id}/read", withAuthedUser(notificationDeps, notification.MarkReadHandler))
+
+			authed.Get("/booking/my", withAuthedUser(bookingDeps, booking.ListHandler))
+			authed.Get("/booking/{booking}", withAuthedUser(bookingDeps, booking.DetailHandler))
+
+			authed.Group(func(tenant chi.Router) {
+				tenant.Use(RequireRole("tenant"))
+				tenant.Post("/booking/submit", withAuthedUser(bookingDeps, booking.SubmitHandler))
+			})
 		})
 		// Remaining endpoint groups (area, search, booking, owner, admin, ...)
 		// mount here in later tasks, each behind the auth/role middleware it

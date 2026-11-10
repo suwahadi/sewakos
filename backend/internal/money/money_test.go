@@ -80,3 +80,11 @@ func TestFormatTimestamp(t *testing.T) {
 		t.Errorf("FormatTimestamp(%v) = %q, want %q", in, got, want)
 	}
 }
+
+func TestFormatExpiresAt(t *testing.T) {
+	in := time.Date(2026, time.November, 10, 17, 36, 44, 0, WIB)
+	want := "2026-11-10T10:36:44+00:00"
+	if got := FormatExpiresAt(in); got != want {
+		t.Errorf("FormatExpiresAt(%v) = %q, want %q", in, got, want)
+	}
+}

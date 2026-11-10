@@ -11,6 +11,155 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getBookingByID = `-- name: GetBookingByID :one
+SELECT b.id, b.tenant_id, b.status, b.rent_type, b.room_id, r.name AS room_name,
+       p.id AS property_id, p.name AS property_name,
+       b.start_date, b.duration, b.end_date, b.period_price, b.price, b.deposit, b.admin_fee,
+       b.flash_sale_discount, b.expires_at, b.paid_at, b.owner_deadline_at, b.reject_reason,
+       b.deposit_returned_at, b.created_at,
+       b.status = 'approved' AS can_extend,
+       (
+         (
+           (b.status = 'approved' AND b.start_date <= ($1::date))
+           OR b.status IN ('completed', 'terminated')
+         )
+         AND NOT EXISTS (SELECT 1 FROM reviews rv WHERE rv.booking_id = b.id)
+       )::bool AS can_review
+FROM bookings b
+JOIN rooms r ON r.id = b.room_id
+JOIN properties p ON p.id = r.property_id
+WHERE b.id = $2
+`
+
+type GetBookingByIDParams struct {
+	Today pgtype.Date
+	ID    int64
+}
+
+type GetBookingByIDRow struct {
+	ID                int64
+	TenantID          int64
+	Status            string
+	RentType          string
+	RoomID            int64
+	RoomName          string
+	PropertyID        int64
+	PropertyName      string
+	StartDate         pgtype.Date
+	Duration          int16
+	EndDate           pgtype.Date
+	PeriodPrice       int64
+	Price             int64
+	Deposit           int64
+	AdminFee          int64
+	FlashSaleDiscount int64
+	ExpiresAt         pgtype.Timestamptz
+	PaidAt            pgtype.Timestamptz
+	OwnerDeadlineAt   pgtype.Timestamptz
+	RejectReason      pgtype.Text
+	DepositReturnedAt pgtype.Timestamptz
+	CreatedAt         pgtype.Timestamptz
+	CanExtend         bool
+	CanReview         bool
+}
+
+func (q *Queries) GetBookingByID(ctx context.Context, arg GetBookingByIDParams) (GetBookingByIDRow, error) {
+	row := q.db.QueryRow(ctx, getBookingByID, arg.Today, arg.ID)
+	var i GetBookingByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.Status,
+		&i.RentType,
+		&i.RoomID,
+		&i.RoomName,
+		&i.PropertyID,
+		&i.PropertyName,
+		&i.StartDate,
+		&i.Duration,
+		&i.EndDate,
+		&i.PeriodPrice,
+		&i.Price,
+		&i.Deposit,
+		&i.AdminFee,
+		&i.FlashSaleDiscount,
+		&i.ExpiresAt,
+		&i.PaidAt,
+		&i.OwnerDeadlineAt,
+		&i.RejectReason,
+		&i.DepositReturnedAt,
+		&i.CreatedAt,
+		&i.CanExtend,
+		&i.CanReview,
+	)
+	return i, err
+}
+
+const getInitialInvoiceForBooking = `-- name: GetInitialInvoiceForBooking :one
+SELECT id, total, status FROM invoices WHERE booking_id = $1 AND type = 'initial'
+`
+
+type GetInitialInvoiceForBookingRow struct {
+	ID     int64
+	Total  int64
+	Status string
+}
+
+func (q *Queries) GetInitialInvoiceForBooking(ctx context.Context, bookingID int64) (GetInitialInvoiceForBookingRow, error) {
+	row := q.db.QueryRow(ctx, getInitialInvoiceForBooking, bookingID)
+	var i GetInitialInvoiceForBookingRow
+	err := row.Scan(&i.ID, &i.Total, &i.Status)
+	return i, err
+}
+
+const getLatestPaymentForInvoice = `-- name: GetLatestPaymentForInvoice :one
+SELECT order_id, gross_amount, status, snap_token, redirect_url, expires_at
+FROM payments
+WHERE invoice_id = $1
+ORDER BY id DESC
+LIMIT 1
+`
+
+type GetLatestPaymentForInvoiceRow struct {
+	OrderID     string
+	GrossAmount int64
+	Status      string
+	SnapToken   pgtype.Text
+	RedirectUrl pgtype.Text
+	ExpiresAt   pgtype.Timestamptz
+}
+
+func (q *Queries) GetLatestPaymentForInvoice(ctx context.Context, invoiceID int64) (GetLatestPaymentForInvoiceRow, error) {
+	row := q.db.QueryRow(ctx, getLatestPaymentForInvoice, invoiceID)
+	var i GetLatestPaymentForInvoiceRow
+	err := row.Scan(
+		&i.OrderID,
+		&i.GrossAmount,
+		&i.Status,
+		&i.SnapToken,
+		&i.RedirectUrl,
+		&i.ExpiresAt,
+	)
+	return i, err
+}
+
+const getRefundForInvoice = `-- name: GetRefundForInvoice :one
+SELECT amount, status, completed_at FROM refunds WHERE invoice_id = $1
+`
+
+type GetRefundForInvoiceRow struct {
+	Amount      int64
+	Status      string
+	CompletedAt pgtype.Timestamptz
+}
+
+func (q *Queries) GetRefundForInvoice(ctx context.Context, invoiceID int64) (GetRefundForInvoiceRow, error) {
+	row := q.db.QueryRow(ctx, getRefundForInvoice, invoiceID)
+	var i GetRefundForInvoiceRow
+	err := row.Scan(&i.Amount, &i.Status, &i.CompletedAt)
+	return i, err
+}
+
 const getRoomForDraftPrice = `-- name: GetRoomForDraftPrice :one
 SELECT r.name, r.price_monthly, r.price_weekly, r.price_daily,
        p.is_flash_sale, p.flash_sale_discount
@@ -40,4 +189,227 @@ func (q *Queries) GetRoomForDraftPrice(ctx context.Context, id int64) (GetRoomFo
 		&i.FlashSaleDiscount,
 	)
 	return i, err
+}
+
+const getRoomForSubmit = `-- name: GetRoomForSubmit :one
+SELECT r.id, r.property_id, r.name, r.price_monthly, r.price_weekly, r.price_daily,
+       r.available, r.monthly_duration_options,
+       p.is_active, p.moderation_status, p.is_flash_sale, p.flash_sale_discount,
+       (o.suspended_at IS NOT NULL)::bool AS owner_suspended
+FROM rooms r
+JOIN properties p ON p.id = r.property_id
+JOIN users o ON o.id = p.owner_id
+WHERE r.id = $1
+`
+
+type GetRoomForSubmitRow struct {
+	ID                     int64
+	PropertyID             int64
+	Name                   string
+	PriceMonthly           int64
+	PriceWeekly            pgtype.Int8
+	PriceDaily             pgtype.Int8
+	Available              int16
+	MonthlyDurationOptions []byte
+	IsActive               bool
+	ModerationStatus       string
+	IsFlashSale            bool
+	FlashSaleDiscount      int64
+	OwnerSuspended         bool
+}
+
+func (q *Queries) GetRoomForSubmit(ctx context.Context, id int64) (GetRoomForSubmitRow, error) {
+	row := q.db.QueryRow(ctx, getRoomForSubmit, id)
+	var i GetRoomForSubmitRow
+	err := row.Scan(
+		&i.ID,
+		&i.PropertyID,
+		&i.Name,
+		&i.PriceMonthly,
+		&i.PriceWeekly,
+		&i.PriceDaily,
+		&i.Available,
+		&i.MonthlyDurationOptions,
+		&i.IsActive,
+		&i.ModerationStatus,
+		&i.IsFlashSale,
+		&i.FlashSaleDiscount,
+		&i.OwnerSuspended,
+	)
+	return i, err
+}
+
+const insertBooking = `-- name: InsertBooking :one
+INSERT INTO bookings (
+  tenant_id, room_id, rent_type, start_date, duration, end_date,
+  period_price, flash_sale_discount, price, deposit, admin_fee, expires_at
+) VALUES (
+  $1, $2, $3, $4,
+  $5, $6, $7, $8,
+  $9, $10, $11, $12
+)
+RETURNING id, expires_at
+`
+
+type InsertBookingParams struct {
+	TenantID          int64
+	RoomID            int64
+	RentType          string
+	StartDate         pgtype.Date
+	Duration          int16
+	EndDate           pgtype.Date
+	PeriodPrice       int64
+	FlashSaleDiscount int64
+	Price             int64
+	Deposit           int64
+	AdminFee          int64
+	ExpiresAt         pgtype.Timestamptz
+}
+
+type InsertBookingRow struct {
+	ID        int64
+	ExpiresAt pgtype.Timestamptz
+}
+
+func (q *Queries) InsertBooking(ctx context.Context, arg InsertBookingParams) (InsertBookingRow, error) {
+	row := q.db.QueryRow(ctx, insertBooking,
+		arg.TenantID,
+		arg.RoomID,
+		arg.RentType,
+		arg.StartDate,
+		arg.Duration,
+		arg.EndDate,
+		arg.PeriodPrice,
+		arg.FlashSaleDiscount,
+		arg.Price,
+		arg.Deposit,
+		arg.AdminFee,
+		arg.ExpiresAt,
+	)
+	var i InsertBookingRow
+	err := row.Scan(&i.ID, &i.ExpiresAt)
+	return i, err
+}
+
+const insertInvoice = `-- name: InsertInvoice :one
+INSERT INTO invoices (
+  booking_id, number, type, period_start, period_end, periods,
+  rent_amount, discount, deposit, admin_fee, total, due_date, issued_at
+) VALUES (
+  $1, '', $2, $3, $4, $5,
+  $6, $7, $8, $9, $10,
+  $11, $12
+)
+RETURNING id
+`
+
+type InsertInvoiceParams struct {
+	BookingID   int64
+	Type        string
+	PeriodStart pgtype.Date
+	PeriodEnd   pgtype.Date
+	Periods     int16
+	RentAmount  int64
+	Discount    int64
+	Deposit     int64
+	AdminFee    int64
+	Total       int64
+	DueDate     pgtype.Date
+	IssuedAt    pgtype.Timestamptz
+}
+
+func (q *Queries) InsertInvoice(ctx context.Context, arg InsertInvoiceParams) (int64, error) {
+	row := q.db.QueryRow(ctx, insertInvoice,
+		arg.BookingID,
+		arg.Type,
+		arg.PeriodStart,
+		arg.PeriodEnd,
+		arg.Periods,
+		arg.RentAmount,
+		arg.Discount,
+		arg.Deposit,
+		arg.AdminFee,
+		arg.Total,
+		arg.DueDate,
+		arg.IssuedAt,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const listBookingsForUser = `-- name: ListBookingsForUser :many
+SELECT b.id, b.status, b.rent_type, b.room_id, r.name AS room_name,
+       b.start_date, b.duration, b.end_date, b.price, b.expires_at, b.created_at
+FROM bookings b
+JOIN rooms r ON r.id = b.room_id
+WHERE b.tenant_id = $1
+ORDER BY b.created_at DESC, b.id DESC
+LIMIT $3 OFFSET $2
+`
+
+type ListBookingsForUserParams struct {
+	TenantID     int64
+	ResultOffset int32
+	ResultLimit  int32
+}
+
+type ListBookingsForUserRow struct {
+	ID        int64
+	Status    string
+	RentType  string
+	RoomID    int64
+	RoomName  string
+	StartDate pgtype.Date
+	Duration  int16
+	EndDate   pgtype.Date
+	Price     int64
+	ExpiresAt pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
+}
+
+func (q *Queries) ListBookingsForUser(ctx context.Context, arg ListBookingsForUserParams) ([]ListBookingsForUserRow, error) {
+	rows, err := q.db.Query(ctx, listBookingsForUser, arg.TenantID, arg.ResultOffset, arg.ResultLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListBookingsForUserRow{}
+	for rows.Next() {
+		var i ListBookingsForUserRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Status,
+			&i.RentType,
+			&i.RoomID,
+			&i.RoomName,
+			&i.StartDate,
+			&i.Duration,
+			&i.EndDate,
+			&i.Price,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const setInvoiceNumber = `-- name: SetInvoiceNumber :exec
+UPDATE invoices SET number = $1, updated_at = now() WHERE id = $2
+`
+
+type SetInvoiceNumberParams struct {
+	Number string
+	ID     int64
+}
+
+func (q *Queries) SetInvoiceNumber(ctx context.Context, arg SetInvoiceNumberParams) error {
+	_, err := q.db.Exec(ctx, setInvoiceNumber, arg.Number, arg.ID)
+	return err
 }

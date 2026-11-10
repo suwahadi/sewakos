@@ -15,6 +15,7 @@ import (
 )
 
 type stubDraftPriceStore struct {
+	baseStubStore
 	room dbgen.GetRoomForDraftPriceRow
 	err  error
 }
@@ -130,8 +131,17 @@ func TestDraftPriceHandlerDurationOutOfRangeIsClamped(t *testing.T) {
 		Data []map[string]any `json:"data"`
 	}
 	_ = json.NewDecoder(w.Body).Decode(&body)
-	if body.Data[0]["remaining_payment"] != float64(100000*30+100000) {
-		t.Errorf("remaining_payment = %v, want duration clamped to 30", body.Data[0]["remaining_payment"])
+	var daily map[string]any
+	for _, item := range body.Data {
+		if item["type"] == "daily" {
+			daily = item
+		}
+	}
+	if daily == nil {
+		t.Fatalf("no daily item in data: %v", body.Data)
+	}
+	if daily["remaining_payment"] != float64(100000*30+100000) {
+		t.Errorf("remaining_payment = %v, want duration clamped to 30", daily["remaining_payment"])
 	}
 }
 

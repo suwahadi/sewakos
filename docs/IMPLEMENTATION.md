@@ -110,7 +110,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 ## B4 — Booking & pembayaran
 
 - [x] **B4.1 Draft-price & setting.** API.md §5.1 (`duration`), baca `admin_fee` dari `settings` dengan cache (SPEC §16).
-- [ ] **B4.2 Submit, daftar, detail booking.** API.md §5.2–5.4: `duration`, `end_date`, invoice `initial` dalam transaksi.
+- [x] **B4.2 Submit, daftar, detail booking.** API.md §5.2–5.4: `duration`, `end_date`, invoice `initial` dalam transaksi.
 - [ ] **B4.3 Klien Midtrans.** SPEC §13.1 di balik interface + mock untuk test.
 - [ ] **B4.4 Checkout.** SPEC §13.2 untuk booking & invoice. *Selesai bila:* test konkurensi — dua checkout bersamaan
   untuk kamar terakhir, hanya satu berhasil; checkout ulang mengembalikan transaksi aktif yang sama.
