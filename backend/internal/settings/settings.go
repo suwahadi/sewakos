@@ -17,9 +17,7 @@ type Store interface {
 	GetSetting(ctx context.Context, key string) ([]byte, error)
 }
 
-// AdminFeeCache reads the admin_fee setting at most once per TTL. A missing
-// row (e.g. before cmd/seed has run) is treated as the documented default, 0,
-// rather than an error.
+// A missing admin_fee row is treated as 0, not an error.
 type AdminFeeCache struct {
 	store Store
 
@@ -58,8 +56,6 @@ func (c *AdminFeeCache) Get(ctx context.Context) (int64, error) {
 	return c.value, nil
 }
 
-// Invalidate forces the next Get to re-read the store; called by the admin
-// settings PATCH endpoint (not yet implemented) after a write.
 func (c *AdminFeeCache) Invalidate() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
