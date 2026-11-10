@@ -1,7 +1,7 @@
 // Package otp implements the Redis-backed verification code mechanism shared
-// by every OTP flow (API.md §2.2-2.3, §11.6; SPEC-GO.md §6.3-6.4): generate,
-// store, send, and one-time-check a code at whatever Redis key the caller
-// supplies. It carries no business rules of its own (who may request a code,
+// by every OTP flow: generate, store, send, and one-time-check a code at
+// whatever Redis key the caller supplies. It carries no business rules of its
+// own (who may request a code,
 // what happens after a correct check), so the same Service backs both the
 // tenant_verification/login/reset_password flow (keyed
 // "otp:code:{for}:{destination}") and the change-phone flow (keyed

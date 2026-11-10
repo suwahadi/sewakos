@@ -1,6 +1,5 @@
-// Package abtest implements GET /config/ab-test/{experiment}?visitor_id=
-// (API.md §7, SPEC-GO.md §9.4): a deterministic variant assignment with no
-// storage — the same visitor_id always resolves to the same variant.
+// Package abtest assigns deterministic experiment variants with no storage —
+// the same visitor_id always resolves to the same variant.
 package abtest
 
 import (

@@ -1,5 +1,5 @@
-// Package account implements API.md §11: logout, password reset, profile,
-// password change, and change-phone. It depends on internal/auth only for
+// Package account handles logout, password reset, profile, password change,
+// and change-phone. It depends on internal/auth only for
 // the phone number format (auth.PhoneRegex) and token issuance primitives,
 // not the other way around.
 package account
