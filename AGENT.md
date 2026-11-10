@@ -159,8 +159,11 @@ Jangan menulis "lint/test lolos" di laporan bila perintahnya tidak dijalankan at
 
 **Branch & history**
 - Branch kerja: **`main` saja**. Jangan membuat branch baru tanpa izin.
-- Dilarang tanpa izin eksplisit: `commit --amend`, `rebase`, `push --force`/`--force-with-lease`, menulis ulang history,
-  menghapus tag, membuat release/tag, mengubah branch terlindungi atau pengaturannya.
+- Dilarang tanpa izin eksplisit: `commit --amend` pada commit yang **sudah di-push**, `rebase`, `push --force`/
+  `--force-with-lease`, menulis ulang history, menghapus tag, membuat release/tag, mengubah branch terlindungi
+  atau pengaturannya.
+- `commit --amend` pada commit yang **belum pernah di-push** diperbolehkan (mis. memperbaiki kesalahan kecil
+  sebelum dibagikan ke remote), karena tidak menyentuh history bersama.
 
 **Identitas**
 - Sebelum commit pertama di setiap sesi, periksa:
