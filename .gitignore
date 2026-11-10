@@ -27,3 +27,6 @@ frontend/next-env.d.ts
 *.swp
 .idea/
 .vscode/
+
+# Local Redis snapshot (created by `redis-server` when run directly in dev)
+dump.rdb

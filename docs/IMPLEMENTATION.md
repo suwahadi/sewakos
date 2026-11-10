@@ -44,26 +44,26 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 
 ## B1 — Fondasi backend
 
-- [ ] **B1.1 Skeleton Go.** `go.mod` (`go 1.27.0`, `toolchain go1.27.3`), staticcheck sebagai tool, konfigurasi env
+- [x] **B1.1 Skeleton Go.** `go.mod` (`go 1.27.0`, `toolchain go1.27.3`), staticcheck sebagai tool, konfigurasi env
   (SPEC §3), `cmd/api`, `cmd/worker`, `cmd/seed`, `cmd/admin` dengan shutdown rapi (SIGTERM), Dockerfile
   multi-stage Debian + libvips (SPEC §3). *Selesai bila:* `go build ./...` dan image Docker berhasil dibuat.
-- [ ] **B1.2 Skema database.** Migration goose untuk **seluruh** skema SPEC §4 (termasuk tabel Rilis 2–3, trigger
+- [x] **B1.2 Skema database.** Migration goose untuk **seluruh** skema SPEC §4 (termasuk tabel Rilis 2–3, trigger
   `storage_deletions`, trigger append-only `ledger_entries`/`audit_logs`). Dua role DB: pemilik migration dan role
   aplikasi tanpa hak `UPDATE/DELETE/TRUNCATE` pada ledger & audit.
   *Selesai bila:* `up` dari DB kosong berhasil; test membuktikan UPDATE/DELETE ledger & audit ditolak; hapus kamar
   memasukkan key foto ke `storage_deletions`.
-- [ ] **B1.3 Envelope & error.** Paket `response`, peta severity, handler 404/405/500, pesan error SPEC §5.3.
-- [ ] **B1.4 Validasi.** Translator pesan SPEC §5.4 + aturan evaluasi (berhenti setelah `required`/`accepted` gagal).
+- [x] **B1.3 Envelope & error.** Paket `response`, peta severity, handler 404/405/500, pesan error SPEC §5.3.
+- [x] **B1.4 Validasi.** Translator pesan SPEC §5.4 + aturan evaluasi (berhenti setelah `required`/`accepted` gagal).
   *Selesai bila:* test tabel untuk setiap rule dan setiap atribut bertitik (`filters.area_id`, `facilities.0`).
-- [ ] **B1.5 Uang & waktu.** Format Rupiah, helper WIB, aritmetika periode SPEC §13.6 (penjepitan akhir bulan).
+- [x] **B1.5 Uang & waktu.** Format Rupiah, helper WIB, aritmetika periode SPEC §13.6 (penjepitan akhir bulan).
   *Selesai bila:* test mencakup mulai 31 Jan, tahun kabisat, pergantian tahun.
-- [ ] **B1.6 Middleware.** Request ID, recovery, CORS, client check, limiter `api` & `otp` (Redis) + header 429,
+- [x] **B1.6 Middleware.** Request ID, recovery, CORS, client check, limiter `api` & `otp` (Redis) + header 429,
   auth wajib/opsional, cek role, cek akun dinonaktifkan. Pengecualian webhook (SPEC §5.1).
-- [ ] **B1.7 Ledger & audit.** `finance.Record` dan `audit.Record` dalam transaksi pemanggil, penyamaran field sensitif.
-- [ ] **B1.8 Notifikasi & email outbox.** Helper pembuat notifikasi (judul, isi, `link` SPEC §17) + insert `email_outbox`
+- [x] **B1.7 Ledger & audit.** `finance.Record` dan `audit.Record` dalam transaksi pemanggil, penyamaran field sensitif.
+- [x] **B1.8 Notifikasi & email outbox.** Helper pembuat notifikasi (judul, isi, `link` SPEC §17) + insert `email_outbox`
   bila penerima punya email; `email.Sender` dengan `LogSender`.
-- [ ] **B1.9 Seed & admin CLI.** `cmd/seed` (SPEC §10, menolak di production), `cmd/admin create` (SPEC §16).
-- [ ] **B1.10 Harness contract test.** Menjalankan API terhadap DB hasil seed; pembanding JSON semantik (SPEC §11);
+- [x] **B1.9 Seed & admin CLI.** `cmd/seed` (SPEC §10, menolak di production), `cmd/admin create` (SPEC §16).
+- [x] **B1.10 Harness contract test.** Menjalankan API terhadap DB hasil seed; pembanding JSON semantik (SPEC §11);
   helper field dinamis. *Selesai bila:* satu contoh fixture dari API.md berjalan hijau.
 
 ## F0 — Fondasi frontend
