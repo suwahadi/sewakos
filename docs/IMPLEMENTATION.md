@@ -86,9 +86,9 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 
 ## F1 — Auth, akun, notifikasi (UI)
 
-- [ ] **F1.1 Halaman auth.** `/daftar`, `/masuk` (password & OTP), `/lupa-password`, OtpInput + OtpChannelPicker.
-- [ ] **F1.2 Akun.** `/akun`: profil, ganti password, ganti nomor, keluar (ConfirmDialog).
-- [ ] **F1.3 Notifikasi.** `/notifikasi` + badge hitungan di header; klik membuka `link`.
+- [x] **F1.1 Halaman auth.** `/daftar`, `/masuk` (password & OTP), `/lupa-password`, OtpInput + OtpChannelPicker.
+- [x] **F1.2 Akun.** `/akun`: profil, ganti password, ganti nomor, keluar (ConfirmDialog).
+- [x] **F1.3 Notifikasi.** `/notifikasi` + badge hitungan di header; klik membuka `link`.
 
 ## B3 — Penemuan
 
