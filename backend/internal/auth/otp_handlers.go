@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -42,32 +41,6 @@ type OTPDeps struct {
 	DebugEcho    bool
 }
 
-func otpCodeKey(forType, destination string) string {
-	return "otp:code:" + forType + ":" + destination
-}
-
-func otpCooldownKey(destination string) string {
-	return "otp:cooldown:" + destination
-}
-
-// checkOTPRateLimit enforces the shared "otp" limiter (2/minute per
-// destination by default, API.md §1.5): request and check draw from the same
-// counter. Redis being unreachable fails open, matching RateLimitAPI.
-func checkOTPRateLimit(ctx context.Context, rdb *redis.Client, destination string, limit int) (ratelimit.Result, bool) {
-	result, err := ratelimit.Allow(ctx, rdb, "otp", destination, int64(limit), time.Minute)
-	if err != nil {
-		return ratelimit.Result{Allowed: true}, true
-	}
-	return result, false
-}
-
-func writeOTPRateLimited(w http.ResponseWriter, limit int, result ratelimit.Result) {
-	w.Header().Set("Retry-After", strconv.Itoa(int(result.RetryAfter.Seconds())))
-	w.Header().Set("X-RateLimit-Limit", strconv.Itoa(limit))
-	w.Header().Set("X-RateLimit-Remaining", strconv.FormatInt(result.Remaining, 10))
-	response.Fail(w, http.StatusTooManyRequests, response.MsgRateLimited, nil)
-}
-
 // OTPRequestHandler implements POST /auth/otp/request (API.md §2.2, SPEC-GO.md §6.3).
 func OTPRequestHandler(deps OTPDeps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -88,8 +61,7 @@ func OTPRequestHandler(deps OTPDeps) http.HandlerFunc {
 		via, _ := body["via"].(string)
 		destination, _ := body["destination"].(string)
 
-		if result, skip := checkOTPRateLimit(ctx, deps.Redis, destination, deps.MaxPerMinute); !skip && !result.Allowed {
-			writeOTPRateLimited(w, deps.MaxPerMinute, result)
+		if !ratelimit.EnforceHTTP(ctx, w, deps.Redis, "otp", destination, int64(deps.MaxPerMinute), time.Minute) {
 			return
 		}
 
@@ -128,7 +100,7 @@ func OTPRequestHandler(deps OTPDeps) http.HandlerFunc {
 			channel = otp.ChannelWhatsApp
 		}
 
-		result, err := deps.Service.Request(ctx, otpCodeKey(forType, destination), otpCooldownKey(destination), channel, destination)
+		result, err := deps.Service.Request(ctx, otp.CodeKey(forType, destination), otp.CooldownKey(destination), channel, destination)
 		if errors.Is(err, otp.ErrCooldown) {
 			const msg = "Silakan tunggu sebelum meminta kode baru."
 			response.Fail(w, http.StatusUnprocessableEntity, msg, map[string][]string{"destination": {msg}})
@@ -173,8 +145,7 @@ func OTPCheckHandler(deps OTPDeps) http.HandlerFunc {
 		destination, _ := body["destination"].(string)
 		code, _ := body["code"].(string)
 
-		if result, skip := checkOTPRateLimit(ctx, deps.Redis, destination, deps.MaxPerMinute); !skip && !result.Allowed {
-			writeOTPRateLimited(w, deps.MaxPerMinute, result)
+		if !ratelimit.EnforceHTTP(ctx, w, deps.Redis, "otp", destination, int64(deps.MaxPerMinute), time.Minute) {
 			return
 		}
 
@@ -185,7 +156,7 @@ func OTPCheckHandler(deps OTPDeps) http.HandlerFunc {
 			return
 		}
 
-		ok, err := deps.Service.Check(ctx, otpCodeKey(forType, destination), code)
+		ok, err := deps.Service.Check(ctx, otp.CodeKey(forType, destination), code)
 		if err != nil {
 			response.InternalErrorHandler(w, r)
 			return

@@ -37,6 +37,25 @@ type Sender interface {
 // ErrCooldown is returned by Request when the resend cooldown hasn't elapsed.
 var ErrCooldown = errors.New("otp: cooldown active")
 
+// CodeKey builds the Redis key for a tenant_verification/login/reset_password
+// code (SPEC-GO.md §6.3: "otp:code:{for}:{destination}").
+func CodeKey(forType, destination string) string {
+	return "otp:code:" + forType + ":" + destination
+}
+
+// ChangePhoneCodeKey builds the Redis key for a change-phone code
+// (SPEC-GO.md §6.4: "otp:code:change_phone:{user_id}:{new_phone}").
+func ChangePhoneCodeKey(userID int64, newPhone string) string {
+	return fmt.Sprintf("otp:code:change_phone:%d:%s", userID, newPhone)
+}
+
+// CooldownKey builds the Redis resend-cooldown key, shared across every "for"
+// value and the change-phone flow for the same destination (SPEC-GO.md §6.3:
+// "otp:cooldown:{destination}" has no "for" component).
+func CooldownKey(destination string) string {
+	return "otp:cooldown:" + destination
+}
+
 // Config holds the SPEC-GO.md §3 OTP settings a Service needs.
 type Config struct {
 	CodeLength  int

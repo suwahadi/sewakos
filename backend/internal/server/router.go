@@ -3,12 +3,14 @@ package server
 
 import (
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/suwahadi/sewakos/backend/internal/account"
 	"github.com/suwahadi/sewakos/backend/internal/auth"
 	"github.com/suwahadi/sewakos/backend/internal/config"
 	"github.com/suwahadi/sewakos/backend/internal/otp"
@@ -55,6 +57,13 @@ func NewRouter(deps Deps) chi.Router {
 		MaxPerMinute: deps.Config.OTPMaxPerMinute,
 		DebugEcho:    deps.Config.OTPDebugEcho,
 	}
+	accountDeps := account.Deps{
+		Store:        queries,
+		OTP:          otpService,
+		Redis:        deps.Redis,
+		MaxPerMinute: deps.Config.OTPMaxPerMinute,
+		DebugEcho:    deps.Config.OTPDebugEcho,
+	}
 
 	r.Route("/api", func(api chi.Router) {
 		api.Use(ClientCheck(deps.Config.APIClientID))
@@ -64,10 +73,33 @@ func NewRouter(deps Deps) chi.Router {
 		api.Post("/auth/otp/request", auth.OTPRequestHandler(otpDeps))
 		api.Post("/auth/otp/check", auth.OTPCheckHandler(otpDeps))
 		api.Post("/auth/login", auth.LoginHandler(login))
-		// Remaining endpoint groups (account, notifications, area, search,
-		// booking, owner, admin, ...) mount here in later tasks (B2.2+), each
-		// behind the auth/role middleware it needs.
+		api.Post("/auth/password/reset", account.PasswordResetHandler(accountDeps))
+
+		api.Group(func(authed chi.Router) {
+			authed.Use(RequireAuth(tokens))
+
+			authed.Post("/auth/logout", withAuthedUser(accountDeps, account.LogoutHandler))
+			authed.Get("/me", withAuthedUser(accountDeps, account.GetMeHandler))
+			authed.Patch("/me", withAuthedUser(accountDeps, account.PatchMeHandler))
+			authed.Put("/me/password", withAuthedUser(accountDeps, account.PutPasswordHandler))
+			authed.Post("/me/phone/request", withAuthedUser(accountDeps, account.PhoneRequestHandler))
+			authed.Post("/me/phone/verify", withAuthedUser(accountDeps, account.PhoneVerifyHandler))
+		})
+		// Remaining endpoint groups (notifications, area, search, booking,
+		// owner, admin, ...) mount here in later tasks (B2.3+), each behind
+		// the auth/role middleware it needs.
 	})
 
 	return r
+}
+
+// withAuthedUser adapts an account handler (which doesn't depend on this
+// package, to avoid an import cycle) to a chi route: it reads the
+// already-authenticated user RequireAuth put in context and hands account
+// package only the two fields it needs.
+func withAuthedUser(deps account.Deps, handler func(account.Deps, account.AuthenticatedUser) http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, _ := UserFromContext(r.Context())
+		handler(deps, account.AuthenticatedUser{UserID: user.ID, TokenID: user.TokenID})(w, r)
+	}
 }

@@ -81,7 +81,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 ## B2 — Auth, akun, notifikasi
 
 - [x] **B2.1 Registrasi, OTP, login, token.** API.md §2; SPEC §6 (Redis OTP, cooldown, debug echo + guard production).
-- [ ] **B2.2 Akun.** API.md §11 (logout, reset password, `/me`, ganti password, ganti nomor).
+- [x] **B2.2 Akun.** API.md §11 (logout, reset password, `/me`, ganti password, ganti nomor).
 - [ ] **B2.3 Notifikasi.** API.md §6 (daftar dengan `link`, counter, tandai dibaca + 403).
 
 ## F1 — Auth, akun, notifikasi (UI)
