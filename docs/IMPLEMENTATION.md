@@ -92,7 +92,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 
 ## B3 — Penemuan
 
-- [ ] **B3.1 Area & suggestion.** API.md §3.1–3.2 (termasuk `landings[].id`, `room_types[].property_id`).
+- [x] **B3.1 Area & suggestion.** API.md §3.1–3.2 (termasuk `landings[].id`, `room_types[].property_id`).
 - [ ] **B3.2 Pencarian.** API.md §3.3: semua filter termasuk `area_id` (radius kampus/MRT), urutan, `has-more`,
   `thumbnail_url`, `area_name`, rating. *Selesai bila:* `EXPLAIN` query utama memakai index pada data seed 10.000 properti
   (generator data uji, bukan seed default).

@@ -11,6 +11,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/suwahadi/sewakos/backend/internal/account"
+	"github.com/suwahadi/sewakos/backend/internal/area"
 	"github.com/suwahadi/sewakos/backend/internal/auth"
 	"github.com/suwahadi/sewakos/backend/internal/authctx"
 	"github.com/suwahadi/sewakos/backend/internal/config"
@@ -18,6 +19,7 @@ import (
 	"github.com/suwahadi/sewakos/backend/internal/otp"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres/dbgen"
 	"github.com/suwahadi/sewakos/backend/internal/response"
+	"github.com/suwahadi/sewakos/backend/internal/search"
 )
 
 // Deps are the shared dependencies every route handler may need.
@@ -67,6 +69,11 @@ func NewRouter(deps Deps) chi.Router {
 		DebugEcho:    deps.Config.OTPDebugEcho,
 	}
 	notificationDeps := notification.Deps{Store: queries}
+	areaDeps := area.Deps{Store: queries}
+	searchDeps := search.Deps{
+		Store: queries, AreaRadiusKM: deps.Config.AreaRadiusKM,
+		StorageBaseURL: deps.Config.StoragePublicBaseURL,
+	}
 
 	r.Route("/api", func(api chi.Router) {
 		api.Use(ClientCheck(deps.Config.APIClientID))
@@ -77,6 +84,10 @@ func NewRouter(deps Deps) chi.Router {
 		api.Post("/auth/otp/check", auth.OTPCheckHandler(otpDeps))
 		api.Post("/auth/login", auth.LoginHandler(login))
 		api.Post("/auth/password/reset", account.PasswordResetHandler(accountDeps))
+
+		api.Get("/area/{type}", area.ListHandler(areaDeps))
+		api.Get("/suggestion", search.SuggestionHandler(searchDeps))
+		api.Post("/listings/search", search.SearchHandler(searchDeps))
 
 		api.Group(func(authed chi.Router) {
 			authed.Use(RequireAuth(tokens))

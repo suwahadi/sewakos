@@ -411,3 +411,6 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
 -- no UPDATE/DELETE/TRUNCATE (enforced both here and by the triggers in 00004).
 GRANT SELECT, INSERT ON ledger_entries, audit_logs TO kos_app;
 
+CREATE INDEX idx_properties_area_id ON properties (area_id);
+CREATE INDEX idx_properties_lat_lng ON properties (latitude, longitude);
+

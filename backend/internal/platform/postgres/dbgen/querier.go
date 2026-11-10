@@ -12,6 +12,7 @@ import (
 
 type Querier interface {
 	CountAreasBySlug(ctx context.Context, slug string) (int64, error)
+	CountSearchRooms(ctx context.Context, arg CountSearchRoomsParams) (CountSearchRoomsRow, error)
 	CountUnreadNotifications(ctx context.Context, userID int64) (int64, error)
 	CountUserNotifications(ctx context.Context, arg CountUserNotificationsParams) (int64, error)
 	CountUsersByPhone(ctx context.Context, phone string) (int64, error)
@@ -26,20 +27,26 @@ type Querier interface {
 	ExistsUserByEmail(ctx context.Context, email pgtype.Text) (bool, error)
 	ExistsUserByPhone(ctx context.Context, phone string) (bool, error)
 	GetAccessTokenForVerification(ctx context.Context, id int64) (GetAccessTokenForVerificationRow, error)
+	GetAreaByID(ctx context.Context, id int64) (GetAreaByIDRow, error)
 	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
 	GetUserByPhone(ctx context.Context, phone string) (GetUserByPhoneRow, error)
 	GetUserNotification(ctx context.Context, id int64) (GetUserNotificationRow, error)
 	GetUserPasswordByID(ctx context.Context, id int64) (pgtype.Text, error)
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (int64, error)
 	InsertLedgerEntry(ctx context.Context, arg InsertLedgerEntryParams) (int64, error)
+	ListAreasByType(ctx context.Context, arg ListAreasByTypeParams) ([]ListAreasByTypeRow, error)
 	ListUserNotifications(ctx context.Context, arg ListUserNotificationsParams) ([]ListUserNotificationsRow, error)
 	MarkUserNotificationRead(ctx context.Context, id int64) error
+	SearchRooms(ctx context.Context, arg SearchRoomsParams) ([]SearchRoomsRow, error)
 	SeedCreateArea(ctx context.Context, arg SeedCreateAreaParams) (int64, error)
 	SeedCreateOwnerBankAccount(ctx context.Context, arg SeedCreateOwnerBankAccountParams) error
 	SeedCreateProperty(ctx context.Context, arg SeedCreatePropertyParams) (int64, error)
 	SeedCreateRoom(ctx context.Context, arg SeedCreateRoomParams) (int64, error)
 	SeedCreateUser(ctx context.Context, arg SeedCreateUserParams) (int64, error)
 	SeedUpsertSetting(ctx context.Context, arg SeedUpsertSettingParams) error
+	SuggestAreas(ctx context.Context, keyword string) ([]SuggestAreasRow, error)
+	SuggestLandings(ctx context.Context, keyword string) ([]SuggestLandingsRow, error)
+	SuggestRoomTypes(ctx context.Context, keyword string) ([]SuggestRoomTypesRow, error)
 	TouchAccessToken(ctx context.Context, id int64) error
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error
 	UpdateUserPasswordAndVerify(ctx context.Context, arg UpdateUserPasswordAndVerifyParams) error
