@@ -102,7 +102,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 ## F2 — Penemuan (UI)
 
 - [x] **F2.1 Beranda.** DESIGN §7 beranda: SearchBar, chip area populer, promo.
-- [ ] **F2.2 Pencarian.** `/cari`: SuggestionList, FilterBar, FilterSheet, SortSheet, ListingCard (horizontal di mobile),
+- [x] **F2.2 Pencarian.** `/cari`: SuggestionList, FilterBar, FilterSheet, SortSheet, ListingCard (horizontal di mobile),
   LoadMore, skeleton, empty state.
 - [ ] **F2.3 Detail kost.** `/kost/{id}`: PropertyGallery, RoomOption, FacilityList, PriceBreakdown, StickyActionBar,
   RatingSummary (tanpa input ulasan), FavoriteButton disembunyikan sampai B9 selesai, tautan peta.
