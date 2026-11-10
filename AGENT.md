@@ -70,8 +70,18 @@ atau instruksi ambigu yang memengaruhi data/uang.
 
 Kode harus jelas dari **nama, tipe, dan struktur**. Komentar adalah pengecualian, bukan kebiasaan.
 
+**Aturan default: tidak ada komentar di atas fungsi, method, class, variabel, atau komponen, kecuali ada alasan
+teknis yang kuat** (lihat daftar "Komentar hanya untuk hal yang tidak terlihat dari kode" di bawah — concurrency,
+batasan keamanan, keanehan provider, invariant, workaround). Kode baru yang ditulis/diubah wajib bersih dan bisa
+dipahami lewat penamaan dan struktur yang jelas, bukan lewat penjelasan di komentar. Ini berlaku untuk kode baru;
+komentar lama yang sudah ada tidak perlu dirapikan mundur kecuali memang sedang disentuh di tugas yang berjalan.
+
 **Dilarang:**
 - Komentar yang mengulang isi kode (`// increment counter` di atas `count++`).
+- Komentar ringkasan yang hanya mendeskripsikan perilaku fungsi tanpa alasan yang tidak terlihat di baliknya
+  (mis. `// LogoutHandler revokes only the token this request used.` di atas kode yang memang hanya menghapus
+  satu token by ID — perilakunya sudah jelas dari baris kodenya sendiri). Tulis komentar seperti ini **hanya**
+  bila perilakunya benar-benar mengejutkan dan tidak bisa disimpulkan dari kode + nama fungsi.
 - Pembatas section dekoratif (`// ======`, `// ---- Handlers ----`, `/* ***** */`).
 - Banner di awal file (nama file, penulis, tanggal, deskripsi umum).
 - Komentar yang hanya menyebutkan endpoint/rujukan dokumen yang diimplementasikan fungsi itu, mis.
