@@ -254,13 +254,16 @@ Jangan melewati hook dengan `--no-verify`.
 
 ```json
 {
-  "includeCoAuthoredBy": false
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  }
 }
 ```
 
-Saat menyiapkan file ini, cocokkan nama setting dengan dokumentasi Claude Code terbaru. Jika setting atribusi sudah
-diganti nama/struktur baru, pakai padanannya yang mematikan semua atribusi pada commit dan pull request, lalu
-perbarui contoh di atas.
+`includeCoAuthoredBy` sudah deprecated, diganti `attribution.commit` / `attribution.pr` (string kosong = sembunyikan
+trailer). Saat menyiapkan file ini di kemudian hari, cocokkan lagi nama setting dengan dokumentasi Claude Code
+terbaru dan perbarui contoh di atas bila sudah berubah lagi.
 
 ### 8.4 `CLAUDE.md`
 

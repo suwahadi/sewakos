@@ -32,7 +32,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 - [x] **R0.1 Struktur monorepo.** Buat struktur `AGENT.md` §2; pindahkan semua dokumen ke `docs/` kecuali `AGENT.md`
   dan `CLAUDE.md` (root). `.gitignore` untuk Go, Node/Next.js, `.env*` (kecuali `.env.example`), artefak build.
   *Selesai bila:* pohon folder sama dengan AGENT.md §2.
-- [ ] **R0.2 Hook & konfigurasi agent.** `.githooks/commit-msg`, `.githooks/pre-commit` (executable, isi AGENT.md §8),
+- [x] **R0.2 Hook & konfigurasi agent.** `.githooks/commit-msg`, `.githooks/pre-commit` (executable, isi AGENT.md §8),
   `.claude/settings.json` (cocokkan nama setting dengan dokumentasi Claude Code terbaru), `CLAUDE.md`,
   lalu `git config core.hooksPath .githooks` (lokal).
   *Selesai bila:* pesan berisi `Co-authored-by: Claude` ditolak hook (laporkan hasil uji), file `.env` ditolak pre-commit.
