@@ -66,6 +66,11 @@ Jika struktur di atas belum ada, buat sesuai tabel ini. Jangan memindahkan folde
 menambah dependency besar di luar SPEC/DESIGN, butuh kredensial/rahasia, test gagal karena hal di luar tugas,
 atau instruksi ambigu yang memengaruhi data/uang.
 
+**Lanjut otomatis antar tugas:** setelah satu tugas IMPLEMENTATION.md selesai (commit + push lolos §6), langsung lanjut
+ke tugas berikutnya tanpa menunggu konfirmasi pemilik, selama tugas berikutnya bukan ⛔ menunggu pemilik dan tidak
+masuk daftar "berhenti dan tanyakan" di atas. Tetap berhenti di akhir tugas terakhir yang tersedia (semua tugas
+tercentang, atau tugas berikutnya ⛔) dan laporkan sesuai §10.
+
 ## 4. Gaya kode & komentar
 
 Kode harus jelas dari **nama, tipe, dan struktur**. Komentar adalah pengecualian, bukan kebiasaan.
