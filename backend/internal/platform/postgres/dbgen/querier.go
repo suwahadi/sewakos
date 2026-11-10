@@ -6,19 +6,34 @@ package dbgen
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
 	CountAreasBySlug(ctx context.Context, slug string) (int64, error)
+	CountUnreadNotifications(ctx context.Context, userID int64) (int64, error)
+	CountUserNotifications(ctx context.Context, arg CountUserNotificationsParams) (int64, error)
 	CountUsersByPhone(ctx context.Context, phone string) (int64, error)
 	CreateAccessToken(ctx context.Context, arg CreateAccessTokenParams) (int64, error)
 	CreateAdminUser(ctx context.Context, arg CreateAdminUserParams) (int64, error)
+	CreateUser(ctx context.Context, arg CreateUserParams) (int64, error)
 	CreateUserNotification(ctx context.Context, arg CreateUserNotificationParams) (int64, error)
+	DeleteAccessToken(ctx context.Context, id int64) error
+	DeleteAllAccessTokensForUser(ctx context.Context, userID int64) error
+	DeleteOtherAccessTokensForUser(ctx context.Context, arg DeleteOtherAccessTokensForUserParams) error
 	EnqueueEmail(ctx context.Context, arg EnqueueEmailParams) (int64, error)
+	ExistsUserByEmail(ctx context.Context, email pgtype.Text) (bool, error)
+	ExistsUserByPhone(ctx context.Context, phone string) (bool, error)
 	GetAccessTokenForVerification(ctx context.Context, id int64) (GetAccessTokenForVerificationRow, error)
+	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
 	GetUserByPhone(ctx context.Context, phone string) (GetUserByPhoneRow, error)
+	GetUserNotification(ctx context.Context, id int64) (GetUserNotificationRow, error)
+	GetUserPasswordByID(ctx context.Context, id int64) (pgtype.Text, error)
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (int64, error)
 	InsertLedgerEntry(ctx context.Context, arg InsertLedgerEntryParams) (int64, error)
+	ListUserNotifications(ctx context.Context, arg ListUserNotificationsParams) ([]ListUserNotificationsRow, error)
+	MarkUserNotificationRead(ctx context.Context, id int64) error
 	SeedCreateArea(ctx context.Context, arg SeedCreateAreaParams) (int64, error)
 	SeedCreateOwnerBankAccount(ctx context.Context, arg SeedCreateOwnerBankAccountParams) error
 	SeedCreateProperty(ctx context.Context, arg SeedCreatePropertyParams) (int64, error)
@@ -26,6 +41,11 @@ type Querier interface {
 	SeedCreateUser(ctx context.Context, arg SeedCreateUserParams) (int64, error)
 	SeedUpsertSetting(ctx context.Context, arg SeedUpsertSettingParams) error
 	TouchAccessToken(ctx context.Context, id int64) error
+	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error
+	UpdateUserPasswordAndVerify(ctx context.Context, arg UpdateUserPasswordAndVerifyParams) error
+	UpdateUserPhone(ctx context.Context, arg UpdateUserPhoneParams) error
+	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error
+	VerifyUserPhone(ctx context.Context, id int64) error
 }
 
 var _ Querier = (*Queries)(nil)

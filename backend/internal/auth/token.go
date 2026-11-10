@@ -29,8 +29,9 @@ var randomAlphabet = []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxy
 
 // VerifiedUser is what Verify returns on success.
 type VerifiedUser struct {
-	ID   int64
-	Role string
+	ID      int64
+	Role    string
+	TokenID int64
 }
 
 // Store is the subset of dbgen.Querier this package needs.
@@ -87,7 +88,7 @@ func (s *Service) Verify(ctx context.Context, token string) (VerifiedUser, error
 	}
 
 	_ = s.store.TouchAccessToken(ctx, id)
-	return VerifiedUser{ID: row.UserID, Role: row.Role}, nil
+	return VerifiedUser{ID: row.UserID, Role: row.Role, TokenID: id}, nil
 }
 
 // splitToken parses "{id}|{plain}", id being a positive integer.

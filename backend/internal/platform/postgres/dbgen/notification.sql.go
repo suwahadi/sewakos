@@ -11,6 +11,34 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countUnreadNotifications = `-- name: CountUnreadNotifications :one
+SELECT COUNT(*) FROM user_notifications WHERE user_id = $1 AND read_at IS NULL
+`
+
+func (q *Queries) CountUnreadNotifications(ctx context.Context, userID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countUnreadNotifications, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countUserNotifications = `-- name: CountUserNotifications :one
+SELECT COUNT(*) FROM user_notifications
+WHERE user_id = $1 AND ($2::varchar IS NULL OR category = $2)
+`
+
+type CountUserNotificationsParams struct {
+	UserID   int64
+	Category pgtype.Text
+}
+
+func (q *Queries) CountUserNotifications(ctx context.Context, arg CountUserNotificationsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countUserNotifications, arg.UserID, arg.Category)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createUserNotification = `-- name: CreateUserNotification :one
 INSERT INTO user_notifications (user_id, category, title, body, link)
 VALUES ($1, $2, $3, $4, $5)
@@ -55,4 +83,88 @@ func (q *Queries) EnqueueEmail(ctx context.Context, arg EnqueueEmailParams) (int
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const getUserNotification = `-- name: GetUserNotification :one
+SELECT id, user_id, read_at FROM user_notifications WHERE id = $1
+`
+
+type GetUserNotificationRow struct {
+	ID     int64
+	UserID int64
+	ReadAt pgtype.Timestamptz
+}
+
+func (q *Queries) GetUserNotification(ctx context.Context, id int64) (GetUserNotificationRow, error) {
+	row := q.db.QueryRow(ctx, getUserNotification, id)
+	var i GetUserNotificationRow
+	err := row.Scan(&i.ID, &i.UserID, &i.ReadAt)
+	return i, err
+}
+
+const listUserNotifications = `-- name: ListUserNotifications :many
+SELECT id, category, title, body, link, read_at, created_at
+FROM user_notifications
+WHERE user_id = $1 AND ($4::varchar IS NULL OR category = $4)
+ORDER BY created_at DESC, id DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListUserNotificationsParams struct {
+	UserID   int64
+	Limit    int32
+	Offset   int32
+	Category pgtype.Text
+}
+
+type ListUserNotificationsRow struct {
+	ID        int64
+	Category  string
+	Title     string
+	Body      string
+	Link      pgtype.Text
+	ReadAt    pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
+}
+
+func (q *Queries) ListUserNotifications(ctx context.Context, arg ListUserNotificationsParams) ([]ListUserNotificationsRow, error) {
+	rows, err := q.db.Query(ctx, listUserNotifications,
+		arg.UserID,
+		arg.Limit,
+		arg.Offset,
+		arg.Category,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListUserNotificationsRow{}
+	for rows.Next() {
+		var i ListUserNotificationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Category,
+			&i.Title,
+			&i.Body,
+			&i.Link,
+			&i.ReadAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markUserNotificationRead = `-- name: MarkUserNotificationRead :exec
+UPDATE user_notifications SET read_at = now(), updated_at = now() WHERE id = $1 AND read_at IS NULL
+`
+
+func (q *Queries) MarkUserNotificationRead(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, markUserNotificationRead, id)
+	return err
 }

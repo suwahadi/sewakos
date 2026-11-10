@@ -3,6 +3,7 @@ package server
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/suwahadi/sewakos/backend/internal/auth"
 	"github.com/suwahadi/sewakos/backend/internal/config"
+	"github.com/suwahadi/sewakos/backend/internal/otp"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres/dbgen"
 	"github.com/suwahadi/sewakos/backend/internal/response"
 )
@@ -39,15 +41,32 @@ func NewRouter(deps Deps) chi.Router {
 	queries := dbgen.New(deps.DB)
 	tokens := auth.NewService(queries)
 	login := auth.NewLoginService(queries, tokens)
+	register := auth.NewRegisterService(queries)
+	otpService := otp.NewService(deps.Redis, otp.LogSender{Logger: deps.Logger}, otp.Config{
+		CodeLength:  deps.Config.OTPLength,
+		TTL:         time.Duration(deps.Config.OTPTTLSeconds) * time.Second,
+		ResendAfter: time.Duration(deps.Config.OTPResendAfterSeconds) * time.Second,
+	})
+	otpDeps := auth.OTPDeps{
+		Service:      otpService,
+		Store:        queries,
+		Tokens:       tokens,
+		Redis:        deps.Redis,
+		MaxPerMinute: deps.Config.OTPMaxPerMinute,
+		DebugEcho:    deps.Config.OTPDebugEcho,
+	}
 
 	r.Route("/api", func(api chi.Router) {
 		api.Use(ClientCheck(deps.Config.APIClientID))
 		api.Use(RateLimitAPI(deps.Redis))
 
+		api.Post("/auth/register", auth.RegisterHandler(register, queries))
+		api.Post("/auth/otp/request", auth.OTPRequestHandler(otpDeps))
+		api.Post("/auth/otp/check", auth.OTPCheckHandler(otpDeps))
 		api.Post("/auth/login", auth.LoginHandler(login))
-		// Remaining endpoint groups (register/OTP, area, search, booking, owner,
-		// admin, ...) mount here in later tasks (B2+), each behind the auth/role
-		// middleware it needs.
+		// Remaining endpoint groups (account, notifications, area, search,
+		// booking, owner, admin, ...) mount here in later tasks (B2.2+), each
+		// behind the auth/role middleware it needs.
 	})
 
 	return r

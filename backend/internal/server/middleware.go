@@ -155,8 +155,9 @@ func clientIP(r *http.Request) string {
 
 // AuthUser is the authenticated user carried in context by RequireAuth/OptionalAuth.
 type AuthUser struct {
-	ID   int64
-	Role string
+	ID      int64
+	Role    string
+	TokenID int64
 }
 
 // UserFromContext returns the authenticated user, or (AuthUser{}, false) if the
@@ -214,7 +215,7 @@ func authenticate(r *http.Request, verifier Verifier) (AuthUser, error) {
 	if err != nil {
 		return AuthUser{}, err
 	}
-	return AuthUser{ID: verified.ID, Role: verified.Role}, nil
+	return AuthUser{ID: verified.ID, Role: verified.Role, TokenID: verified.TokenID}, nil
 }
 
 // RequireRole rejects any authenticated user whose role isn't in roles

@@ -13,3 +13,12 @@ WHERE at.id = $1;
 UPDATE access_tokens
 SET last_used_at = now(), updated_at = now()
 WHERE id = $1;
+
+-- name: DeleteAccessToken :exec
+DELETE FROM access_tokens WHERE id = $1;
+
+-- name: DeleteAllAccessTokensForUser :exec
+DELETE FROM access_tokens WHERE user_id = $1;
+
+-- name: DeleteOtherAccessTokensForUser :exec
+DELETE FROM access_tokens WHERE user_id = $1 AND id != $2;

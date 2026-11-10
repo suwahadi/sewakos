@@ -11,6 +11,86 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createUser = `-- name: CreateUser :one
+INSERT INTO users (name, phone, email, password, role)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id
+`
+
+type CreateUserParams struct {
+	Name     string
+	Phone    string
+	Email    pgtype.Text
+	Password pgtype.Text
+	Role     string
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, error) {
+	row := q.db.QueryRow(ctx, createUser,
+		arg.Name,
+		arg.Phone,
+		arg.Email,
+		arg.Password,
+		arg.Role,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const existsUserByEmail = `-- name: ExistsUserByEmail :one
+SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)
+`
+
+func (q *Queries) ExistsUserByEmail(ctx context.Context, email pgtype.Text) (bool, error) {
+	row := q.db.QueryRow(ctx, existsUserByEmail, email)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const existsUserByPhone = `-- name: ExistsUserByPhone :one
+SELECT EXISTS(SELECT 1 FROM users WHERE phone = $1)
+`
+
+func (q *Queries) ExistsUserByPhone(ctx context.Context, phone string) (bool, error) {
+	row := q.db.QueryRow(ctx, existsUserByPhone, phone)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, name, role, phone, email, phone_verified_at, suspended_at
+FROM users
+WHERE id = $1
+`
+
+type GetUserByIDRow struct {
+	ID              int64
+	Name            string
+	Role            string
+	Phone           string
+	Email           pgtype.Text
+	PhoneVerifiedAt pgtype.Timestamptz
+	SuspendedAt     pgtype.Timestamptz
+}
+
+func (q *Queries) GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error) {
+	row := q.db.QueryRow(ctx, getUserByID, id)
+	var i GetUserByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Role,
+		&i.Phone,
+		&i.Email,
+		&i.PhoneVerifiedAt,
+		&i.SuspendedAt,
+	)
+	return i, err
+}
+
 const getUserByPhone = `-- name: GetUserByPhone :one
 SELECT id, name, role, password, phone_verified_at, suspended_at
 FROM users
@@ -38,4 +118,91 @@ func (q *Queries) GetUserByPhone(ctx context.Context, phone string) (GetUserByPh
 		&i.SuspendedAt,
 	)
 	return i, err
+}
+
+const getUserPasswordByID = `-- name: GetUserPasswordByID :one
+SELECT password FROM users WHERE id = $1
+`
+
+func (q *Queries) GetUserPasswordByID(ctx context.Context, id int64) (pgtype.Text, error) {
+	row := q.db.QueryRow(ctx, getUserPasswordByID, id)
+	var password pgtype.Text
+	err := row.Scan(&password)
+	return password, err
+}
+
+const updateUserPassword = `-- name: UpdateUserPassword :exec
+UPDATE users
+SET password = $2, updated_at = now()
+WHERE id = $1
+`
+
+type UpdateUserPasswordParams struct {
+	ID       int64
+	Password pgtype.Text
+}
+
+func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
+	_, err := q.db.Exec(ctx, updateUserPassword, arg.ID, arg.Password)
+	return err
+}
+
+const updateUserPasswordAndVerify = `-- name: UpdateUserPasswordAndVerify :exec
+UPDATE users
+SET password = $2, phone_verified_at = now(), updated_at = now()
+WHERE id = $1
+`
+
+type UpdateUserPasswordAndVerifyParams struct {
+	ID       int64
+	Password pgtype.Text
+}
+
+func (q *Queries) UpdateUserPasswordAndVerify(ctx context.Context, arg UpdateUserPasswordAndVerifyParams) error {
+	_, err := q.db.Exec(ctx, updateUserPasswordAndVerify, arg.ID, arg.Password)
+	return err
+}
+
+const updateUserPhone = `-- name: UpdateUserPhone :exec
+UPDATE users
+SET phone = $2, updated_at = now()
+WHERE id = $1
+`
+
+type UpdateUserPhoneParams struct {
+	ID    int64
+	Phone string
+}
+
+func (q *Queries) UpdateUserPhone(ctx context.Context, arg UpdateUserPhoneParams) error {
+	_, err := q.db.Exec(ctx, updateUserPhone, arg.ID, arg.Phone)
+	return err
+}
+
+const updateUserProfile = `-- name: UpdateUserProfile :exec
+UPDATE users
+SET name = $2, email = $3, updated_at = now()
+WHERE id = $1
+`
+
+type UpdateUserProfileParams struct {
+	ID    int64
+	Name  string
+	Email pgtype.Text
+}
+
+func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error {
+	_, err := q.db.Exec(ctx, updateUserProfile, arg.ID, arg.Name, arg.Email)
+	return err
+}
+
+const verifyUserPhone = `-- name: VerifyUserPhone :exec
+UPDATE users
+SET phone_verified_at = now(), updated_at = now()
+WHERE id = $1
+`
+
+func (q *Queries) VerifyUserPhone(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, verifyUserPhone, id)
+	return err
 }

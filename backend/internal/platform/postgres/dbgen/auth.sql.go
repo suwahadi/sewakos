@@ -27,6 +27,38 @@ func (q *Queries) CreateAccessToken(ctx context.Context, arg CreateAccessTokenPa
 	return id, err
 }
 
+const deleteAccessToken = `-- name: DeleteAccessToken :exec
+DELETE FROM access_tokens WHERE id = $1
+`
+
+func (q *Queries) DeleteAccessToken(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, deleteAccessToken, id)
+	return err
+}
+
+const deleteAllAccessTokensForUser = `-- name: DeleteAllAccessTokensForUser :exec
+DELETE FROM access_tokens WHERE user_id = $1
+`
+
+func (q *Queries) DeleteAllAccessTokensForUser(ctx context.Context, userID int64) error {
+	_, err := q.db.Exec(ctx, deleteAllAccessTokensForUser, userID)
+	return err
+}
+
+const deleteOtherAccessTokensForUser = `-- name: DeleteOtherAccessTokensForUser :exec
+DELETE FROM access_tokens WHERE user_id = $1 AND id != $2
+`
+
+type DeleteOtherAccessTokensForUserParams struct {
+	UserID int64
+	ID     int64
+}
+
+func (q *Queries) DeleteOtherAccessTokensForUser(ctx context.Context, arg DeleteOtherAccessTokensForUserParams) error {
+	_, err := q.db.Exec(ctx, deleteOtherAccessTokensForUser, arg.UserID, arg.ID)
+	return err
+}
+
 const getAccessTokenForVerification = `-- name: GetAccessTokenForVerification :one
 SELECT at.id, at.token_hash, u.id AS user_id, u.role
 FROM access_tokens at
