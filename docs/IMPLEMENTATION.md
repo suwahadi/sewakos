@@ -68,7 +68,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 
 ## F0 — Fondasi frontend
 
-- [ ] **F0.1 Setup Next.js.** TypeScript strict, Tailwind v4 + `globals.css` dari DESIGN §3.10, Poppins, ESLint, Vitest,
+- [x] **F0.1 Setup Next.js.** TypeScript strict, Tailwind v4 + `globals.css` dari DESIGN §3.10, Poppins, ESLint, Vitest,
   Playwright, script wajib (DESIGN §2), `next/image` remote pattern dari env.
 - [ ] **F0.2 BFF & klien API.** Route handler yang meneruskan ke backend dengan `x-api-client` + token dari cookie
   httpOnly; login/logout set/hapus cookie; parser envelope; pemetaan error DESIGN §8.2; `lib/labels.ts` (§8.1) dan

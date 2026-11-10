@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #FFF4EF;
+  --color-brand-100: #FFE6DA;
+  --color-brand-200: #FFC9B0;
+  --color-brand-300: #FFA27C;
+  --color-brand-500: #F2592A;
+  --color-brand-600: #CC4316;
+  --color-brand-700: #B33812;
+  --color-brand-800: #8C2D10;
+
+  --color-neutral-0: #FFFFFF;
+  --color-neutral-50: #F7F7F8;
+  --color-neutral-100: #EFEFF1;
+  --color-neutral-200: #E2E2E6;
+  --color-neutral-300: #C9C9D0;
+  --color-neutral-400: #8E8E99;
+  --color-neutral-500: #70707C;
+  --color-neutral-600: #555561;
+  --color-neutral-700: #3D3D47;
+  --color-neutral-800: #26262E;
+  --color-neutral-900: #16161C;
+
+  --color-success: #1E7A4F;   --color-success-bg: #E8F6EF;  --color-success-on-dark: #5BD49A;
+  --color-warning: #9A4A06;   --color-warning-bg: #FFF6E5;  --color-warning-on-dark: #F5B841;
+  --color-danger: #B42318;    --color-danger-bg: #FDECEC;   --color-danger-on-dark: #FF8A80;
+  --color-info: #1A5FB8;      --color-info-bg: #EAF2FD;     --color-info-on-dark: #7CB4FF;
+  --color-star: #BF7A00;
+
+  --color-putra: #1A5FB8;   --color-putra-bg: #EAF2FD;
+  --color-putri: #B0174F;   --color-putri-bg: #FCE8F0;
+  --color-campur: #5B3FB8;  --color-campur-bg: #F0ECFC;
+
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Mobile sizes; desktop overrides live in the @layer base media query below. */
+  --text-display: 1.375rem;   --text-display--line-height: 1.875rem;
+  --text-title-lg: 1.125rem;  --text-title-lg--line-height: 1.625rem;
+  --text-title-md: 1rem;      --text-title-md--line-height: 1.5rem;
+  --text-title-sm: 0.875rem;  --text-title-sm--line-height: 1.25rem;
+  --text-body: 0.875rem;      --text-body--line-height: 1.375rem;
+  --text-caption: 0.75rem;    --text-caption--line-height: 1.125rem;
+  --text-label: 0.8125rem;    --text-label--line-height: 1.125rem;
+  --text-price: 1.125rem;     --text-price--line-height: 1.5rem;
+  --text-price-lg: 1.5rem;    --text-price-lg--line-height: 2rem;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-sheet: 20px;
+
+  --shadow-raised: 0 1px 2px rgb(22 22 28 / 0.06), 0 2px 8px rgb(22 22 28 / 0.06);
+  --shadow-overlay: 0 8px 24px rgb(22 22 28 / 0.14), 0 2px 6px rgb(22 22 28 / 0.08);
+  --shadow-sheet: 0 -4px 24px rgb(22 22 28 / 0.12);
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --animate-page-enter: page-enter 200ms var(--ease-standard) both;
+  --animate-toast-in: toast-in 200ms var(--ease-standard) both;
+  --animate-toast-out: toast-out 150ms var(--ease-exit) both;
+  --animate-shimmer: shimmer 1.4s linear infinite;
+
+  @keyframes page-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+  }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to   { opacity: 1; transform: none; }
+  }
+  @keyframes toast-out {
+    from { opacity: 1; transform: none; }
+    to   { opacity: 0; transform: translateY(4px) scale(0.98); }
+  }
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to   { background-position: -200% 0; }
+  }
+}
+
+@layer base {
+  html { color-scheme: light; -webkit-tap-highlight-color: transparent; }
+  body {
+    @apply bg-neutral-0 font-sans text-body text-neutral-900 antialiased;
+  }
+  :focus-visible { outline: 2px solid var(--color-brand-600); outline-offset: 2px; }
+
+  /* Tailwind v4 preflight resets button cursors to default; restore pointer for every clickable element. */
+  a[href], button, summary, label[for], select,
+  input[type="checkbox"], input[type="radio"], input[type="date"],
+  [role="button"], [role="tab"], [role="radio"], [role="switch"],
+  [role="option"], [role="menuitem"], [role="checkbox"] {
+    cursor: pointer;
+  }
+  :disabled, [aria-disabled="true"] { cursor: not-allowed; }
+
+  @media (min-width: 1024px) {
+    :root {
+      --text-display: 2rem;       --text-display--line-height: 2.5rem;
+      --text-title-lg: 1.5rem;    --text-title-lg--line-height: 2rem;
+      --text-title-md: 1.125rem;  --text-title-md--line-height: 1.625rem;
+      --text-body: 0.9375rem;     --text-body--line-height: 1.5rem;
+      --text-price: 1.25rem;      --text-price--line-height: 1.75rem;
+      --text-price-lg: 1.75rem;   --text-price-lg--line-height: 2.25rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@utility tabular { font-variant-numeric: tabular-nums; }

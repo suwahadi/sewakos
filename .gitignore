@@ -21,6 +21,7 @@ frontend/coverage/
 frontend/playwright-report/
 frontend/test-results/
 frontend/next-env.d.ts
+frontend/*.tsbuildinfo
 
 # OS / editors
 .DS_Store
