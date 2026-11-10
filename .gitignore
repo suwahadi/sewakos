@@ -1,0 +1,29 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Go
+backend/*.exe
+backend/*.test
+backend/*.out
+backend/vendor/
+backend/tmp/
+backend/bin/
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.turbo/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
+frontend/next-env.d.ts
+
+# OS / editors
+.DS_Store
+*.swp
+.idea/
+.vscode/
