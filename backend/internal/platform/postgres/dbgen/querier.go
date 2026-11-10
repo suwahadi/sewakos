@@ -30,6 +30,8 @@ type Querier interface {
 	GetAccessTokenForVerification(ctx context.Context, id int64) (GetAccessTokenForVerificationRow, error)
 	GetAreaByID(ctx context.Context, id int64) (GetAreaByIDRow, error)
 	GetListingProperty(ctx context.Context, id int64) (GetListingPropertyRow, error)
+	GetRoomForDraftPrice(ctx context.Context, id int64) (GetRoomForDraftPriceRow, error)
+	GetSetting(ctx context.Context, key string) ([]byte, error)
 	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
 	GetUserByPhone(ctx context.Context, phone string) (GetUserByPhoneRow, error)
 	GetUserNotification(ctx context.Context, id int64) (GetUserNotificationRow, error)

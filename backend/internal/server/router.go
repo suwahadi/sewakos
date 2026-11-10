@@ -15,6 +15,7 @@ import (
 	"github.com/suwahadi/sewakos/backend/internal/area"
 	"github.com/suwahadi/sewakos/backend/internal/auth"
 	"github.com/suwahadi/sewakos/backend/internal/authctx"
+	"github.com/suwahadi/sewakos/backend/internal/booking"
 	"github.com/suwahadi/sewakos/backend/internal/config"
 	"github.com/suwahadi/sewakos/backend/internal/listing"
 	"github.com/suwahadi/sewakos/backend/internal/notification"
@@ -22,6 +23,7 @@ import (
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres/dbgen"
 	"github.com/suwahadi/sewakos/backend/internal/response"
 	"github.com/suwahadi/sewakos/backend/internal/search"
+	"github.com/suwahadi/sewakos/backend/internal/settings"
 )
 
 // Deps are the shared dependencies every route handler may need.
@@ -77,6 +79,7 @@ func NewRouter(deps Deps) chi.Router {
 		StorageBaseURL: deps.Config.StoragePublicBaseURL,
 	}
 	listingDeps := listing.Deps{Store: queries, DB: deps.DB, StorageBaseURL: deps.Config.StoragePublicBaseURL}
+	bookingDeps := booking.Deps{Store: queries, DB: deps.DB, AdminFee: settings.NewAdminFeeCache(queries)}
 
 	r.Route("/api", func(api chi.Router) {
 		api.Use(ClientCheck(deps.Config.APIClientID))
@@ -94,6 +97,7 @@ func NewRouter(deps Deps) chi.Router {
 		api.Post("/listings/{property}/view", listing.ViewHandler(listingDeps))
 		api.Get("/listings/{property}/gallery", listing.GalleryHandler(listingDeps))
 		api.Get("/config/ab-test/{experiment}", abtest.Handler())
+		api.Get("/booking/draft-price/{room}", booking.DraftPriceHandler(bookingDeps))
 
 		api.Group(func(optional chi.Router) {
 			optional.Use(OptionalAuth(tokens))
