@@ -118,7 +118,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
   *Selesai bila:* test notifikasi duplikat, tidak berurutan, nominal beda, bayar setelah kunci lepas.
 - [x] **B4.6 Batal & refund.** API.md §5.6–5.7, SPEC §13.4–13.5.
 - [x] **B4.7 Invoice tenant.** API.md §12.1–12.3 (tanpa PDF dan tanpa perpanjangan).
-- [ ] **B4.8 Worker dasar.** SPEC §14: `expire_payments`, `expire_bookings`, `send_emails` (LogSender), advisory lock untuk job harian.
+- [x] **B4.8 Worker dasar.** SPEC §14: `expire_payments`, `expire_bookings`, `send_emails` (LogSender). Job harian & advisory lock-nya menunggu fitur owner/admin (lihat DECISIONS.md).
 
 ## F3 — Booking & pembayaran (UI)
 

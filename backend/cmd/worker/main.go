@@ -1,7 +1,3 @@
-// Command worker runs the scheduled jobs described in SPEC-GO.md §14. The job
-// list itself is implemented task by task (B4.8, B7.1, B8.x); this is the
-// skeleton the jobs attach to: config/DB/Redis setup, a 60-second tick, and a
-// clean stop on SIGTERM.
 package main
 
 import (
@@ -14,8 +10,12 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	"github.com/suwahadi/sewakos/backend/internal/booking"
 	"github.com/suwahadi/sewakos/backend/internal/config"
+	"github.com/suwahadi/sewakos/backend/internal/email"
+	"github.com/suwahadi/sewakos/backend/internal/midtrans"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres"
+	"github.com/suwahadi/sewakos/backend/internal/worker"
 )
 
 func main() {
@@ -49,6 +49,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	deps := worker.Deps{
+		Booking: booking.Deps{
+			DB:                pool,
+			Midtrans:          midtrans.NewHTTPClient(cfg.MidtransServerKey, cfg.MidtransIsProduction),
+			MidtransServerKey: cfg.MidtransServerKey,
+			AppPublicURL:      cfg.AppPublicURL,
+		},
+		Email: email.LogSender{Logger: logger},
+	}
+
 	logger.Info("worker started")
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
@@ -59,14 +69,7 @@ func main() {
 			logger.Info("worker shutting down")
 			return
 		case <-ticker.C:
-			runJobs(ctx, logger)
+			worker.RunJobs(ctx, deps, logger)
 		}
 	}
-}
-
-// runJobs will call each SPEC-GO.md §14 job in order once they're implemented
-// (B4.8 onward); it's a no-op until then.
-func runJobs(ctx context.Context, logger *slog.Logger) {
-	_ = ctx
-	_ = logger
 }

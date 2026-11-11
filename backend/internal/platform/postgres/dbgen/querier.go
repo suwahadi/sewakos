@@ -12,6 +12,7 @@ import (
 
 type Querier interface {
 	CancelBooking(ctx context.Context, id int64) error
+	CancelBookingBySystem(ctx context.Context, id int64) error
 	CountAreasBySlug(ctx context.Context, slug string) (int64, error)
 	CountSearchRooms(ctx context.Context, arg CountSearchRoomsParams) (CountSearchRoomsRow, error)
 	CountUnreadNotifications(ctx context.Context, userID int64) (int64, error)
@@ -69,6 +70,8 @@ type Querier interface {
 	ListListingRooms(ctx context.Context, propertyID int64) ([]ListListingRoomsRow, error)
 	ListUserNotifications(ctx context.Context, arg ListUserNotificationsParams) ([]ListUserNotificationsRow, error)
 	MarkBookingPaid(ctx context.Context, arg MarkBookingPaidParams) error
+	MarkEmailAttemptFailed(ctx context.Context, arg MarkEmailAttemptFailedParams) error
+	MarkEmailSent(ctx context.Context, id int64) error
 	MarkInvoicePaid(ctx context.Context, arg MarkInvoicePaidParams) error
 	MarkPaymentExpired(ctx context.Context, id int64) error
 	MarkPaymentFailure(ctx context.Context, id int64) error
@@ -84,6 +87,9 @@ type Querier interface {
 	SeedUpsertSetting(ctx context.Context, arg SeedUpsertSettingParams) error
 	SelectBookingForCancel(ctx context.Context, id int64) (SelectBookingForCancelRow, error)
 	SelectBookingForCheckout(ctx context.Context, id int64) (SelectBookingForCheckoutRow, error)
+	SelectDueEmailOutbox(ctx context.Context) ([]SelectDueEmailOutboxRow, error)
+	SelectExpiredBookingIDsWithoutPendingPayment(ctx context.Context) ([]int64, error)
+	SelectExpiredPendingPaymentOrderIDs(ctx context.Context) ([]string, error)
 	SelectInvoiceForCheckout(ctx context.Context, id int64) (SelectInvoiceForCheckoutRow, error)
 	SetBookingStockHeld(ctx context.Context, arg SetBookingStockHeldParams) error
 	SetInvoiceNumber(ctx context.Context, arg SetInvoiceNumberParams) error
