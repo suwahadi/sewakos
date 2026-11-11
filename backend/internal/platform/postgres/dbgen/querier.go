@@ -121,6 +121,7 @@ type Querier interface {
 	ListRoomPhotos(ctx context.Context, roomIds []int64) ([]ListRoomPhotosRow, error)
 	ListUserNotifications(ctx context.Context, arg ListUserNotificationsParams) ([]ListUserNotificationsRow, error)
 	LockBookingForCompletion(ctx context.Context, id int64) (LockBookingForCompletionRow, error)
+	LockBookingForDepositReturn(ctx context.Context, arg LockBookingForDepositReturnParams) (LockBookingForDepositReturnRow, error)
 	LockBookingForExtend(ctx context.Context, id int64) (LockBookingForExtendRow, error)
 	LockBookingForRenewal(ctx context.Context, arg LockBookingForRenewalParams) (LockBookingForRenewalRow, error)
 	LockOverdueRenewal(ctx context.Context, id int64) (LockOverdueRenewalRow, error)
@@ -131,6 +132,7 @@ type Querier interface {
 	LockPaidBooking(ctx context.Context, arg LockPaidBookingParams) (LockPaidBookingRow, error)
 	LockVoidableExtension(ctx context.Context, id int64) (LockVoidableExtensionRow, error)
 	MarkBookingPaid(ctx context.Context, arg MarkBookingPaidParams) error
+	MarkDepositReturned(ctx context.Context, arg MarkDepositReturnedParams) error
 	MarkEmailAttemptFailed(ctx context.Context, arg MarkEmailAttemptFailedParams) error
 	MarkEmailSent(ctx context.Context, id int64) error
 	MarkInvoicePaid(ctx context.Context, arg MarkInvoicePaidParams) error

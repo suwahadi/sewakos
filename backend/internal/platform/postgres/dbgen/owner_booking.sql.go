@@ -122,6 +122,43 @@ func (q *Queries) ListOwnerBookings(ctx context.Context, arg ListOwnerBookingsPa
 	return items, nil
 }
 
+const lockBookingForDepositReturn = `-- name: LockBookingForDepositReturn :one
+SELECT b.id, b.status, b.tenant_id, b.deposit, b.deposit_returned_at, p.owner_id
+FROM bookings b
+JOIN rooms r ON r.id = b.room_id
+JOIN properties p ON p.id = r.property_id
+WHERE b.id = $1 AND p.owner_id = $2
+FOR UPDATE OF b
+`
+
+type LockBookingForDepositReturnParams struct {
+	ID      int64
+	OwnerID int64
+}
+
+type LockBookingForDepositReturnRow struct {
+	ID                int64
+	Status            string
+	TenantID          int64
+	Deposit           int64
+	DepositReturnedAt pgtype.Timestamptz
+	OwnerID           int64
+}
+
+func (q *Queries) LockBookingForDepositReturn(ctx context.Context, arg LockBookingForDepositReturnParams) (LockBookingForDepositReturnRow, error) {
+	row := q.db.QueryRow(ctx, lockBookingForDepositReturn, arg.ID, arg.OwnerID)
+	var i LockBookingForDepositReturnRow
+	err := row.Scan(
+		&i.ID,
+		&i.Status,
+		&i.TenantID,
+		&i.Deposit,
+		&i.DepositReturnedAt,
+		&i.OwnerID,
+	)
+	return i, err
+}
+
 const lockPaidBooking = `-- name: LockPaidBooking :one
 SELECT
   b.id, b.status, b.tenant_id, b.room_id, b.stock_held, b.start_date, b.owner_deadline_at,
@@ -180,6 +217,21 @@ func (q *Queries) LockPaidBooking(ctx context.Context, arg LockPaidBookingParams
 		&i.InvoiceAdminFee,
 	)
 	return i, err
+}
+
+const markDepositReturned = `-- name: MarkDepositReturned :exec
+UPDATE bookings SET deposit_returned_at = now(), deposit_return_note = $1, updated_at = now()
+WHERE id = $2
+`
+
+type MarkDepositReturnedParams struct {
+	Note pgtype.Text
+	ID   int64
+}
+
+func (q *Queries) MarkDepositReturned(ctx context.Context, arg MarkDepositReturnedParams) error {
+	_, err := q.db.Exec(ctx, markDepositReturned, arg.Note, arg.ID)
+	return err
 }
 
 const markOwnerReminderSent = `-- name: MarkOwnerReminderSent :one

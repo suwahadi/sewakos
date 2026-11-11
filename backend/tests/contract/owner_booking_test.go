@@ -214,6 +214,51 @@ func TestOwnerBookingVisibilityAndDeadline(t *testing.T) {
 	}
 }
 
+func TestOwnerBookingDepositReturned(t *testing.T) {
+	t.Setenv("OTP_DEBUG_ECHO", "true")
+	srv, pool := newTestServerAndPool(t)
+	_, ownerToken, roomID, tenantToken, _, _ := newOwnerBookingFixture(t, srv, pool)
+	bookingID := submitBookingFixture(t, srv, tenantToken, roomID)
+	markBookingPaid(t, pool, bookingID, roomID, 24*time.Hour)
+	ctx := context.Background()
+	depositPath := fmt.Sprintf("/api/owner/bookings/%d/deposit-returned", bookingID)
+
+	resp, body := bookingAuthedRequest(t, srv, http.MethodPost, depositPath, ownerToken, "")
+	if resp.StatusCode != http.StatusBadRequest || !strings.Contains(string(body), "Pengembalian deposit tidak dapat dicatat.") {
+		t.Fatalf("before completed: status = %d, body = %s", resp.StatusCode, body)
+	}
+
+	if _, err := pool.Exec(ctx, `UPDATE bookings SET status = 'completed', ended_at = now() WHERE id = $1`, bookingID); err != nil {
+		t.Fatal(err)
+	}
+
+	resp, body = bookingAuthedRequest(t, srv, http.MethodPost, depositPath, ownerToken, `{"note":"Transfer BCA 1 Mar 2027"}`)
+	if resp.StatusCode != http.StatusOK || !strings.Contains(string(body), "Pengembalian deposit dicatat.") ||
+		!strings.Contains(string(body), `"deposit_returned_at":"`) {
+		t.Fatalf("deposit-returned: status = %d, body = %s", resp.StatusCode, body)
+	}
+
+	var amount int64
+	var description string
+	if err := pool.QueryRow(ctx, `SELECT amount, description FROM ledger_entries WHERE booking_id = $1 AND type = 'deposit_returned'`, bookingID).
+		Scan(&amount, &description); err != nil {
+		t.Fatalf("load ledger entry: %v", err)
+	}
+	if amount != 1500000 {
+		t.Errorf("deposit_returned ledger amount = %d, want 1500000", amount)
+	}
+
+	resp, body = bookingAuthedRequest(t, srv, http.MethodPost, depositPath, ownerToken, "")
+	if resp.StatusCode != http.StatusBadRequest || !strings.Contains(string(body), "Pengembalian deposit tidak dapat dicatat.") {
+		t.Errorf("second deposit-returned: status = %d, body = %s", resp.StatusCode, body)
+	}
+
+	_, otherOwnerToken := newOwner(t, srv, pool)
+	if resp, _ := bookingAuthedRequest(t, srv, http.MethodPost, depositPath, otherOwnerToken, ""); resp.StatusCode != http.StatusNotFound {
+		t.Errorf("other owner: status = %d, want 404", resp.StatusCode)
+	}
+}
+
 func TestOwnerTimeoutAndReminderJobs(t *testing.T) {
 	t.Setenv("OTP_DEBUG_ECHO", "true")
 	srv, pool := newTestServerAndPool(t)

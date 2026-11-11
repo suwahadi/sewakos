@@ -211,6 +211,7 @@ func NewRouter(deps Deps) chi.Router {
 				ownerRoutes.Get("/owner/bookings/{booking}", withAuthedUser(ownerDeps, owner.GetBookingHandler))
 				ownerRoutes.Post("/owner/bookings/{booking}/approve", withAuthedUser(ownerDeps, owner.ApproveBookingHandler))
 				ownerRoutes.Post("/owner/bookings/{booking}/reject", withAuthedUser(ownerDeps, owner.RejectBookingHandler))
+				ownerRoutes.Post("/owner/bookings/{booking}/deposit-returned", withAuthedUser(ownerDeps, owner.DepositReturnedHandler))
 				ownerRoutes.Get("/owner/invoices", withAuthedUser(ownerDeps, owner.ListInvoicesHandler))
 				ownerRoutes.Get("/owner/bank-account", withAuthedUser(ownerDeps, owner.GetBankAccountHandler))
 				ownerRoutes.Put("/owner/bank-account", withAuthedUser(ownerDeps, owner.PutBankAccountHandler))

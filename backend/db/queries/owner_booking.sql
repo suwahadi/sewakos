@@ -30,6 +30,18 @@ WHERE b.id = sqlc.arg(id) AND b.paid_at IS NOT NULL
   AND (sqlc.narg(owner_id)::bigint IS NULL OR p.owner_id = sqlc.narg(owner_id))
 FOR UPDATE OF b;
 
+-- name: LockBookingForDepositReturn :one
+SELECT b.id, b.status, b.tenant_id, b.deposit, b.deposit_returned_at, p.owner_id
+FROM bookings b
+JOIN rooms r ON r.id = b.room_id
+JOIN properties p ON p.id = r.property_id
+WHERE b.id = sqlc.arg(id) AND p.owner_id = sqlc.arg(owner_id)
+FOR UPDATE OF b;
+
+-- name: MarkDepositReturned :exec
+UPDATE bookings SET deposit_returned_at = now(), deposit_return_note = sqlc.narg(note), updated_at = now()
+WHERE id = sqlc.arg(id);
+
 -- name: ApproveBooking :exec
 UPDATE bookings SET status = 'approved', responded_at = now(), updated_at = now() WHERE id = sqlc.arg(id);
 
