@@ -5,7 +5,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"log/slog"
+	"net"
 	"net/http"
+	"net/netip"
 	"strconv"
 	"strings"
 	"time"
@@ -49,6 +51,22 @@ func RequestIDFromContext(ctx context.Context) string {
 
 // Recoverer turns a panic in a later handler into a 500 envelope. The panic
 // detail is logged, never returned to the client (SPEC-GO.md §5.3).
+func SecurityHeaders(hsts bool) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h := w.Header()
+			h.Set("X-Content-Type-Options", "nosniff")
+			h.Set("X-Frame-Options", "DENY")
+			h.Set("Referrer-Policy", "no-referrer")
+			h.Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+			if hsts {
+				h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 func Recoverer(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -141,16 +159,45 @@ func RateLimitAPI(rdb *redis.Client) func(http.Handler) http.Handler {
 }
 
 func clientIP(r *http.Request) string {
-	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
-		if parts := strings.SplitN(fwd, ",", 2); len(parts) > 0 {
-			return strings.TrimSpace(parts[0])
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
+}
+
+func isTrustedProxy(addr netip.Addr, trusted []netip.Prefix) bool {
+	for _, prefix := range trusted {
+		if prefix.Contains(addr.Unmap()) {
+			return true
 		}
 	}
-	host := r.RemoteAddr
-	if i := strings.LastIndex(host, ":"); i != -1 {
-		host = host[:i]
+	return false
+}
+
+// X-Forwarded-For is client-controlled, so it is only read when the direct peer is a trusted proxy, and the
+// right-most hop that is not itself a trusted proxy is taken: entries left of it may have been forged.
+func ForwardedClientIP(trusted []netip.Prefix) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			peer, err := netip.ParseAddr(clientIP(r))
+			if err != nil || !isTrustedProxy(peer, trusted) {
+				next.ServeHTTP(w, r)
+				return
+			}
+			hops := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
+			for i := len(hops) - 1; i >= 0; i-- {
+				hop, err := netip.ParseAddr(strings.TrimSpace(hops[i]))
+				if err != nil {
+					break
+				}
+				if !isTrustedProxy(hop, trusted) {
+					r.RemoteAddr = net.JoinHostPort(hop.Unmap().String(), "0")
+					break
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
 	}
-	return host
 }
 
 // AuthUser is the authenticated user carried in context by RequireAuth/OptionalAuth.

@@ -3,6 +3,7 @@ package config
 
 import (
 	"fmt"
+	"net/netip"
 	"os"
 	"strconv"
 	"strings"
@@ -16,6 +17,7 @@ type Config struct {
 
 	APIClientID        string
 	CORSAllowedOrigins []string
+	TrustedProxies     []netip.Prefix
 
 	OTPLength             int
 	OTPTTLSeconds         int
@@ -158,6 +160,9 @@ func Load() (Config, error) {
 	if cfg.SMTPPort, err = getInt("SMTP_PORT", 0); err != nil {
 		return Config{}, err
 	}
+	if cfg.TrustedProxies, err = getPrefixes("TRUSTED_PROXIES"); err != nil {
+		return Config{}, err
+	}
 
 	// OTP_DEBUG_ECHO must never leak real codes in production (API.md §2.2, SPEC-GO.md §3).
 	if cfg.AppEnv == "production" && cfg.OTPDebugEcho {
@@ -224,6 +229,22 @@ func getBool(key string, def bool) (bool, error) {
 		return false, fmt.Errorf("parse %s=%q: %w", key, v, err)
 	}
 	return b, nil
+}
+
+func getPrefixes(key string) ([]netip.Prefix, error) {
+	var prefixes []netip.Prefix
+	for _, entry := range splitNonEmpty(os.Getenv(key)) {
+		if addr, err := netip.ParseAddr(entry); err == nil {
+			prefixes = append(prefixes, netip.PrefixFrom(addr, addr.BitLen()))
+			continue
+		}
+		prefix, err := netip.ParsePrefix(entry)
+		if err != nil {
+			return nil, fmt.Errorf("%s: invalid IP or CIDR %q", key, entry)
+		}
+		prefixes = append(prefixes, prefix.Masked())
+	}
+	return prefixes, nil
 }
 
 func splitNonEmpty(s string) []string {

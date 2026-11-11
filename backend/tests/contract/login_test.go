@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"os"
 	"regexp"
 	"testing"
@@ -67,6 +68,7 @@ func newTestServerAndPoolWithMidtrans(t *testing.T, midtransClient midtrans.Clie
 	if err != nil {
 		t.Fatalf("load config: %v", err)
 	}
+	cfg.TrustedProxies = []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8"), netip.MustParsePrefix("::1/128")}
 
 	deps := server.Deps{
 		Config:   cfg,

@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"os"
 	"strings"
 	"testing"
@@ -32,6 +33,46 @@ func TestRequestIDSetsHeaderAndContext(t *testing.T) {
 	header := w.Header().Get("X-Request-Id")
 	if header == "" || header != sawID {
 		t.Errorf("header=%q context=%q, want equal and non-empty", header, sawID)
+	}
+}
+
+func TestSecurityHeaders(t *testing.T) {
+	for _, hsts := range []bool{false, true} {
+		w := httptest.NewRecorder()
+		SecurityHeaders(hsts)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})).ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/", nil))
+		if w.Header().Get("X-Content-Type-Options") != "nosniff" || w.Header().Get("X-Frame-Options") != "DENY" ||
+			w.Header().Get("Content-Security-Policy") == "" || w.Header().Get("Referrer-Policy") != "no-referrer" {
+			t.Errorf("hsts=%v: headers = %v", hsts, w.Header())
+		}
+		if got := w.Header().Get("Strict-Transport-Security") != ""; got != hsts {
+			t.Errorf("hsts=%v: Strict-Transport-Security present = %v", hsts, got)
+		}
+	}
+}
+
+func TestForwardedClientIP(t *testing.T) {
+	trusted := []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")}
+	cases := []struct {
+		name, remote, forwarded, want string
+	}{
+		{"untrusted peer ignores header", "203.0.113.9:4000", "198.51.100.1", "203.0.113.9"},
+		{"trusted peer without header keeps peer", "10.0.0.2:4000", "", "10.0.0.2"},
+		{"trusted peer uses right-most untrusted hop", "10.0.0.2:4000", "198.51.100.66, 198.51.100.7, 10.0.0.3", "198.51.100.7"},
+		{"malformed hop falls back to peer", "10.0.0.2:4000", "198.51.100.7, bogus", "10.0.0.2"},
+		{"ipv6 client", "10.0.0.2:4000", "2001:db8::1", "2001:db8::1"},
+	}
+	for _, tc := range cases {
+		var got string
+		h := ForwardedClientIP(trusted)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) { got = clientIP(r) }))
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		r.RemoteAddr = tc.remote
+		if tc.forwarded != "" {
+			r.Header.Set("X-Forwarded-For", tc.forwarded)
+		}
+		h.ServeHTTP(httptest.NewRecorder(), r)
+		if got != tc.want {
+			t.Errorf("%s: client IP = %q, want %q", tc.name, got, tc.want)
+		}
 	}
 }
 

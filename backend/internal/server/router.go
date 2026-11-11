@@ -50,6 +50,8 @@ func NewRouter(deps Deps) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(RequestID)
+	r.Use(SecurityHeaders(deps.Config.AppEnv == "production"))
+	r.Use(ForwardedClientIP(deps.Config.TrustedProxies))
 	r.Use(Recoverer(deps.Logger))
 	r.Use(CORS(deps.Config.CORSAllowedOrigins))
 

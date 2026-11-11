@@ -1,3 +1,4 @@
+import { headers as requestHeaders } from "next/headers";
 import { getSessionToken } from "@/lib/auth/session";
 import { networkFailureResult, parseEnvelope, type ApiResult } from "./envelope";
 
@@ -42,6 +43,8 @@ export async function apiFetch<T>(path: string, options: ApiRequestOptions = {})
 
   const bearer = token ?? (auth ? await getSessionToken() : null);
   if (bearer) headers.Authorization = `Bearer ${bearer}`;
+  const forwardedFor = (await requestHeaders()).get("x-forwarded-for");
+  if (forwardedFor) headers["X-Forwarded-For"] = forwardedFor;
 
   let response: Response;
   try {
