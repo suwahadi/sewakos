@@ -90,9 +90,13 @@ func NewRouter(deps Deps) chi.Router {
 	bookingDeps := booking.Deps{
 		Store: queries, DB: deps.DB, AdminFee: settings.NewAdminFeeCache(queries),
 		Midtrans:             midtransClient,
+		MidtransServerKey:    deps.Config.MidtransServerKey,
 		PaymentExpiryMinutes: deps.Config.PaymentExpiryMinutes,
 		MidtransFinishURL:    deps.Config.MidtransFinishURL,
+		AppPublicURL:         deps.Config.AppPublicURL,
 	}
+
+	r.Post("/api/payments/midtrans/notification", booking.WebhookHandler(bookingDeps))
 
 	r.Route("/api", func(api chi.Router) {
 		api.Use(ClientCheck(deps.Config.APIClientID))

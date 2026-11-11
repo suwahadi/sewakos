@@ -28,6 +28,8 @@ type Querier interface {
 	ExistsFavorite(ctx context.Context, arg ExistsFavoriteParams) (bool, error)
 	ExistsUserByEmail(ctx context.Context, email pgtype.Text) (bool, error)
 	ExistsUserByPhone(ctx context.Context, phone string) (bool, error)
+	ExtendBookingDuration(ctx context.Context, arg ExtendBookingDurationParams) error
+	FinalizePayment(ctx context.Context, arg FinalizePaymentParams) error
 	GetAccessTokenForVerification(ctx context.Context, id int64) (GetAccessTokenForVerificationRow, error)
 	GetActivePaymentForInvoice(ctx context.Context, invoiceID int64) (GetActivePaymentForInvoiceRow, error)
 	GetAreaByID(ctx context.Context, id int64) (GetAreaByIDRow, error)
@@ -35,6 +37,8 @@ type Querier interface {
 	GetInitialInvoiceForBooking(ctx context.Context, bookingID int64) (GetInitialInvoiceForBookingRow, error)
 	GetLatestPaymentForInvoice(ctx context.Context, invoiceID int64) (GetLatestPaymentForInvoiceRow, error)
 	GetListingProperty(ctx context.Context, id int64) (GetListingPropertyRow, error)
+	GetPaymentByOrderID(ctx context.Context, orderID string) (GetPaymentByOrderIDRow, error)
+	GetPaymentForWebhook(ctx context.Context, orderID string) (GetPaymentForWebhookRow, error)
 	GetRefundForInvoice(ctx context.Context, invoiceID int64) (GetRefundForInvoiceRow, error)
 	GetRoomForDraftPrice(ctx context.Context, id int64) (GetRoomForDraftPriceRow, error)
 	GetRoomForSubmit(ctx context.Context, id int64) (GetRoomForSubmitRow, error)
@@ -48,7 +52,9 @@ type Querier interface {
 	InsertBooking(ctx context.Context, arg InsertBookingParams) (InsertBookingRow, error)
 	InsertInvoice(ctx context.Context, arg InsertInvoiceParams) (int64, error)
 	InsertLedgerEntry(ctx context.Context, arg InsertLedgerEntryParams) (int64, error)
+	InsertPayout(ctx context.Context, arg InsertPayoutParams) (int64, error)
 	InsertPendingPayment(ctx context.Context, arg InsertPendingPaymentParams) (int64, error)
+	InsertRefund(ctx context.Context, arg InsertRefundParams) (int64, error)
 	IsPropertyListedForRoom(ctx context.Context, roomID int64) (bool, error)
 	ListAreasByType(ctx context.Context, arg ListAreasByTypeParams) ([]ListAreasByTypeRow, error)
 	ListBookingsForUser(ctx context.Context, arg ListBookingsForUserParams) ([]ListBookingsForUserRow, error)
@@ -57,8 +63,11 @@ type Querier interface {
 	ListListingRoomPhotos(ctx context.Context, propertyID int64) ([]ListListingRoomPhotosRow, error)
 	ListListingRooms(ctx context.Context, propertyID int64) ([]ListListingRoomsRow, error)
 	ListUserNotifications(ctx context.Context, arg ListUserNotificationsParams) ([]ListUserNotificationsRow, error)
+	MarkBookingPaid(ctx context.Context, arg MarkBookingPaidParams) error
+	MarkInvoicePaid(ctx context.Context, arg MarkInvoicePaidParams) error
 	MarkPaymentFailure(ctx context.Context, id int64) error
 	MarkUserNotificationRead(ctx context.Context, id int64) error
+	RejectBookingForStockUnavailable(ctx context.Context, arg RejectBookingForStockUnavailableParams) error
 	ReleaseRoomLock(ctx context.Context, id int64) error
 	SearchRooms(ctx context.Context, arg SearchRoomsParams) ([]SearchRoomsRow, error)
 	SeedCreateArea(ctx context.Context, arg SeedCreateAreaParams) (int64, error)

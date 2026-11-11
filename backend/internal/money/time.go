@@ -64,3 +64,7 @@ func FormatTimestamp(t time.Time) string {
 func FormatExpiresAt(t time.Time) string {
 	return t.UTC().Format("2006-01-02T15:04:05-07:00")
 }
+
+func FormatHumanWIB(t time.Time) string {
+	return t.In(WIB).Format("2 Jan 2006 15:04") + " WIB"
+}

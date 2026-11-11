@@ -114,7 +114,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 - [x] **B4.3 Klien Midtrans.** SPEC §13.1 di balik interface + mock untuk test.
 - [x] **B4.4 Checkout.** SPEC §13.2 untuk booking & invoice. *Selesai bila:* test konkurensi — dua checkout bersamaan
   untuk kamar terakhir, hanya satu berhasil; checkout ulang mengembalikan transaksi aktif yang sama.
-- [ ] **B4.5 Webhook.** SPEC §13.3: signature, cek status, `ApplyPaymentStatus` semua baris tabel, ledger.
+- [x] **B4.5 Webhook.** SPEC §13.3: signature, cek status, `ApplyPaymentStatus` semua baris tabel, ledger.
   *Selesai bila:* test notifikasi duplikat, tidak berurutan, nominal beda, bayar setelah kunci lepas.
 - [ ] **B4.6 Batal & refund.** API.md §5.6–5.7, SPEC §13.4–13.5.
 - [ ] **B4.7 Invoice tenant.** API.md §12.1–12.3 (tanpa PDF dan tanpa perpanjangan).
