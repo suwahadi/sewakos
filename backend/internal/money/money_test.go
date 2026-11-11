@@ -88,3 +88,20 @@ func TestFormatExpiresAt(t *testing.T) {
 		t.Errorf("FormatExpiresAt(%v) = %q, want %q", in, got, want)
 	}
 }
+
+func TestFormatHumanWIBUsesIndonesianMonths(t *testing.T) {
+	cases := map[time.Time]string{
+		time.Date(2026, time.November, 11, 10, 5, 0, 0, time.UTC): "11 Nov 2026 17:05 WIB",
+		time.Date(2026, time.December, 31, 18, 0, 0, 0, time.UTC): "1 Jan 2027 01:00 WIB",
+		time.Date(2027, time.August, 3, 0, 0, 0, 0, WIB):          "3 Agu 2027 00:00 WIB",
+		time.Date(2027, time.May, 20, 9, 30, 0, 0, WIB):           "20 Mei 2027 09:30 WIB",
+	}
+	for in, want := range cases {
+		if got := FormatHumanWIB(in); got != want {
+			t.Errorf("FormatHumanWIB(%v) = %q, want %q", in, got, want)
+		}
+	}
+	if got := FormatDateWIB(time.Date(2026, time.December, 1, 0, 0, 0, 0, time.UTC)); got != "1 Des 2026" {
+		t.Errorf("FormatDateWIB = %q, want 1 Des 2026", got)
+	}
+}

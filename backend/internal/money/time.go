@@ -1,6 +1,9 @@
 package money
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // WIB is Indonesia Western Time (UTC+7). Indonesia has never observed daylight
 // saving, so a fixed offset is used instead of time.LoadLocation("Asia/Jakarta") —
@@ -65,6 +68,13 @@ func FormatExpiresAt(t time.Time) string {
 	return t.UTC().Format("2006-01-02T15:04:05-07:00")
 }
 
+var shortMonthsID = [...]string{"Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"}
+
+func FormatDateWIB(t time.Time) string {
+	wib := t.In(WIB)
+	return fmt.Sprintf("%d %s %d", wib.Day(), shortMonthsID[wib.Month()-1], wib.Year())
+}
+
 func FormatHumanWIB(t time.Time) string {
-	return t.In(WIB).Format("2 Jan 2006 15:04") + " WIB"
+	return FormatDateWIB(t) + " " + t.In(WIB).Format("15:04") + " WIB"
 }

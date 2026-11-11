@@ -321,6 +321,16 @@ func (f *FieldValidator) Unique(taken bool) *FieldValidator {
 	return f
 }
 
+func (f *FieldValidator) Distinct(duplicate bool) *FieldValidator {
+	if f.skip() {
+		return f
+	}
+	if duplicate {
+		f.fail("The :attribute field has a duplicate value.", false)
+	}
+	return f
+}
+
 const dateLayout = "2006-01-02"
 
 // Date enforces "YYYY-MM-DD" and returns the parsed date in the WIB zone so

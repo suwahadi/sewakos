@@ -230,3 +230,11 @@ func TestValidPassesWithNoErrors(t *testing.T) {
 		t.Errorf("expected valid, got errors=%v", v.Errors())
 	}
 }
+
+func TestDistinctNamesTheArrayItem(t *testing.T) {
+	v := New()
+	v.Field("monthly_duration_options.1", 3.0).Integer().Distinct(true)
+	if got := firstMsg(t, v, "monthly_duration_options.1"); got != "The monthly duration options.1 field has a duplicate value." {
+		t.Errorf("got %q", got)
+	}
+}

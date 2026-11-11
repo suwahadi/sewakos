@@ -162,11 +162,7 @@ func AddPhotoHandler(deps Deps, user authctx.User) http.HandlerFunc {
 		}
 
 		response.Success(w, http.StatusOK, "Foto ditambahkan.", map[string]any{
-			"photo": map[string]any{
-				"id": inserted.ID, "url": photoURL(deps.StorageBaseURL, largeKey),
-				"thumbnail_url": photoURL(deps.StorageBaseURL, thumbKey), "caption": nullableText(photo.Caption),
-				"room_id": nullableInt8(photo.RoomID), "sort_order": inserted.SortOrder,
-			},
+			"photo": photoBody(deps.StorageBaseURL, inserted.ID, largeKey, thumbKey, photo.Caption, photo.RoomID, inserted.SortOrder),
 		})
 	}
 }

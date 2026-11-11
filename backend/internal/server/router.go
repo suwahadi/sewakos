@@ -102,6 +102,7 @@ func NewRouter(deps Deps) chi.Router {
 	ownerDeps := owner.Deps{
 		Store: queries, DB: deps.DB, Storage: deps.Storage, Images: deps.Images,
 		StorageBaseURL: deps.Config.StoragePublicBaseURL, UploadMaxBytes: deps.Config.UploadMaxBytes,
+		AppPublicURL: deps.Config.AppPublicURL,
 	}
 
 	r.Post("/api/payments/midtrans/notification", booking.WebhookHandler(bookingDeps))
@@ -159,6 +160,19 @@ func NewRouter(deps Deps) chi.Router {
 
 			authed.Group(func(ownerRoutes chi.Router) {
 				ownerRoutes.Use(RequireRole("owner"))
+				ownerRoutes.Get("/owner/properties", withAuthedUser(ownerDeps, owner.ListPropertiesHandler))
+				ownerRoutes.Post("/owner/properties", withAuthedUser(ownerDeps, owner.CreatePropertyHandler))
+				ownerRoutes.Get("/owner/properties/{property}", withAuthedUser(ownerDeps, owner.GetPropertyHandler))
+				ownerRoutes.Patch("/owner/properties/{property}", withAuthedUser(ownerDeps, owner.UpdatePropertyHandler))
+				ownerRoutes.Post("/owner/properties/{property}/submit", withAuthedUser(ownerDeps, owner.SubmitPropertyHandler))
+				ownerRoutes.Get("/owner/properties/{property}/rooms", withAuthedUser(ownerDeps, owner.ListRoomsHandler))
+				ownerRoutes.Post("/owner/properties/{property}/rooms", withAuthedUser(ownerDeps, owner.CreateRoomHandler))
+				ownerRoutes.Patch("/owner/rooms/{room}", withAuthedUser(ownerDeps, owner.UpdateRoomHandler))
+				ownerRoutes.Delete("/owner/rooms/{room}", withAuthedUser(ownerDeps, owner.DeleteRoomHandler))
+				ownerRoutes.Get("/owner/bookings", withAuthedUser(ownerDeps, owner.ListBookingsHandler))
+				ownerRoutes.Get("/owner/bookings/{booking}", withAuthedUser(ownerDeps, owner.GetBookingHandler))
+				ownerRoutes.Post("/owner/bookings/{booking}/approve", withAuthedUser(ownerDeps, owner.ApproveBookingHandler))
+				ownerRoutes.Post("/owner/bookings/{booking}/reject", withAuthedUser(ownerDeps, owner.RejectBookingHandler))
 				ownerRoutes.Post("/owner/uploads/presign", withAuthedUser(ownerDeps, owner.PresignHandler))
 				ownerRoutes.Post("/owner/properties/{property}/photos", withAuthedUser(ownerDeps, owner.AddPhotoHandler))
 				ownerRoutes.Patch("/owner/photos/{photo}", withAuthedUser(ownerDeps, owner.UpdatePhotoHandler))

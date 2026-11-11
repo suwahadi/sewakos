@@ -43,6 +43,7 @@ type Deps struct {
 	Images         ImageProcessor
 	StorageBaseURL string
 	UploadMaxBytes int64
+	AppPublicURL   string
 }
 
 func photoURL(base, key string) string {

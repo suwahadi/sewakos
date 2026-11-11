@@ -68,6 +68,8 @@ func main() {
 		},
 		Email:   email.LogSender{Logger: logger},
 		Storage: objectStore,
+
+		OwnerReminderBeforeMinutes: cfg.OwnerReminderBeforeMinutes,
 	}
 	scheduler := &worker.Scheduler{}
 

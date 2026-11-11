@@ -134,9 +134,9 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 - [x] **B5.1 Storage & media.** Klien MinIO/S3, presign, pengolahan gambar SPEC §18 (libvips), foto API-OWNER.md §4,
   job `purge_storage`, `cleanup_uploads`, `reconcile_storage`. *Selesai bila:* test JPEG/PNG/WebP → dua WebP benar,
   EXIF/GPS hilang, file rusak 400, retry hapus saat storage gagal.
-- [ ] **B5.2 Properti.** API-OWNER.md §2 (moderasi, slug, ajukan ulang).
-- [ ] **B5.3 Kamar.** API-OWNER.md §3 (`held`, `occupied`, `monthly_duration_options`).
-- [ ] **B5.4 Booking masuk.** API-OWNER.md §5.1–5.4 + payout & ledger saat disetujui; job `owner_timeout`, `owner_reminder`.
+- [x] **B5.2 Properti.** API-OWNER.md §2 (moderasi, slug, ajukan ulang).
+- [x] **B5.3 Kamar.** API-OWNER.md §3 (`held`, `occupied`, `monthly_duration_options`).
+- [x] **B5.4 Booking masuk.** API-OWNER.md §5.1–5.4 + payout & ledger saat disetujui; job `owner_timeout`, `owner_reminder`.
 - [ ] **B5.5 Rekening, payout, invoice owner.** API-OWNER.md §5.6, §6.
 
 ## F4 — Pemilik (UI)

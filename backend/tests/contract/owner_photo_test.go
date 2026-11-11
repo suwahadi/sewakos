@@ -53,11 +53,21 @@ func requireStorage(t *testing.T) *storage.Client {
 
 func newOwner(t *testing.T, srv *httptest.Server, pool *pgxpool.Pool) (ownerID int64, token string) {
 	t.Helper()
-	phone, token := registerAndVerify(t, srv)
+	phone, token := bookingRegisterAndVerify(t, srv)
 	if _, err := pool.Exec(context.Background(), `UPDATE users SET role = 'owner' WHERE phone = $1`, phone); err != nil {
 		t.Fatalf("make owner: %v", err)
 	}
-	return currentUserID(t, srv, token), token
+	resp, body := bookingAuthedRequest(t, srv, http.MethodGet, "/api/me", token, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("/api/me: status = %d, body = %s", resp.StatusCode, body)
+	}
+	var me struct {
+		User struct {
+			ID int64 `json:"id"`
+		} `json:"user"`
+	}
+	mustUnmarshal(t, body, &me)
+	return me.User.ID, token
 }
 
 func newOwnerProperty(t *testing.T, pool *pgxpool.Pool, ownerID int64) int64 {
@@ -83,7 +93,7 @@ func photoJPEG(t *testing.T) []byte {
 
 func presignUpload(t *testing.T, srv *httptest.Server, token, contentType string, size int) (url, objectKey string) {
 	t.Helper()
-	resp, body := authedRequest(t, srv, http.MethodPost, "/api/owner/uploads/presign", token,
+	resp, body := bookingAuthedRequest(t, srv, http.MethodPost, "/api/owner/uploads/presign", token,
 		fmt.Sprintf(`{"content_type":%q,"size":%d}`, contentType, size))
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("presign: status = %d, body = %s", resp.StatusCode, body)
@@ -128,7 +138,7 @@ func TestOwnerPresignFixture(t *testing.T) {
 	srv, pool := newTestServerAndPool(t)
 	ownerID, token := newOwner(t, srv, pool)
 
-	resp, body := authedRequest(t, srv, http.MethodPost, "/api/owner/uploads/presign", token, `{"content_type":"image/jpeg","size":345678}`)
+	resp, body := bookingAuthedRequest(t, srv, http.MethodPost, "/api/owner/uploads/presign", token, `{"content_type":"image/jpeg","size":345678}`)
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status = %d, body = %s", resp.StatusCode, body)
 	}
@@ -165,7 +175,7 @@ func TestOwnerPhotoLifecycle(t *testing.T) {
 		t.Fatalf("PUT presigned object: status = %d", status)
 	}
 
-	resp, body := authedRequest(t, srv, http.MethodPost, fmt.Sprintf("/api/owner/properties/%d/photos", propertyID), token,
+	resp, body := bookingAuthedRequest(t, srv, http.MethodPost, fmt.Sprintf("/api/owner/properties/%d/photos", propertyID), token,
 		fmt.Sprintf(`{"object_key":%q,"room_id":null,"caption":"Tampak depan"}`, uploadKey))
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("add photo: status = %d, body = %s", resp.StatusCode, body)
@@ -205,7 +215,7 @@ func TestOwnerPhotoLifecycle(t *testing.T) {
 		}
 	}
 
-	resp, body = authedRequest(t, srv, http.MethodPatch, fmt.Sprintf("/api/owner/photos/%d", photoID), token, `{"caption":"Kamar mandi","sort_order":3}`)
+	resp, body = bookingAuthedRequest(t, srv, http.MethodPatch, fmt.Sprintf("/api/owner/photos/%d", photoID), token, `{"caption":"Kamar mandi","sort_order":3}`)
 	if resp.StatusCode != http.StatusOK || !strings.Contains(string(body), `"Foto diperbarui."`) {
 		t.Fatalf("update photo: status = %d, body = %s", resp.StatusCode, body)
 	}
@@ -218,7 +228,7 @@ func TestOwnerPhotoLifecycle(t *testing.T) {
 		t.Errorf("after update caption = %q, sort_order = %d", caption, sortOrder)
 	}
 
-	resp, body = authedRequest(t, srv, http.MethodDelete, fmt.Sprintf("/api/owner/photos/%d", photoID), token, "")
+	resp, body = bookingAuthedRequest(t, srv, http.MethodDelete, fmt.Sprintf("/api/owner/photos/%d", photoID), token, "")
 	if resp.StatusCode != http.StatusOK || !strings.Contains(string(body), `"Foto dihapus."`) {
 		t.Fatalf("delete photo: status = %d, body = %s", resp.StatusCode, body)
 	}
@@ -263,15 +273,15 @@ func TestOwnerPhotoRejections(t *testing.T) {
 	photosPath := fmt.Sprintf("/api/owner/properties/%d/photos", propertyID)
 
 	t.Run("tenant is forbidden", func(t *testing.T) {
-		_, tenantToken := registerAndVerify(t, srv)
-		resp, body := authedRequest(t, srv, http.MethodPost, "/api/owner/uploads/presign", tenantToken, `{"content_type":"image/jpeg","size":10}`)
+		_, tenantToken := bookingRegisterAndVerify(t, srv)
+		resp, body := bookingAuthedRequest(t, srv, http.MethodPost, "/api/owner/uploads/presign", tenantToken, `{"content_type":"image/jpeg","size":10}`)
 		if resp.StatusCode != http.StatusForbidden {
 			t.Errorf("status = %d, body = %s", resp.StatusCode, body)
 		}
 	})
 
 	t.Run("presign validation", func(t *testing.T) {
-		resp, body := authedRequest(t, srv, http.MethodPost, "/api/owner/uploads/presign", token, `{"content_type":"image/gif","size":0}`)
+		resp, body := bookingAuthedRequest(t, srv, http.MethodPost, "/api/owner/uploads/presign", token, `{"content_type":"image/gif","size":0}`)
 		want := `{
 			"status": false,
 			"meta": {"response_code": 422, "code": 422, "severity": "WARNING", "message": "Validasi gagal."},
@@ -288,14 +298,14 @@ func TestOwnerPhotoRejections(t *testing.T) {
 
 	t.Run("another owner's property is not found", func(t *testing.T) {
 		key := uploadPhoto(t, srv, token, photoJPEG(t))
-		resp, _ := authedRequest(t, srv, http.MethodPost, fmt.Sprintf("/api/owner/properties/%d/photos", otherPropertyID), token, fmt.Sprintf(`{"object_key":%q}`, key))
+		resp, _ := bookingAuthedRequest(t, srv, http.MethodPost, fmt.Sprintf("/api/owner/properties/%d/photos", otherPropertyID), token, fmt.Sprintf(`{"object_key":%q}`, key))
 		if resp.StatusCode != http.StatusNotFound {
 			t.Errorf("status = %d, want 404", resp.StatusCode)
 		}
 	})
 
 	t.Run("room of another property", func(t *testing.T) {
-		resp, body := authedRequest(t, srv, http.MethodPost, photosPath, token, fmt.Sprintf(`{"object_key":"uploads/%d/x.jpg","room_id":%d}`, ownerID, otherRoomID))
+		resp, body := bookingAuthedRequest(t, srv, http.MethodPost, photosPath, token, fmt.Sprintf(`{"object_key":"uploads/%d/x.jpg","room_id":%d}`, ownerID, otherRoomID))
 		if resp.StatusCode != http.StatusUnprocessableEntity || !strings.Contains(string(body), "The selected room id is invalid.") {
 			t.Errorf("status = %d, body = %s", resp.StatusCode, body)
 		}
@@ -306,7 +316,7 @@ func TestOwnerPhotoRejections(t *testing.T) {
 		"key that was never uploaded":           fmt.Sprintf("uploads/%d/missing.jpg", ownerID),
 	} {
 		t.Run(name, func(t *testing.T) {
-			resp, body := authedRequest(t, srv, http.MethodPost, photosPath, token, fmt.Sprintf(`{"object_key":%q}`, objectKey))
+			resp, body := bookingAuthedRequest(t, srv, http.MethodPost, photosPath, token, fmt.Sprintf(`{"object_key":%q}`, objectKey))
 			if resp.StatusCode != http.StatusBadRequest || !strings.Contains(string(body), "File foto tidak ditemukan atau tidak valid.") {
 				t.Errorf("status = %d, body = %s", resp.StatusCode, body)
 			}
@@ -316,7 +326,7 @@ func TestOwnerPhotoRejections(t *testing.T) {
 	t.Run("corrupt file", func(t *testing.T) {
 		corrupt := append([]byte{0xFF, 0xD8, 0xFF, 0xE0}, bytes.Repeat([]byte{7}, 256)...)
 		key := uploadPhoto(t, srv, token, corrupt)
-		resp, body := authedRequest(t, srv, http.MethodPost, photosPath, token, fmt.Sprintf(`{"object_key":%q}`, key))
+		resp, body := bookingAuthedRequest(t, srv, http.MethodPost, photosPath, token, fmt.Sprintf(`{"object_key":%q}`, key))
 		if resp.StatusCode != http.StatusBadRequest || !strings.Contains(string(body), "File foto tidak dapat diproses.") {
 			t.Errorf("status = %d, body = %s", resp.StatusCode, body)
 		}
@@ -328,7 +338,7 @@ func TestOwnerPhotoRejections(t *testing.T) {
 		for range 30 {
 			seedPropertyPhoto(t, pool, fullPropertyID)
 		}
-		resp, body := authedRequest(t, srv, http.MethodPost, fmt.Sprintf("/api/owner/properties/%d/photos", fullPropertyID), token, fmt.Sprintf(`{"object_key":"uploads/%d/x.jpg"}`, ownerID))
+		resp, body := bookingAuthedRequest(t, srv, http.MethodPost, fmt.Sprintf("/api/owner/properties/%d/photos", fullPropertyID), token, fmt.Sprintf(`{"object_key":"uploads/%d/x.jpg"}`, ownerID))
 		if resp.StatusCode != http.StatusBadRequest || !strings.Contains(string(body), "Jumlah foto sudah mencapai batas.") {
 			t.Errorf("status = %d, body = %s", resp.StatusCode, body)
 		}
