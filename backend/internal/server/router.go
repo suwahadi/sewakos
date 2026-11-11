@@ -199,6 +199,7 @@ func NewRouter(deps Deps) chi.Router {
 				adminRoutes.Get("/admin/settings", withAuthedUser(adminDeps, admin.GetSettingsHandler))
 				adminRoutes.Patch("/admin/settings", withAuthedUser(adminDeps, admin.PatchSettingsHandler))
 				adminRoutes.Post("/admin/notifications/broadcast", withAuthedUser(adminDeps, admin.BroadcastHandler))
+				adminRoutes.Get("/admin/audit-logs", withAuthedUser(adminDeps, admin.AuditLogsHandler))
 			})
 
 			authed.Group(func(ownerRoutes chi.Router) {
@@ -225,6 +226,7 @@ func NewRouter(deps Deps) chi.Router {
 				ownerRoutes.Get("/owner/finance/ledger", withAuthedUser(ownerDeps, owner.FinanceLedgerHandler))
 				ownerRoutes.Get("/owner/finance/ledger.csv", withAuthedUser(ownerDeps, owner.FinanceLedgerCSVHandler))
 				ownerRoutes.Get("/owner/stats", withAuthedUser(ownerDeps, owner.StatsHandler))
+				ownerRoutes.Get("/owner/audit-logs", withAuthedUser(ownerDeps, owner.AuditLogsHandler))
 				ownerRoutes.Post("/owner/uploads/presign", withAuthedUser(ownerDeps, owner.PresignHandler))
 				ownerRoutes.Post("/owner/properties/{property}/photos", withAuthedUser(ownerDeps, owner.AddPhotoHandler))
 				ownerRoutes.Patch("/owner/photos/{photo}", withAuthedUser(ownerDeps, owner.UpdatePhotoHandler))

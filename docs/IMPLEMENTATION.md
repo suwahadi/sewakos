@@ -176,11 +176,11 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 ## B8 — Rilis 2 backend
 
 - [x] **B8.1 Perpanjangan.** API.md §12.5, job `void_extensions`, `ApplyPaymentStatus` untuk `extension`.
-- [ ] **B8.2 PDF invoice.** API.md §12.4, SPEC §13.7.
-- [ ] **B8.3 Deposit.** API-OWNER.md §5.5.
-- [ ] **B8.4 Keuangan & statistik owner.** API-OWNER.md §8–9 (CSV streaming).
-- [ ] **B8.5 Keuangan admin & rekonsiliasi.** API-ADMIN.md §10, job `reconcile_payments`.
-- [ ] **B8.6 Audit log.** API-OWNER.md §11, API-ADMIN.md §12.
+- [x] **B8.2 PDF invoice.** API.md §12.4, SPEC §13.7.
+- [x] **B8.3 Deposit.** API-OWNER.md §5.5.
+- [x] **B8.4 Keuangan & statistik owner.** API-OWNER.md §8–9 (CSV streaming).
+- [x] **B8.5 Keuangan admin & rekonsiliasi.** API-ADMIN.md §10, job `reconcile_payments`.
+- [x] **B8.6 Audit log.** API-OWNER.md §11, API-ADMIN.md §12.
 
 ## F6 — Rilis 2 UI
 
