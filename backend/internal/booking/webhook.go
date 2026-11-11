@@ -65,7 +65,7 @@ func WebhookHandler(deps Deps) http.HandlerFunc {
 			return
 		}
 
-		authoritativeAmount, ok := parseMidtransGrossAmount(status.GrossAmount)
+		authoritativeAmount, ok := ParseMidtransGrossAmount(status.GrossAmount)
 		if !ok {
 			response.InternalErrorHandler(w, r)
 			return
@@ -107,7 +107,7 @@ func getPaymentByOrderID(ctx context.Context, deps Deps, orderID string) (dbgen.
 	return dbgen.New(tx).GetPaymentByOrderID(ctx, orderID)
 }
 
-func parseMidtransGrossAmount(s string) (int64, bool) {
+func ParseMidtransGrossAmount(s string) (int64, bool) {
 	whole, _, found := strings.Cut(s, ".")
 	if !found {
 		whole = s

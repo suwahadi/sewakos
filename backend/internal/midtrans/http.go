@@ -69,7 +69,7 @@ func (c *HTTPClient) do(ctx context.Context, method, url string, body any, out a
 		return fmt.Errorf("read response: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("midtrans status %d: %s", resp.StatusCode, respBody)
+		return &StatusCodeError{StatusCode: resp.StatusCode, Body: string(respBody)}
 	}
 	if out == nil {
 		return nil

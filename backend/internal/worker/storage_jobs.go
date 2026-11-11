@@ -152,6 +152,7 @@ func (s *Scheduler) RunDue(ctx context.Context, deps Deps, logger *slog.Logger, 
 	if s.dailyDoneOn != today && wib.Hour() >= 2 {
 		s.dailyDoneOn = today
 		runExclusive(ctx, deps, logger, cleanupUploadsLockKey, func() { CleanupUploads(ctx, deps, logger, now) })
+		runExclusive(ctx, deps, logger, reconcilePaymentsLockKey, func() { ReconcilePayments(ctx, deps, logger, now) })
 	}
 	if s.weeklyDoneOn != today && wib.Weekday() == time.Sunday && wib.Hour() >= 3 {
 		s.weeklyDoneOn = today

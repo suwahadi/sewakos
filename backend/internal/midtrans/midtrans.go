@@ -1,6 +1,29 @@
 package midtrans
 
-import "context"
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+)
+
+// StatusCodeError is returned by HTTPClient when Midtrans answers with a
+// non-2xx status; IsNotFound distinguishes a genuine 404 (transaction never
+// existed at Midtrans) from a transient failure that a caller should retry
+// rather than treat as a permanent discrepancy.
+type StatusCodeError struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *StatusCodeError) Error() string {
+	return fmt.Sprintf("midtrans status %d: %s", e.StatusCode, e.Body)
+}
+
+func IsNotFound(err error) bool {
+	var scErr *StatusCodeError
+	return errors.As(err, &scErr) && scErr.StatusCode == http.StatusNotFound
+}
 
 type TransactionDetails struct {
 	OrderID     string `json:"order_id"`

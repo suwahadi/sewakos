@@ -1,10 +1,13 @@
 package admin
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -253,6 +256,211 @@ func CompletePayoutHandler(deps Deps, user authctx.User) http.HandlerFunc {
 			return
 		}
 		response.Success(w, http.StatusOK, "Payout ditandai selesai.", map[string]any{"payout": payoutBody(rows[0])})
+	}
+}
+
+func respondInvalidDateRange(w http.ResponseWriter, r *http.Request, errs map[string][]string) {
+	response.Fail(w, http.StatusUnprocessableEntity, response.MsgValidationFailed, errs)
+}
+
+func toPgTimestamptz(t time.Time) pgtype.Timestamptz {
+	return pgtype.Timestamptz{Time: t, Valid: true}
+}
+
+func FinanceSummaryHandler(deps Deps, _ authctx.User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		from, toExclusive, errs := finance.ParseDateRange(r)
+		if errs != nil {
+			respondInvalidDateRange(w, r, errs)
+			return
+		}
+		ctx := r.Context()
+
+		summary, err := deps.Store.GetAdminFinanceSummary(ctx, dbgen.GetAdminFinanceSummaryParams{
+			FromTime: toPgTimestamptz(from), ToTime: toPgTimestamptz(toExclusive),
+		})
+		if err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		outstanding, err := deps.Store.GetAdminFinanceOutstanding(ctx)
+		if err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+
+		response.Success(w, http.StatusOK, "", map[string]any{"summary": map[string]any{
+			"from": from.Format("2006-01-02"), "to": toExclusive.AddDate(0, 0, -1).Format("2006-01-02"),
+			"payments_received": summary.PaymentsReceived, "payments_received_label": money.FormatRupiah(summary.PaymentsReceived),
+			"admin_fee_revenue": summary.AdminFeeRevenue, "admin_fee_revenue_label": money.FormatRupiah(summary.AdminFeeRevenue),
+			"refunds_completed": summary.RefundsCompleted, "refunds_completed_label": money.FormatRupiah(summary.RefundsCompleted),
+			"refunds_outstanding": outstanding.RefundsOutstanding, "refunds_outstanding_label": money.FormatRupiah(outstanding.RefundsOutstanding),
+			"payouts_completed": summary.PayoutsCompleted, "payouts_completed_label": money.FormatRupiah(summary.PayoutsCompleted),
+			"payouts_outstanding": outstanding.PayoutsOutstanding, "payouts_outstanding_label": money.FormatRupiah(outstanding.PayoutsOutstanding),
+			"open_reconciliation_issues": outstanding.OpenReconciliationIssues,
+		}})
+	}
+}
+
+func adminLedgerEntryBody(id int64, occurredAt pgtype.Timestamptz, entryType string, amount int64, ownerID, bookingID pgtype.Int8, invoiceNumber pgtype.Text, description string) map[string]any {
+	return map[string]any{
+		"id": id, "occurred_at": money.FormatExpiresAt(occurredAt.Time), "type": entryType,
+		"amount": amount, "amount_label": money.FormatRupiah(amount),
+		"owner_id": nullableInt8(ownerID), "booking_id": nullableInt8(bookingID),
+		"invoice_number": nullableText(invoiceNumber), "description": description,
+	}
+}
+
+func FinanceLedgerHandler(deps Deps, _ authctx.User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		from, toExclusive, errs := finance.ParseDateRange(r)
+		if errs != nil {
+			respondInvalidDateRange(w, r, errs)
+			return
+		}
+		page, limit := pageParam(r), limitParam(r)
+		rows, err := deps.Store.ListAdminLedgerEntries(r.Context(), dbgen.ListAdminLedgerEntriesParams{
+			FromTime: toPgTimestamptz(from), ToTime: toPgTimestamptz(toExclusive),
+			Type: queryText(r, "type"), OwnerID: queryID(r, "owner_id"), RowLimit: limit, RowOffset: (page - 1) * limit,
+		})
+		if err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		entries := make([]map[string]any, len(rows))
+		for i, row := range rows {
+			entries[i] = adminLedgerEntryBody(row.ID, row.OccurredAt, row.Type, row.Amount, row.OwnerID, row.BookingID, row.InvoiceNumber, row.Description)
+		}
+		response.Success(w, http.StatusOK, "", map[string]any{"entries": entries, "current_page": page})
+	}
+}
+
+func FinanceLedgerCSVHandler(deps Deps, _ authctx.User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		from, toExclusive, errs := finance.ParseDateRange(r)
+		if errs != nil {
+			respondInvalidDateRange(w, r, errs)
+			return
+		}
+		rows, err := deps.Store.StreamAdminLedgerEntries(r.Context(), dbgen.StreamAdminLedgerEntriesParams{
+			FromTime: toPgTimestamptz(from), ToTime: toPgTimestamptz(toExclusive),
+			Type: queryText(r, "type"), OwnerID: queryID(r, "owner_id"),
+		})
+		if err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+
+		lastDay := toExclusive.AddDate(0, 0, -1).Format("2006-01-02")
+		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="ledger-%s-%s.csv"`, from.Format("2006-01-02"), lastDay))
+		writer := csv.NewWriter(w)
+		_ = writer.Write([]string{"id", "occurred_at_wib", "type", "amount", "owner_id", "booking_id", "invoice_number", "description"})
+		for _, row := range rows {
+			_ = writer.Write([]string{
+				strconv.FormatInt(row.ID, 10), money.FormatHumanWIB(row.OccurredAt.Time), row.Type, strconv.FormatInt(row.Amount, 10),
+				csvNullableInt8(row.OwnerID), csvNullableInt8(row.BookingID), csvNullableText(row.InvoiceNumber), row.Description,
+			})
+		}
+		writer.Flush()
+	}
+}
+
+func csvNullableInt8(n pgtype.Int8) string {
+	if !n.Valid {
+		return ""
+	}
+	return strconv.FormatInt(n.Int64, 10)
+}
+
+func csvNullableText(t pgtype.Text) string {
+	if !t.Valid {
+		return ""
+	}
+	return t.String
+}
+
+func reconciliationIssueBody(row dbgen.ListReconciliationIssuesRow) map[string]any {
+	return map[string]any{
+		"id": row.ID, "order_id": row.OrderID, "kind": row.Kind,
+		"local_status": row.LocalStatus, "midtrans_status": nullableText(row.MidtransStatus),
+		"local_amount": row.LocalAmount, "midtrans_amount": nullableInt8(row.MidtransAmount),
+		"status": row.Status, "note": nullableText(row.Note), "detected_at": money.FormatExpiresAt(row.DetectedAt.Time),
+	}
+}
+
+func ListReconciliationIssuesHandler(deps Deps, _ authctx.User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		page, limit := pageParam(r), limitParam(r)
+		rows, err := deps.Store.ListReconciliationIssues(r.Context(), dbgen.ListReconciliationIssuesParams{
+			Status: queryText(r, "status"), RowLimit: limit, RowOffset: (page - 1) * limit,
+		})
+		if err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		issues := make([]map[string]any, len(rows))
+		for i, row := range rows {
+			issues[i] = reconciliationIssueBody(row)
+		}
+		response.Success(w, http.StatusOK, "", map[string]any{"issues": issues, "current_page": page})
+	}
+}
+
+func ResolveReconciliationIssueHandler(deps Deps, user authctx.User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		issueID, ok := parseID(r, "issue")
+		if !ok {
+			response.NotFoundHandler(w, r)
+			return
+		}
+		body := decodeBody(r)
+		v := validation.New()
+		v.Field("note", body["note"]).Required().String().MaxStringLen(500)
+		if !v.Valid() {
+			response.Fail(w, http.StatusUnprocessableEntity, response.MsgValidationFailed, v.Errors())
+			return
+		}
+
+		ctx := r.Context()
+		tx, err := deps.DB.Begin(ctx)
+		if err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		defer func() { _ = tx.Rollback(ctx) }()
+		queries := dbgen.New(tx)
+
+		issue, err := queries.LockReconciliationIssue(ctx, issueID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			response.NotFoundHandler(w, r)
+			return
+		}
+		if err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		if issue.Status != "open" {
+			response.Fail(w, http.StatusBadRequest, "Selisih sudah ditandai selesai.", nil)
+			return
+		}
+		note := body["note"].(string)
+		if err := queries.ResolveReconciliationIssue(ctx, dbgen.ResolveReconciliationIssueParams{
+			ID: issue.ID, Note: pgtype.Text{String: note, Valid: true}, ResolvedBy: pgtype.Int8{Int64: user.UserID, Valid: true},
+		}); err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		if err := recordAudit(ctx, queries, r, user, "reconciliation_issue.resolve", "reconciliation_issue", issue.ID, nil,
+			map[string]any{"status": "open"}, map[string]any{"status": "resolved", "note": note}); err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		if err := tx.Commit(ctx); err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		response.Success(w, http.StatusOK, "Selisih ditandai selesai.", nil)
 	}
 }
 

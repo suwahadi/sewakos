@@ -68,6 +68,8 @@ type Querier interface {
 	FinalizePayment(ctx context.Context, arg FinalizePaymentParams) error
 	GetAccessTokenForVerification(ctx context.Context, id int64) (GetAccessTokenForVerificationRow, error)
 	GetActivePaymentForInvoice(ctx context.Context, invoiceID int64) (GetActivePaymentForInvoiceRow, error)
+	GetAdminFinanceOutstanding(ctx context.Context) (GetAdminFinanceOutstandingRow, error)
+	GetAdminFinanceSummary(ctx context.Context, arg GetAdminFinanceSummaryParams) (GetAdminFinanceSummaryRow, error)
 	GetAreaByID(ctx context.Context, id int64) (GetAreaByIDRow, error)
 	GetBookingByID(ctx context.Context, arg GetBookingByIDParams) (GetBookingByIDRow, error)
 	GetInitialInvoiceForBooking(ctx context.Context, bookingID int64) (GetInitialInvoiceForBookingRow, error)
@@ -108,10 +110,12 @@ type Querier interface {
 	InsertPendingPayment(ctx context.Context, arg InsertPendingPaymentParams) (int64, error)
 	InsertProperty(ctx context.Context, arg InsertPropertyParams) (int64, error)
 	InsertPropertyPhoto(ctx context.Context, arg InsertPropertyPhotoParams) (InsertPropertyPhotoRow, error)
+	InsertReconciliationIssue(ctx context.Context, arg InsertReconciliationIssueParams) error
 	InsertRefund(ctx context.Context, arg InsertRefundParams) (int64, error)
 	InsertRoom(ctx context.Context, arg InsertRoomParams) (int64, error)
 	InvoiceExistsForPeriod(ctx context.Context, arg InvoiceExistsForPeriodParams) (bool, error)
 	IsPropertyListedForRoom(ctx context.Context, roomID int64) (bool, error)
+	ListAdminLedgerEntries(ctx context.Context, arg ListAdminLedgerEntriesParams) ([]ListAdminLedgerEntriesRow, error)
 	ListAreasByType(ctx context.Context, arg ListAreasByTypeParams) ([]ListAreasByTypeRow, error)
 	ListBookingsForUser(ctx context.Context, arg ListBookingsForUserParams) ([]ListBookingsForUserRow, error)
 	ListGalleryRooms(ctx context.Context, propertyID int64) ([]ListGalleryRoomsRow, error)
@@ -127,6 +131,7 @@ type Querier interface {
 	ListOwnerRooms(ctx context.Context, arg ListOwnerRoomsParams) ([]ListOwnerRoomsRow, error)
 	ListPhotoObjectKeys(ctx context.Context) ([]ListPhotoObjectKeysRow, error)
 	ListPhotosForProperties(ctx context.Context, propertyIds []int64) ([]ListPhotosForPropertiesRow, error)
+	ListReconciliationIssues(ctx context.Context, arg ListReconciliationIssuesParams) ([]ListReconciliationIssuesRow, error)
 	ListRoomPhotos(ctx context.Context, roomIds []int64) ([]ListRoomPhotosRow, error)
 	ListUserNotifications(ctx context.Context, arg ListUserNotificationsParams) ([]ListUserNotificationsRow, error)
 	LockBookingForCompletion(ctx context.Context, id int64) (LockBookingForCompletionRow, error)
@@ -139,6 +144,7 @@ type Querier interface {
 	LockOwnerPropertyForEdit(ctx context.Context, arg LockOwnerPropertyForEditParams) (LockOwnerPropertyForEditRow, error)
 	LockOwnerRoom(ctx context.Context, arg LockOwnerRoomParams) (LockOwnerRoomRow, error)
 	LockPaidBooking(ctx context.Context, arg LockPaidBookingParams) (LockPaidBookingRow, error)
+	LockReconciliationIssue(ctx context.Context, id int64) (LockReconciliationIssueRow, error)
 	LockVoidableExtension(ctx context.Context, id int64) (LockVoidableExtensionRow, error)
 	MarkBookingPaid(ctx context.Context, arg MarkBookingPaidParams) error
 	MarkDepositReturned(ctx context.Context, arg MarkDepositReturnedParams) error
@@ -156,6 +162,7 @@ type Querier interface {
 	RejectBookingForStockUnavailable(ctx context.Context, arg RejectBookingForStockUnavailableParams) error
 	RejectPaidBooking(ctx context.Context, arg RejectPaidBookingParams) error
 	ReleaseRoomLock(ctx context.Context, id int64) error
+	ResolveReconciliationIssue(ctx context.Context, arg ResolveReconciliationIssueParams) error
 	ResubmitProperty(ctx context.Context, id int64) error
 	RoomBelongsToProperty(ctx context.Context, arg RoomBelongsToPropertyParams) (bool, error)
 	RoomHasBookings(ctx context.Context, roomID int64) (bool, error)
@@ -179,6 +186,7 @@ type Querier interface {
 	SelectOverdueRenewalIDs(ctx context.Context, arg SelectOverdueRenewalIDsParams) ([]int64, error)
 	SelectOwnerReminderBookingIDs(ctx context.Context, beforeMinutes int32) ([]int64, error)
 	SelectOwnerTimeoutBookingIDs(ctx context.Context) ([]int64, error)
+	SelectPaymentsForReconciliation(ctx context.Context, since pgtype.Timestamptz) ([]SelectPaymentsForReconciliationRow, error)
 	SelectVoidableExtensionInvoiceIDs(ctx context.Context, today pgtype.Date) ([]int64, error)
 	SetBookingStockHeld(ctx context.Context, arg SetBookingStockHeldParams) error
 	SetInvoiceNumber(ctx context.Context, arg SetInvoiceNumberParams) error
@@ -187,6 +195,7 @@ type Querier interface {
 	SetPropertySlug(ctx context.Context, arg SetPropertySlugParams) error
 	SetRefundAccount(ctx context.Context, arg SetRefundAccountParams) error
 	SetUserSuspended(ctx context.Context, arg SetUserSuspendedParams) error
+	StreamAdminLedgerEntries(ctx context.Context, arg StreamAdminLedgerEntriesParams) ([]StreamAdminLedgerEntriesRow, error)
 	StreamOwnerLedgerEntries(ctx context.Context, arg StreamOwnerLedgerEntriesParams) ([]StreamOwnerLedgerEntriesRow, error)
 	SuggestAreas(ctx context.Context, keyword string) ([]SuggestAreasRow, error)
 	SuggestLandings(ctx context.Context, keyword string) ([]SuggestLandingsRow, error)
