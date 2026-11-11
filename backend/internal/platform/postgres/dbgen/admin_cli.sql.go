@@ -23,19 +23,25 @@ func (q *Queries) CountUsersByPhone(ctx context.Context, phone string) (int64, e
 }
 
 const createAdminUser = `-- name: CreateAdminUser :one
-INSERT INTO users (name, role, phone, password, phone_verified_at)
-VALUES ($1, 'admin', $2, $3, now())
+INSERT INTO users (name, role, phone, email, password, phone_verified_at)
+VALUES ($1, 'admin', $2, $3, $4, now())
 RETURNING id
 `
 
 type CreateAdminUserParams struct {
 	Name     string
 	Phone    string
+	Email    pgtype.Text
 	Password pgtype.Text
 }
 
 func (q *Queries) CreateAdminUser(ctx context.Context, arg CreateAdminUserParams) (int64, error) {
-	row := q.db.QueryRow(ctx, createAdminUser, arg.Name, arg.Phone, arg.Password)
+	row := q.db.QueryRow(ctx, createAdminUser,
+		arg.Name,
+		arg.Phone,
+		arg.Email,
+		arg.Password,
+	)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
