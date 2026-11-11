@@ -103,7 +103,9 @@ docker image prune -f >/dev/null
 log "Done: https://${PUBLIC_HOST}"
 cat <<EOF
 Create the first admin (choose your own name, phone and password):
-  cd $APP_DIR/deploy && sudo docker compose run --rm api admin create --name "Admin" --phone 08xxxxxxxxxx --password '<password>'
+  cd $APP_DIR/deploy && sudo docker compose run --rm api admin create --name "Admin" --phone 08xxxxxxxxxx --email admin@example.com --password '<password>'
+Optionally load demo listings with Unsplash photos:
+  cd $APP_DIR/deploy && sudo docker compose run --rm api demoseed --count 100
 Follow logs (OTP codes are written there until an SMS/WhatsApp provider is set):
   cd $APP_DIR/deploy && sudo docker compose logs -f api worker
 EOF
