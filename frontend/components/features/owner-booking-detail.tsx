@@ -16,11 +16,16 @@ import { bookingStatusLabel, durationLabel, rentTypeUnit } from "@/lib/labels";
 import type { OwnerBooking } from "@/lib/owner";
 import { toast } from "@/lib/toast";
 
+const DEPOSIT_RETURNABLE_STATUSES = ["completed", "terminated"];
+
 export function OwnerBookingDetail({ booking }: { booking: OwnerBooking }) {
   const router = useRouter();
   const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [reason, setReason] = useState("");
+  const [depositOpen, setDepositOpen] = useState(false);
+  const [depositNote, setDepositNote] = useState("");
+  const [recordingDeposit, setRecordingDeposit] = useState(false);
   const status = bookingStatusLabel(booking.status);
 
   async function respond(action: "approve" | "reject") {
@@ -34,6 +39,22 @@ export function OwnerBookingDetail({ booking }: { booking: OwnerBooking }) {
     if (!result.ok) {
       showApiError(result, (href) => router.push(href), () => respond(action));
       if (result.httpStatus === 400) router.refresh();
+      return;
+    }
+    toast.success(result.data.meta.message);
+    router.refresh();
+  }
+
+  async function recordDepositReturned() {
+    setRecordingDeposit(true);
+    const result = await callBff(`/api/owner/bookings/${booking.id}/deposit-returned`, {
+      method: "POST",
+      body: depositNote.trim() ? { note: depositNote.trim() } : {},
+    });
+    setRecordingDeposit(false);
+    setDepositOpen(false);
+    if (!result.ok) {
+      showApiError(result, (href) => router.push(href), recordDepositReturned);
       return;
     }
     toast.success(result.data.meta.message);
@@ -92,8 +113,17 @@ export function OwnerBookingDetail({ booking }: { booking: OwnerBooking }) {
             <span className="font-semibold">{booking.payout_amount_label}</span>
           </DetailRow>
           {booking.paid_at && <DetailRow label="Dibayar">{formatDateShort(booking.paid_at)}, {formatTimeWIB(booking.paid_at)}</DetailRow>}
+          {booking.deposit_returned_at && (
+            <DetailRow label="Deposit dikembalikan">{formatDateShort(booking.deposit_returned_at)}</DetailRow>
+          )}
         </dl>
       </section>
+
+      {DEPOSIT_RETURNABLE_STATUSES.includes(booking.status) && !booking.deposit_returned_at && (
+        <Button variant="outline" fullWidth onClick={() => setDepositOpen(true)}>
+          Catat deposit dikembalikan
+        </Button>
+      )}
 
       {booking.status === "paid" && (
         <ButtonPair>
@@ -106,20 +136,39 @@ export function OwnerBookingDetail({ booking }: { booking: OwnerBooking }) {
         </ButtonPair>
       )}
 
-      <ConfirmDialog
-        open={rejectOpen}
-        onClose={() => setRejectOpen(false)}
-        title="Tolak booking ini?"
-        description={
-          <div className="flex flex-col gap-3">
-            <p>Kamar dilepas dan seluruh dana dikembalikan ke penyewa.</p>
-            <Textarea label="Alasan (opsional)" maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} />
-          </div>
-        }
-        confirmLabel="Tolak booking"
-        loading={busy === "reject"}
-        onConfirm={() => respond("reject")}
-      />
+      {booking.status === "paid" && (
+        <ConfirmDialog
+          open={rejectOpen}
+          onClose={() => setRejectOpen(false)}
+          title="Tolak booking ini?"
+          description={
+            <div className="flex flex-col gap-3">
+              <p>Kamar dilepas dan seluruh dana dikembalikan ke penyewa.</p>
+              <Textarea label="Alasan (opsional)" maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} />
+            </div>
+          }
+          confirmLabel="Tolak booking"
+          loading={busy === "reject"}
+          onConfirm={() => respond("reject")}
+        />
+      )}
+
+      {DEPOSIT_RETURNABLE_STATUSES.includes(booking.status) && !booking.deposit_returned_at && (
+        <ConfirmDialog
+          open={depositOpen}
+          onClose={() => setDepositOpen(false)}
+          title="Catat deposit sudah dikembalikan?"
+          description={
+            <div className="flex flex-col gap-3">
+              <p>Deposit {booking.deposit_label} ditandai sudah dikembalikan ke penyewa di luar sistem.</p>
+              <Textarea label="Catatan (opsional)" maxLength={500} value={depositNote} onChange={(event) => setDepositNote(event.target.value)} />
+            </div>
+          }
+          confirmLabel="Catat deposit dikembalikan"
+          loading={recordingDeposit}
+          onConfirm={recordDepositReturned}
+        />
+      )}
     </div>
   );
 }

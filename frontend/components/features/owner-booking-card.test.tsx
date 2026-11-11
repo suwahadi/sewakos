@@ -27,6 +27,7 @@ function booking(overrides: Partial<OwnerBooking> = {}): OwnerBooking {
     paid_at: "2026-11-10T10:05:00+00:00",
     owner_deadline_at: new Date(Date.now() + 90 * 60_000).toISOString(),
     reject_reason: null,
+    deposit_returned_at: null,
     ...overrides,
   };
 }

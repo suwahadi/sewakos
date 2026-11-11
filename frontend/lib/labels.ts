@@ -113,3 +113,35 @@ const INVOICE_TYPE_LABEL: Record<string, string> = {
 export function invoiceTypeLabel(type: string): string {
   return INVOICE_TYPE_LABEL[type] ?? type;
 }
+
+const LEDGER_TYPE_LABEL: Record<string, string> = {
+  payment_received: "Tagihan dibayar",
+  admin_fee_earned: "Biaya admin",
+  owner_earning: "Pendapatan pemilik",
+  payout_completed: "Payout ditransfer",
+  refund_due: "Refund dibuat",
+  refund_completed: "Refund ditransfer",
+  admin_fee_reversed: "Biaya admin dikembalikan",
+  deposit_returned: "Deposit dikembalikan",
+};
+
+export function ledgerTypeLabel(type: string): string {
+  return LEDGER_TYPE_LABEL[type] ?? type;
+}
+
+const RECONCILIATION_KIND_LABEL: Record<string, string> = {
+  status_mismatch: "Status tidak cocok",
+  amount_mismatch: "Nominal tidak cocok",
+  not_found_at_midtrans: "Tidak ditemukan di Midtrans",
+};
+
+export function reconciliationKindLabel(kind: string): string {
+  return RECONCILIATION_KIND_LABEL[kind] ?? kind;
+}
+
+const RECONCILIATION_STATUS: Record<string, StatusLabel> = {
+  open: { label: "Terbuka", color: "warning" },
+  resolved: { label: "Selesai", color: "success" },
+};
+
+export const reconciliationStatusLabel = (status: string) => lookup(RECONCILIATION_STATUS, status);

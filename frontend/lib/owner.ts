@@ -16,6 +16,7 @@ export interface OwnerBooking {
   paid_at: string | null;
   owner_deadline_at: string | null;
   reject_reason: string | null;
+  deposit_returned_at: string | null;
 }
 
 export interface OwnerPhoto {
@@ -74,4 +75,47 @@ export interface Payout {
   transfer_reference: string | null;
   completed_at: string | null;
   created_at: string;
+}
+
+export interface OwnerFinanceSummary {
+  from: string;
+  to: string;
+  earnings_label: string;
+  payouts_completed_label: string;
+  pending_balance_label: string;
+  deposits_held_label: string;
+  paid_invoices: number;
+}
+
+export interface OwnerLedgerEntry {
+  id: number;
+  occurred_at: string;
+  type: string;
+  amount: number;
+  amount_label: string;
+  booking_id: number | null;
+  invoice_number: string | null;
+  description: string;
+}
+
+export interface OwnerStats {
+  from: string;
+  to: string;
+  views: number;
+  bookings_paid: number;
+  bookings_approved: number;
+  bookings_rejected: number;
+  earnings_label: string;
+  occupancy: { occupied: number; total: number; rate: number };
+  rating: { average: number | null; count: number };
+}
+
+export interface AuditLogEntry {
+  id: number;
+  created_at: string;
+  actor: { id: number; name: string; role: string } | null;
+  action: string;
+  entity_type: string;
+  entity_id: number;
+  changes: Record<string, [unknown, unknown]>;
 }
