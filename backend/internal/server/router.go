@@ -12,6 +12,7 @@ import (
 
 	"github.com/suwahadi/sewakos/backend/internal/abtest"
 	"github.com/suwahadi/sewakos/backend/internal/account"
+	"github.com/suwahadi/sewakos/backend/internal/admin"
 	"github.com/suwahadi/sewakos/backend/internal/area"
 	"github.com/suwahadi/sewakos/backend/internal/auth"
 	"github.com/suwahadi/sewakos/backend/internal/authctx"
@@ -90,8 +91,9 @@ func NewRouter(deps Deps) chi.Router {
 	if midtransClient == nil {
 		midtransClient = midtrans.NewHTTPClient(deps.Config.MidtransServerKey, deps.Config.MidtransIsProduction, deps.Config.MidtransBaseURL)
 	}
+	adminFeeCache := settings.NewAdminFeeCache(queries)
 	bookingDeps := booking.Deps{
-		Store: queries, DB: deps.DB, AdminFee: settings.NewAdminFeeCache(queries),
+		Store: queries, DB: deps.DB, AdminFee: adminFeeCache,
 		Midtrans:             midtransClient,
 		MidtransServerKey:    deps.Config.MidtransServerKey,
 		PaymentExpiryMinutes: deps.Config.PaymentExpiryMinutes,
@@ -103,6 +105,11 @@ func NewRouter(deps Deps) chi.Router {
 		Store: queries, DB: deps.DB, Storage: deps.Storage, Images: deps.Images,
 		StorageBaseURL: deps.Config.StoragePublicBaseURL, UploadMaxBytes: deps.Config.UploadMaxBytes,
 		AppPublicURL: deps.Config.AppPublicURL,
+	}
+
+	adminDeps := admin.Deps{
+		Store: queries, DB: deps.DB, AdminFee: adminFeeCache,
+		StorageBaseURL: deps.Config.StoragePublicBaseURL, AppPublicURL: deps.Config.AppPublicURL,
 	}
 
 	r.Post("/api/payments/midtrans/notification", booking.WebhookHandler(bookingDeps))
@@ -156,6 +163,33 @@ func NewRouter(deps Deps) chi.Router {
 				tenant.Post("/booking/{booking}/cancel", withAuthedUser(bookingDeps, booking.CancelHandler))
 				tenant.Put("/booking/{booking}/refund-account", withAuthedUser(bookingDeps, booking.RefundAccountHandler))
 				tenant.Post("/invoices/{invoice}/checkout", withAuthedUser(bookingDeps, booking.InvoiceCheckoutHandler))
+			})
+
+			authed.Group(func(adminRoutes chi.Router) {
+				adminRoutes.Use(RequireRole("admin"))
+				adminRoutes.Get("/admin/areas", withAuthedUser(adminDeps, admin.ListAreasHandler))
+				adminRoutes.Post("/admin/areas", withAuthedUser(adminDeps, admin.CreateAreaHandler))
+				adminRoutes.Patch("/admin/areas/{area}", withAuthedUser(adminDeps, admin.UpdateAreaHandler))
+				adminRoutes.Delete("/admin/areas/{area}", withAuthedUser(adminDeps, admin.DeleteAreaHandler))
+				adminRoutes.Get("/admin/users", withAuthedUser(adminDeps, admin.ListUsersHandler))
+				adminRoutes.Get("/admin/users/{user}", withAuthedUser(adminDeps, admin.GetUserHandler))
+				adminRoutes.Post("/admin/users/{user}/suspend", withAuthedUser(adminDeps, admin.SuspendUserHandler))
+				adminRoutes.Post("/admin/users/{user}/unsuspend", withAuthedUser(adminDeps, admin.UnsuspendUserHandler))
+				adminRoutes.Get("/admin/properties", withAuthedUser(adminDeps, admin.ListPropertiesHandler))
+				adminRoutes.Get("/admin/properties/{property}", withAuthedUser(adminDeps, admin.GetPropertyHandler))
+				adminRoutes.Post("/admin/properties/{property}/approve", withAuthedUser(adminDeps, admin.ApprovePropertyHandler))
+				adminRoutes.Post("/admin/properties/{property}/reject", withAuthedUser(adminDeps, admin.RejectPropertyHandler))
+				adminRoutes.Post("/admin/properties/{property}/suspend", withAuthedUser(adminDeps, admin.SuspendPropertyHandler))
+				adminRoutes.Get("/admin/bookings", withAuthedUser(adminDeps, admin.ListBookingsHandler))
+				adminRoutes.Get("/admin/bookings/{booking}", withAuthedUser(adminDeps, admin.GetBookingHandler))
+				adminRoutes.Get("/admin/invoices", withAuthedUser(adminDeps, admin.ListInvoicesHandler))
+				adminRoutes.Get("/admin/refunds", withAuthedUser(adminDeps, admin.ListRefundsHandler))
+				adminRoutes.Post("/admin/refunds/{refund}/complete", withAuthedUser(adminDeps, admin.CompleteRefundHandler))
+				adminRoutes.Get("/admin/payouts", withAuthedUser(adminDeps, admin.ListPayoutsHandler))
+				adminRoutes.Post("/admin/payouts/{payout}/complete", withAuthedUser(adminDeps, admin.CompletePayoutHandler))
+				adminRoutes.Get("/admin/settings", withAuthedUser(adminDeps, admin.GetSettingsHandler))
+				adminRoutes.Patch("/admin/settings", withAuthedUser(adminDeps, admin.PatchSettingsHandler))
+				adminRoutes.Post("/admin/notifications/broadcast", withAuthedUser(adminDeps, admin.BroadcastHandler))
 			})
 
 			authed.Group(func(ownerRoutes chi.Router) {

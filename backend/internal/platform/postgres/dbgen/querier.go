@@ -11,9 +11,30 @@ import (
 )
 
 type Querier interface {
+	AdminDeleteArea(ctx context.Context, id int64) error
+	AdminInsertArea(ctx context.Context, arg AdminInsertAreaParams) (int64, error)
+	AdminListAreas(ctx context.Context, arg AdminListAreasParams) ([]AdminListAreasRow, error)
+	AdminListBookings(ctx context.Context, arg AdminListBookingsParams) ([]AdminListBookingsRow, error)
+	AdminListInvoices(ctx context.Context, arg AdminListInvoicesParams) ([]AdminListInvoicesRow, error)
+	AdminListPayouts(ctx context.Context, arg AdminListPayoutsParams) ([]AdminListPayoutsRow, error)
+	AdminListProperties(ctx context.Context, arg AdminListPropertiesParams) ([]AdminListPropertiesRow, error)
+	AdminListRefunds(ctx context.Context, arg AdminListRefundsParams) ([]AdminListRefundsRow, error)
+	AdminListUsers(ctx context.Context, arg AdminListUsersParams) ([]AdminListUsersRow, error)
+	AdminLockArea(ctx context.Context, id int64) (AdminLockAreaRow, error)
+	AdminLockPayout(ctx context.Context, id int64) (AdminLockPayoutRow, error)
+	AdminLockProperty(ctx context.Context, id int64) (AdminLockPropertyRow, error)
+	AdminLockRefund(ctx context.Context, id int64) (AdminLockRefundRow, error)
+	AdminLockUser(ctx context.Context, id int64) (AdminLockUserRow, error)
+	AdminSetModeration(ctx context.Context, arg AdminSetModerationParams) error
+	AdminUpdateArea(ctx context.Context, arg AdminUpdateAreaParams) error
 	ApproveBooking(ctx context.Context, id int64) error
+	AreaInUse(ctx context.Context, areaID int64) (bool, error)
+	AreaSlugTaken(ctx context.Context, arg AreaSlugTakenParams) (bool, error)
+	BroadcastNotification(ctx context.Context, arg BroadcastNotificationParams) (int64, error)
 	CancelBooking(ctx context.Context, id int64) error
 	CancelBookingBySystem(ctx context.Context, id int64) error
+	CompletePayout(ctx context.Context, arg CompletePayoutParams) error
+	CompleteRefund(ctx context.Context, arg CompleteRefundParams) error
 	CountAreasBySlug(ctx context.Context, slug string) (int64, error)
 	CountPropertyPhotos(ctx context.Context, propertyID int64) (int64, error)
 	CountSearchRooms(ctx context.Context, arg CountSearchRoomsParams) (CountSearchRoomsRow, error)
@@ -48,6 +69,7 @@ type Querier interface {
 	GetOwnerBankAccount(ctx context.Context, userID int64) (GetOwnerBankAccountRow, error)
 	GetPaymentByOrderID(ctx context.Context, orderID string) (GetPaymentByOrderIDRow, error)
 	GetPaymentForWebhook(ctx context.Context, orderID string) (GetPaymentForWebhookRow, error)
+	GetPayoutForInvoice(ctx context.Context, invoiceID int64) (GetPayoutForInvoiceRow, error)
 	GetPendingPaymentOrderID(ctx context.Context, invoiceID int64) (GetPendingPaymentOrderIDRow, error)
 	GetRefundForBookingInitialInvoice(ctx context.Context, bookingID int64) (GetRefundForBookingInitialInvoiceRow, error)
 	GetRefundForInvoice(ctx context.Context, invoiceID int64) (GetRefundForInvoiceRow, error)
@@ -130,6 +152,7 @@ type Querier interface {
 	SetPaymentSnapDetails(ctx context.Context, arg SetPaymentSnapDetailsParams) error
 	SetPropertySlug(ctx context.Context, arg SetPropertySlugParams) error
 	SetRefundAccount(ctx context.Context, arg SetRefundAccountParams) error
+	SetUserSuspended(ctx context.Context, arg SetUserSuspendedParams) error
 	SuggestAreas(ctx context.Context, keyword string) ([]SuggestAreasRow, error)
 	SuggestLandings(ctx context.Context, keyword string) ([]SuggestLandingsRow, error)
 	SuggestRoomTypes(ctx context.Context, keyword string) ([]SuggestRoomTypesRow, error)
@@ -144,6 +167,7 @@ type Querier interface {
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error
 	UpsertOwnerBankAccount(ctx context.Context, arg UpsertOwnerBankAccountParams) error
 	UpsertPropertyViewDaily(ctx context.Context, arg UpsertPropertyViewDailyParams) error
+	UpsertSetting(ctx context.Context, arg UpsertSettingParams) error
 	VerifyUserPhone(ctx context.Context, id int64) error
 }
 

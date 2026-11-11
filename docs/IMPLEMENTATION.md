@@ -150,9 +150,9 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 
 ## B6 — Admin
 
-- [ ] **B6.1 Area & pengguna.** API-ADMIN.md §2–3.
-- [ ] **B6.2 Moderasi, booking, invoice.** API-ADMIN.md §4–5, §12 (invoice).
-- [ ] **B6.3 Refund, payout, setting, broadcast.** API-ADMIN.md §6–9.
+- [x] **B6.1 Area & pengguna.** API-ADMIN.md §2–3.
+- [x] **B6.2 Moderasi, booking, invoice.** API-ADMIN.md §4–5, §12 (invoice).
+- [x] **B6.3 Refund, payout, setting, broadcast.** API-ADMIN.md §6–9.
 
 ## F5 — Admin (UI)
 
