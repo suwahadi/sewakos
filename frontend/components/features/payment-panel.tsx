@@ -1,24 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/lib/toast";
+import { formatRemaining, useRemainingMs } from "@/lib/use-remaining";
 
-const SECOND = 1000;
-const MINUTE = 60 * SECOND;
-const HOUR = 60 * MINUTE;
-const WARNING_THRESHOLD = 5 * MINUTE;
-
-export function formatRemaining(ms: number): string {
-  if (ms >= HOUR) return `${Math.floor(ms / HOUR)} jam ${Math.floor((ms % HOUR) / MINUTE)} menit`;
-  const seconds = Math.max(0, Math.floor(ms / SECOND));
-  return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
-}
-
-function nextTickDelay(remaining: number): number {
-  const unit = remaining >= HOUR ? MINUTE : SECOND;
-  return remaining % unit || unit;
-}
+const WARNING_THRESHOLD = 5 * 60 * 1000;
 
 export interface CountdownProps {
   expiresAt: string;
@@ -27,10 +14,9 @@ export interface CountdownProps {
 }
 
 export function Countdown({ expiresAt, activePaymentExpiresAt, onExpire }: CountdownProps) {
-  const [now, setNow] = useState(() => Date.now());
-  const paymentDeadline = activePaymentExpiresAt ? new Date(activePaymentExpiresAt).getTime() : 0;
-  const deadline = paymentDeadline > now ? paymentDeadline : new Date(expiresAt).getTime();
-  const remaining = deadline - now;
+  const paymentRemaining = useRemainingMs(activePaymentExpiresAt ? new Date(activePaymentExpiresAt).getTime() : 0);
+  const bookingRemaining = useRemainingMs(new Date(expiresAt).getTime());
+  const remaining = paymentRemaining > 0 ? paymentRemaining : bookingRemaining;
   const previousRemaining = useRef(remaining);
 
   useEffect(() => {
@@ -38,12 +24,7 @@ export function Countdown({ expiresAt, activePaymentExpiresAt, onExpire }: Count
       toast.warning("Sisa waktu pembayaran 5 menit.");
     }
     previousRemaining.current = remaining;
-    if (remaining <= 0) {
-      onExpire();
-      return;
-    }
-    const timer = setTimeout(() => setNow(Date.now()), nextTickDelay(remaining));
-    return () => clearTimeout(timer);
+    if (remaining <= 0) onExpire();
   }, [remaining, onExpire]);
 
   return (

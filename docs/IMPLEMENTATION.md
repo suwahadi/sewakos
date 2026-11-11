@@ -141,7 +141,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 
 ## F4 — Pemilik (UI)
 
-- [ ] **F4.1 Beranda owner.** `/owner`: daftar "Perlu direspons" dengan countdown + properti (StatCard menyusul di F6).
+- [x] **F4.1 Beranda owner.** `/owner`: daftar "Perlu direspons" dengan countdown + properti (StatCard menyusul di F6).
 - [ ] **F4.2 Properti & kamar.** `/owner/properti`, `/owner/properti/{id}`: form, Switch aktif/promo, status moderasi,
   InlineAlert alasan ditolak, form kamar (durasi bulanan, Rupiah).
 - [ ] **F4.3 Foto.** PhotoUploader (DESIGN §6.47).
