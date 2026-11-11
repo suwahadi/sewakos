@@ -11,7 +11,7 @@ export interface BottomNavProps {
 }
 
 export function hasOwnStickyActionBar(pathname: string): boolean {
-  return /^\/kost\/[^/]+$/.test(pathname);
+  return /^\/kost\/[^/]+(\/sewa)?$/.test(pathname);
 }
 
 export function BottomNav({ role }: BottomNavProps) {

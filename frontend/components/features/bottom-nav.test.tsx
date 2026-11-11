@@ -8,7 +8,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock, back: vi.fn() }),
 }));
 
-const { BottomNav } = await import("./bottom-nav");
+const { BottomNav, hasOwnStickyActionBar } = await import("./bottom-nav");
 
 describe("BottomNav", () => {
   it("marks the current page with aria-current", () => {
@@ -29,5 +29,11 @@ describe("BottomNav", () => {
 
     await user.click(screen.getByRole("link", { name: "Favorit" }));
     expect(pushMock).toHaveBeenCalledWith("/masuk?next=%2Ffavorit");
+  });
+
+  it("hides itself on the listing detail and rent form pages", () => {
+    expect(hasOwnStickyActionBar("/kost/1")).toBe(true);
+    expect(hasOwnStickyActionBar("/kost/1/sewa")).toBe(true);
+    expect(hasOwnStickyActionBar("/kost/1/ulasan")).toBe(false);
   });
 });

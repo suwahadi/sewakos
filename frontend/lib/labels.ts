@@ -79,3 +79,37 @@ const NOTIFICATION_CATEGORY_LABEL: Record<string, string> = {
 export function notificationCategoryLabel(category: string): string {
   return NOTIFICATION_CATEGORY_LABEL[category] ?? category;
 }
+
+const RENT_TYPE_LABEL: Record<string, string> = {
+  monthly: "Bulanan",
+  weekly: "Mingguan",
+  daily: "Harian",
+};
+
+const RENT_TYPE_UNIT: Record<string, string> = {
+  monthly: "bulan",
+  weekly: "minggu",
+  daily: "hari",
+};
+
+export function rentTypeLabel(rentType: string): string {
+  return RENT_TYPE_LABEL[rentType] ?? rentType;
+}
+
+export function rentTypeUnit(rentType: string): string {
+  return RENT_TYPE_UNIT[rentType] ?? rentType;
+}
+
+export function durationLabel(rentType: string, duration: number): string {
+  return `${duration} ${rentTypeUnit(rentType)}`;
+}
+
+const INVOICE_TYPE_LABEL: Record<string, string> = {
+  initial: "Pembayaran pertama",
+  renewal: "Tagihan bulanan",
+  extension: "Perpanjangan",
+};
+
+export function invoiceTypeLabel(type: string): string {
+  return INVOICE_TYPE_LABEL[type] ?? type;
+}

@@ -7,9 +7,10 @@ export interface StickyActionBarProps {
   actionLabel: string;
   onAction: () => void;
   disabled?: boolean;
+  loading?: boolean;
 }
 
-export function StickyActionBar({ leadingLabel, price, priceUnit, actionLabel, onAction, disabled }: StickyActionBarProps) {
+export function StickyActionBar({ leadingLabel, price, priceUnit, actionLabel, onAction, disabled, loading }: StickyActionBarProps) {
   return (
     <div
       className="fixed inset-x-0 bottom-0 z-[var(--z-sticky)] flex items-center justify-between gap-3 border-t border-neutral-200 bg-neutral-0 px-4 py-3 shadow-raised lg:sticky lg:top-20 lg:bottom-auto lg:rounded-lg lg:border"
@@ -22,7 +23,7 @@ export function StickyActionBar({ leadingLabel, price, priceUnit, actionLabel, o
           {priceUnit && <span className="text-body font-normal text-neutral-600"> {priceUnit}</span>}
         </p>
       </div>
-      <Button size="lg" onClick={onAction} disabled={disabled}>
+      <Button size="lg" onClick={onAction} disabled={disabled} loading={loading}>
         {actionLabel}
       </Button>
     </div>

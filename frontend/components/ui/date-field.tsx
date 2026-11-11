@@ -3,10 +3,7 @@
 import { useId } from "react";
 import { cn } from "@/lib/cn";
 import { formatDateLong } from "@/lib/format";
-
-function todayWIB(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
-}
+import { todayWIB } from "@/lib/period";
 
 export interface DateFieldProps {
   label: string;

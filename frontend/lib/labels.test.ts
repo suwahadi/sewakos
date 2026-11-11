@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   bookingStatusLabel,
+  durationLabel,
   genderLabel,
   invoiceStatusLabel,
+  invoiceTypeLabel,
   moderationStatusLabel,
   notificationCategoryLabel,
   paymentStatusLabel,
   payoutStatusLabel,
   refundStatusLabel,
+  rentTypeLabel,
 } from "./labels";
 
 describe("bookingStatusLabel", () => {
@@ -99,5 +102,18 @@ describe("notificationCategoryLabel", () => {
     ["chat", "Chat"],
   ])("maps %s", (category, label) => {
     expect(notificationCategoryLabel(category)).toBe(label);
+  });
+});
+
+describe("rent type and invoice type labels", () => {
+  it("names rent types and durations", () => {
+    expect(rentTypeLabel("weekly")).toBe("Mingguan");
+    expect(durationLabel("monthly", 3)).toBe("3 bulan");
+    expect(durationLabel("daily", 5)).toBe("5 hari");
+  });
+
+  it("names invoice types", () => {
+    expect(invoiceTypeLabel("initial")).toBe("Pembayaran pertama");
+    expect(invoiceTypeLabel("renewal")).toBe("Tagihan bulanan");
   });
 });
