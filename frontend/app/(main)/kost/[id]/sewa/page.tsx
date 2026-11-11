@@ -24,7 +24,7 @@ export default async function SewaPage({
   const { room: roomParam } = await searchParams;
   await requireAuthenticated(`/kost/${id}/sewa${roomParam ? `?room=${encodeURIComponent(roomParam)}` : ""}`);
 
-  const [role, listing] = await Promise.all([getNavRole(), apiFetch<ListingResponse>(`/listings/${id}`)]);
+  const [role, listing] = await Promise.all([getNavRole(), apiFetch<ListingResponse>(`/listings/${encodeURIComponent(id)}`)]);
   if (role === "owner") {
     return (
       <>

@@ -4,7 +4,7 @@ import { apiFetch } from "@/lib/api/client";
 export async function GET(request: Request, context: { params: Promise<{ type: string }> }) {
   const { type } = await context.params;
   const url = new URL(request.url);
-  const result = await apiFetch(`/area/${type}`, {
+  const result = await apiFetch(`/area/${encodeURIComponent(type)}`, {
     auth: false,
     searchParams: { top: url.searchParams.get("top") ?? undefined },
   });

@@ -31,7 +31,7 @@ export default async function KostDetailPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const [role, result] = await Promise.all([
     getNavRole(),
-    apiFetch<PropertyDetailResponse>(`/listings/${id}`),
+    apiFetch<PropertyDetailResponse>(`/listings/${encodeURIComponent(id)}`),
   ]);
 
   if (!result.ok) notFound();
