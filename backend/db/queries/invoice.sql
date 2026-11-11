@@ -18,6 +18,25 @@ FROM invoices i
 JOIN bookings b ON b.id = i.booking_id
 WHERE i.id = sqlc.arg(id);
 
+-- name: GetInvoiceForPDF :one
+SELECT i.id, i.number, i.type, i.status, i.period_start, i.period_end,
+       i.rent_amount, i.discount, i.deposit, i.admin_fee, i.total, i.due_date, i.paid_at, i.issued_at,
+       b.tenant_id, r.name AS room_name, p.name AS property_name, p.owner_id,
+       u.name AS tenant_name, u.phone AS tenant_phone
+FROM invoices i
+JOIN bookings b ON b.id = i.booking_id
+JOIN rooms r ON r.id = b.room_id
+JOIN properties p ON p.id = r.property_id
+JOIN users u ON u.id = b.tenant_id
+WHERE i.id = sqlc.arg(id);
+
+-- name: GetSettledPaymentForInvoice :one
+SELECT order_id, payment_type
+FROM payments
+WHERE invoice_id = sqlc.arg(invoice_id) AND status = 'settlement'
+ORDER BY id DESC
+LIMIT 1;
+
 -- name: SelectInvoiceForCheckout :one
 SELECT i.id, i.type, i.status, i.total, i.admin_fee, i.number,
        b.id AS booking_id, b.tenant_id, b.room_id, b.rent_type, b.status AS booking_status, b.stock_held,

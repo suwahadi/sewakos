@@ -157,6 +157,7 @@ func NewRouter(deps Deps) chi.Router {
 			authed.Get("/booking/{booking}", withAuthedUser(bookingDeps, booking.DetailHandler))
 			authed.Get("/invoices", withAuthedUser(bookingDeps, booking.InvoiceListHandler))
 			authed.Get("/invoices/{invoice}", withAuthedUser(bookingDeps, booking.InvoiceDetailHandler))
+			authed.Get("/invoices/{invoice}/pdf", withAuthedUser(bookingDeps, booking.InvoicePDFHandler))
 
 			authed.Group(func(tenant chi.Router) {
 				tenant.Use(RequireRole("tenant"))

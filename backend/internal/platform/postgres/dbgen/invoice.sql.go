@@ -11,6 +11,70 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getInvoiceForPDF = `-- name: GetInvoiceForPDF :one
+SELECT i.id, i.number, i.type, i.status, i.period_start, i.period_end,
+       i.rent_amount, i.discount, i.deposit, i.admin_fee, i.total, i.due_date, i.paid_at, i.issued_at,
+       b.tenant_id, r.name AS room_name, p.name AS property_name, p.owner_id,
+       u.name AS tenant_name, u.phone AS tenant_phone
+FROM invoices i
+JOIN bookings b ON b.id = i.booking_id
+JOIN rooms r ON r.id = b.room_id
+JOIN properties p ON p.id = r.property_id
+JOIN users u ON u.id = b.tenant_id
+WHERE i.id = $1
+`
+
+type GetInvoiceForPDFRow struct {
+	ID           int64
+	Number       string
+	Type         string
+	Status       string
+	PeriodStart  pgtype.Date
+	PeriodEnd    pgtype.Date
+	RentAmount   int64
+	Discount     int64
+	Deposit      int64
+	AdminFee     int64
+	Total        int64
+	DueDate      pgtype.Date
+	PaidAt       pgtype.Timestamptz
+	IssuedAt     pgtype.Timestamptz
+	TenantID     int64
+	RoomName     string
+	PropertyName string
+	OwnerID      int64
+	TenantName   string
+	TenantPhone  string
+}
+
+func (q *Queries) GetInvoiceForPDF(ctx context.Context, id int64) (GetInvoiceForPDFRow, error) {
+	row := q.db.QueryRow(ctx, getInvoiceForPDF, id)
+	var i GetInvoiceForPDFRow
+	err := row.Scan(
+		&i.ID,
+		&i.Number,
+		&i.Type,
+		&i.Status,
+		&i.PeriodStart,
+		&i.PeriodEnd,
+		&i.RentAmount,
+		&i.Discount,
+		&i.Deposit,
+		&i.AdminFee,
+		&i.Total,
+		&i.DueDate,
+		&i.PaidAt,
+		&i.IssuedAt,
+		&i.TenantID,
+		&i.RoomName,
+		&i.PropertyName,
+		&i.OwnerID,
+		&i.TenantName,
+		&i.TenantPhone,
+	)
+	return i, err
+}
+
 const getInvoiceForTenant = `-- name: GetInvoiceForTenant :one
 SELECT i.id, i.number, i.booking_id, i.type, i.status,
        i.period_start, i.period_end, i.rent_amount, i.discount, i.deposit, i.admin_fee, i.total,
@@ -60,6 +124,26 @@ func (q *Queries) GetInvoiceForTenant(ctx context.Context, id int64) (GetInvoice
 		&i.IssuedAt,
 		&i.TenantID,
 	)
+	return i, err
+}
+
+const getSettledPaymentForInvoice = `-- name: GetSettledPaymentForInvoice :one
+SELECT order_id, payment_type
+FROM payments
+WHERE invoice_id = $1 AND status = 'settlement'
+ORDER BY id DESC
+LIMIT 1
+`
+
+type GetSettledPaymentForInvoiceRow struct {
+	OrderID     string
+	PaymentType pgtype.Text
+}
+
+func (q *Queries) GetSettledPaymentForInvoice(ctx context.Context, invoiceID int64) (GetSettledPaymentForInvoiceRow, error) {
+	row := q.db.QueryRow(ctx, getSettledPaymentForInvoice, invoiceID)
+	var i GetSettledPaymentForInvoiceRow
+	err := row.Scan(&i.OrderID, &i.PaymentType)
 	return i, err
 }
 

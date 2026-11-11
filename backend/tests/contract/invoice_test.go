@@ -210,6 +210,93 @@ func TestInvoiceCheckoutNonUnpaidIs400(t *testing.T) {
 	}
 }
 
+func TestInvoicePDFForTenantIsPDF(t *testing.T) {
+	t.Setenv("OTP_DEBUG_ECHO", "true")
+	srv, pool := newTestServerAndPool(t)
+	roomID := seedBookingFixture(t, pool, 2250000, 2, false)
+	_, token := bookingRegisterAndVerify(t, srv)
+	bookingID := submitBookingFixture(t, srv, token, roomID)
+	invoiceID := getInitialInvoiceID(t, pool, bookingID)
+
+	resp, body := invoiceAuthedGet(t, srv, token, fmt.Sprintf("/api/invoices/%d/pdf", invoiceID))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", resp.StatusCode, body)
+	}
+	if ct := resp.Header.Get("Content-Type"); ct != "application/pdf" {
+		t.Errorf("content-type = %q, want application/pdf", ct)
+	}
+	if len(body) < 4 || string(body[:4]) != "%PDF" {
+		t.Errorf("body does not start with %%PDF: %q", body[:min(len(body), 20)])
+	}
+}
+
+func TestInvoicePDFForbiddenForOtherTenant(t *testing.T) {
+	t.Setenv("OTP_DEBUG_ECHO", "true")
+	srv, pool := newTestServerAndPool(t)
+	roomID := seedBookingFixture(t, pool, 2250000, 2, false)
+	_, tokenA := bookingRegisterAndVerify(t, srv)
+	_, tokenB := bookingRegisterAndVerify(t, srv)
+	bookingID := submitBookingFixture(t, srv, tokenA, roomID)
+	invoiceID := getInitialInvoiceID(t, pool, bookingID)
+
+	resp, body := invoiceAuthedGet(t, srv, tokenB, fmt.Sprintf("/api/invoices/%d/pdf", invoiceID))
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("status = %d, body = %s, want 403", resp.StatusCode, body)
+	}
+}
+
+func TestInvoicePDFPaidShowsLunasAndAllowsOwner(t *testing.T) {
+	t.Setenv("OTP_DEBUG_ECHO", "true")
+	srv, pool := newTestServerAndPool(t)
+	roomID := seedBookingFixture(t, pool, 2250000, 2, false)
+	_, token := bookingRegisterAndVerify(t, srv)
+	bookingID := submitBookingFixture(t, srv, token, roomID)
+	invoiceID := getInitialInvoiceID(t, pool, bookingID)
+
+	ctx := context.Background()
+	if _, err := pool.Exec(ctx, `UPDATE invoices SET status = 'paid', paid_at = now() WHERE id = $1`, invoiceID); err != nil {
+		t.Fatalf("mark invoice paid: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO payments (invoice_id, order_id, status, payment_type, gross_amount, expires_at)
+		VALUES ($1, $2, 'settlement', 'bank_transfer', 2250000, now() + interval '15 minutes')`,
+		invoiceID, fmt.Sprintf("KOS-TEST-PAID-%d", invoiceID)); err != nil {
+		t.Fatalf("insert settled payment: %v", err)
+	}
+
+	var ownerID int64
+	if err := pool.QueryRow(ctx, `
+		SELECT p.owner_id FROM rooms r JOIN properties p ON p.id = r.property_id WHERE r.id = $1`, roomID).Scan(&ownerID); err != nil {
+		t.Fatalf("read owner id: %v", err)
+	}
+	ownerToken := mintTenantToken(t, pool, ownerID)
+
+	resp, body := invoiceAuthedGet(t, srv, ownerToken, fmt.Sprintf("/api/invoices/%d/pdf", invoiceID))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", resp.StatusCode, body)
+	}
+	if ct := resp.Header.Get("Content-Type"); ct != "application/pdf" {
+		t.Errorf("content-type = %q, want application/pdf", ct)
+	}
+}
+
+func TestInvoicePDFVoidIs400(t *testing.T) {
+	t.Setenv("OTP_DEBUG_ECHO", "true")
+	srv, pool := newTestServerAndPool(t)
+	roomID := seedBookingFixture(t, pool, 2250000, 2, false)
+	_, token := bookingRegisterAndVerify(t, srv)
+	bookingID := submitBookingFixture(t, srv, token, roomID)
+	invoiceID := getInitialInvoiceID(t, pool, bookingID)
+	if _, err := pool.Exec(context.Background(), `UPDATE invoices SET status = 'void' WHERE id = $1`, invoiceID); err != nil {
+		t.Fatalf("void invoice: %v", err)
+	}
+
+	resp, body := invoiceAuthedGet(t, srv, token, fmt.Sprintf("/api/invoices/%d/pdf", invoiceID))
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d, body = %s, want 400", resp.StatusCode, body)
+	}
+}
+
 func TestInvoiceCheckoutBookingNotApprovedIs400(t *testing.T) {
 	t.Setenv("OTP_DEBUG_ECHO", "true")
 	srv, pool := newTestServerAndPool(t)

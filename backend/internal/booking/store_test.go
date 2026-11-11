@@ -45,3 +45,11 @@ func (baseStubStore) ListInvoicesForTenant(ctx context.Context, arg dbgen.ListIn
 func (baseStubStore) GetInvoiceForTenant(ctx context.Context, id int64) (dbgen.GetInvoiceForTenantRow, error) {
 	return dbgen.GetInvoiceForTenantRow{}, pgx.ErrNoRows
 }
+
+func (baseStubStore) GetInvoiceForPDF(ctx context.Context, id int64) (dbgen.GetInvoiceForPDFRow, error) {
+	return dbgen.GetInvoiceForPDFRow{}, pgx.ErrNoRows
+}
+
+func (baseStubStore) GetSettledPaymentForInvoice(ctx context.Context, invoiceID int64) (dbgen.GetSettledPaymentForInvoiceRow, error) {
+	return dbgen.GetSettledPaymentForInvoiceRow{}, pgx.ErrNoRows
+}
