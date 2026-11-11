@@ -91,6 +91,14 @@ func nullableInt8(n pgtype.Int8) any {
 	return n.Int64
 }
 
+func toPgTimestamptz(t time.Time) pgtype.Timestamptz {
+	return pgtype.Timestamptz{Time: t, Valid: true}
+}
+
+func toPgDate(t time.Time) pgtype.Date {
+	return pgtype.Date{Time: t, Valid: true}
+}
+
 func recordAudit(ctx context.Context, store audit.Store, r *http.Request, user authctx.User, action, entityType string, entityID int64, before, after map[string]any) error {
 	ownerID, role, userAgent := user.UserID, user.Role, r.UserAgent()
 	params := audit.Params{

@@ -76,6 +76,14 @@ type Querier interface {
 	GetLatestPaymentForInvoice(ctx context.Context, invoiceID int64) (GetLatestPaymentForInvoiceRow, error)
 	GetListingProperty(ctx context.Context, id int64) (GetListingPropertyRow, error)
 	GetOwnerBankAccount(ctx context.Context, userID int64) (GetOwnerBankAccountRow, error)
+	GetOwnerDepositsHeld(ctx context.Context, ownerID int64) (int64, error)
+	GetOwnerFinanceSummary(ctx context.Context, arg GetOwnerFinanceSummaryParams) (GetOwnerFinanceSummaryRow, error)
+	GetOwnerOccupancy(ctx context.Context, arg GetOwnerOccupancyParams) (GetOwnerOccupancyRow, error)
+	GetOwnerPendingBalance(ctx context.Context, ownerID pgtype.Int8) (int64, error)
+	GetOwnerRating(ctx context.Context, arg GetOwnerRatingParams) (GetOwnerRatingRow, error)
+	GetOwnerStatsBookingCounts(ctx context.Context, arg GetOwnerStatsBookingCountsParams) (GetOwnerStatsBookingCountsRow, error)
+	GetOwnerStatsEarnings(ctx context.Context, arg GetOwnerStatsEarningsParams) (int64, error)
+	GetOwnerStatsViews(ctx context.Context, arg GetOwnerStatsViewsParams) (int64, error)
 	GetPaymentByOrderID(ctx context.Context, orderID string) (GetPaymentByOrderIDRow, error)
 	GetPaymentForWebhook(ctx context.Context, orderID string) (GetPaymentForWebhookRow, error)
 	GetPayoutForInvoice(ctx context.Context, invoiceID int64) (GetPayoutForInvoiceRow, error)
@@ -113,6 +121,7 @@ type Querier interface {
 	ListListingRoomPhotos(ctx context.Context, propertyID int64) ([]ListListingRoomPhotosRow, error)
 	ListListingRooms(ctx context.Context, propertyID int64) ([]ListListingRoomsRow, error)
 	ListOwnerBookings(ctx context.Context, arg ListOwnerBookingsParams) ([]ListOwnerBookingsRow, error)
+	ListOwnerLedgerEntries(ctx context.Context, arg ListOwnerLedgerEntriesParams) ([]ListOwnerLedgerEntriesRow, error)
 	ListOwnerPayouts(ctx context.Context, arg ListOwnerPayoutsParams) ([]ListOwnerPayoutsRow, error)
 	ListOwnerProperties(ctx context.Context, arg ListOwnerPropertiesParams) ([]ListOwnerPropertiesRow, error)
 	ListOwnerRooms(ctx context.Context, arg ListOwnerRoomsParams) ([]ListOwnerRoomsRow, error)
@@ -178,6 +187,7 @@ type Querier interface {
 	SetPropertySlug(ctx context.Context, arg SetPropertySlugParams) error
 	SetRefundAccount(ctx context.Context, arg SetRefundAccountParams) error
 	SetUserSuspended(ctx context.Context, arg SetUserSuspendedParams) error
+	StreamOwnerLedgerEntries(ctx context.Context, arg StreamOwnerLedgerEntriesParams) ([]StreamOwnerLedgerEntriesRow, error)
 	SuggestAreas(ctx context.Context, keyword string) ([]SuggestAreasRow, error)
 	SuggestLandings(ctx context.Context, keyword string) ([]SuggestLandingsRow, error)
 	SuggestRoomTypes(ctx context.Context, keyword string) ([]SuggestRoomTypesRow, error)

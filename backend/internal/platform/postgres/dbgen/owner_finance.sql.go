@@ -28,6 +28,206 @@ func (q *Queries) GetOwnerBankAccount(ctx context.Context, userID int64) (GetOwn
 	return i, err
 }
 
+const getOwnerDepositsHeld = `-- name: GetOwnerDepositsHeld :one
+SELECT COALESCE(SUM(b.deposit), 0)::bigint AS deposits_held
+FROM bookings b
+JOIN rooms r ON r.id = b.room_id
+JOIN properties p ON p.id = r.property_id
+WHERE p.owner_id = $1 AND b.status IN ('approved', 'completed', 'terminated') AND b.deposit_returned_at IS NULL
+`
+
+func (q *Queries) GetOwnerDepositsHeld(ctx context.Context, ownerID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, getOwnerDepositsHeld, ownerID)
+	var deposits_held int64
+	err := row.Scan(&deposits_held)
+	return deposits_held, err
+}
+
+const getOwnerFinanceSummary = `-- name: GetOwnerFinanceSummary :one
+SELECT
+  COALESCE(SUM(amount) FILTER (WHERE type = 'owner_earning'), 0)::bigint AS earnings,
+  COALESCE(-SUM(amount) FILTER (WHERE type = 'payout_completed'), 0)::bigint AS payouts_completed,
+  COUNT(DISTINCT invoice_id) FILTER (WHERE type = 'owner_earning')::bigint AS paid_invoices
+FROM ledger_entries
+WHERE owner_id = $1 AND occurred_at >= $2 AND occurred_at < $3
+`
+
+type GetOwnerFinanceSummaryParams struct {
+	OwnerID  pgtype.Int8
+	FromTime pgtype.Timestamptz
+	ToTime   pgtype.Timestamptz
+}
+
+type GetOwnerFinanceSummaryRow struct {
+	Earnings         int64
+	PayoutsCompleted int64
+	PaidInvoices     int64
+}
+
+func (q *Queries) GetOwnerFinanceSummary(ctx context.Context, arg GetOwnerFinanceSummaryParams) (GetOwnerFinanceSummaryRow, error) {
+	row := q.db.QueryRow(ctx, getOwnerFinanceSummary, arg.OwnerID, arg.FromTime, arg.ToTime)
+	var i GetOwnerFinanceSummaryRow
+	err := row.Scan(&i.Earnings, &i.PayoutsCompleted, &i.PaidInvoices)
+	return i, err
+}
+
+const getOwnerOccupancy = `-- name: GetOwnerOccupancy :one
+SELECT
+  COALESCE(SUM(r.available), 0)::bigint AS available,
+  COALESCE(SUM((SELECT count(*) FROM bookings b WHERE b.room_id = r.id AND b.stock_held AND b.status IN ('pending', 'paid'))), 0)::bigint AS held,
+  COALESCE(SUM((SELECT count(*) FROM bookings b WHERE b.room_id = r.id AND b.stock_held AND b.status = 'approved')), 0)::bigint AS occupied
+FROM rooms r
+JOIN properties p ON p.id = r.property_id
+WHERE p.owner_id = $1 AND ($2::bigint IS NULL OR p.id = $2)
+`
+
+type GetOwnerOccupancyParams struct {
+	OwnerID    int64
+	PropertyID pgtype.Int8
+}
+
+type GetOwnerOccupancyRow struct {
+	Available int64
+	Held      int64
+	Occupied  int64
+}
+
+func (q *Queries) GetOwnerOccupancy(ctx context.Context, arg GetOwnerOccupancyParams) (GetOwnerOccupancyRow, error) {
+	row := q.db.QueryRow(ctx, getOwnerOccupancy, arg.OwnerID, arg.PropertyID)
+	var i GetOwnerOccupancyRow
+	err := row.Scan(&i.Available, &i.Held, &i.Occupied)
+	return i, err
+}
+
+const getOwnerPendingBalance = `-- name: GetOwnerPendingBalance :one
+SELECT COALESCE(SUM(amount) FILTER (WHERE type IN ('owner_earning', 'payout_completed')), 0)::bigint AS pending_balance
+FROM ledger_entries WHERE owner_id = $1
+`
+
+func (q *Queries) GetOwnerPendingBalance(ctx context.Context, ownerID pgtype.Int8) (int64, error) {
+	row := q.db.QueryRow(ctx, getOwnerPendingBalance, ownerID)
+	var pending_balance int64
+	err := row.Scan(&pending_balance)
+	return pending_balance, err
+}
+
+const getOwnerRating = `-- name: GetOwnerRating :one
+SELECT COALESCE(AVG(rv.rating), 0)::float8 AS average, COUNT(*)::bigint AS count
+FROM reviews rv
+JOIN properties p ON p.id = rv.property_id
+WHERE p.owner_id = $1 AND NOT rv.is_hidden
+  AND ($2::bigint IS NULL OR p.id = $2)
+`
+
+type GetOwnerRatingParams struct {
+	OwnerID    int64
+	PropertyID pgtype.Int8
+}
+
+type GetOwnerRatingRow struct {
+	Average float64
+	Count   int64
+}
+
+func (q *Queries) GetOwnerRating(ctx context.Context, arg GetOwnerRatingParams) (GetOwnerRatingRow, error) {
+	row := q.db.QueryRow(ctx, getOwnerRating, arg.OwnerID, arg.PropertyID)
+	var i GetOwnerRatingRow
+	err := row.Scan(&i.Average, &i.Count)
+	return i, err
+}
+
+const getOwnerStatsBookingCounts = `-- name: GetOwnerStatsBookingCounts :one
+SELECT
+  COUNT(*) FILTER (WHERE b.paid_at >= $1 AND b.paid_at < $2)::bigint AS bookings_paid,
+  COUNT(*) FILTER (WHERE b.status = 'approved' AND b.responded_at >= $1 AND b.responded_at < $2)::bigint AS bookings_approved,
+  COUNT(*) FILTER (WHERE b.status = 'rejected' AND b.responded_at >= $1 AND b.responded_at < $2)::bigint AS bookings_rejected
+FROM bookings b
+JOIN rooms r ON r.id = b.room_id
+JOIN properties p ON p.id = r.property_id
+WHERE p.owner_id = $3 AND ($4::bigint IS NULL OR p.id = $4)
+`
+
+type GetOwnerStatsBookingCountsParams struct {
+	FromTime   pgtype.Timestamptz
+	ToTime     pgtype.Timestamptz
+	OwnerID    int64
+	PropertyID pgtype.Int8
+}
+
+type GetOwnerStatsBookingCountsRow struct {
+	BookingsPaid     int64
+	BookingsApproved int64
+	BookingsRejected int64
+}
+
+func (q *Queries) GetOwnerStatsBookingCounts(ctx context.Context, arg GetOwnerStatsBookingCountsParams) (GetOwnerStatsBookingCountsRow, error) {
+	row := q.db.QueryRow(ctx, getOwnerStatsBookingCounts,
+		arg.FromTime,
+		arg.ToTime,
+		arg.OwnerID,
+		arg.PropertyID,
+	)
+	var i GetOwnerStatsBookingCountsRow
+	err := row.Scan(&i.BookingsPaid, &i.BookingsApproved, &i.BookingsRejected)
+	return i, err
+}
+
+const getOwnerStatsEarnings = `-- name: GetOwnerStatsEarnings :one
+SELECT COALESCE(SUM(l.amount), 0)::bigint AS earnings
+FROM ledger_entries l
+JOIN bookings b ON b.id = l.booking_id
+JOIN rooms r ON r.id = b.room_id
+WHERE l.owner_id = $1 AND l.type = 'owner_earning'
+  AND l.occurred_at >= $2 AND l.occurred_at < $3
+  AND ($4::bigint IS NULL OR r.property_id = $4)
+`
+
+type GetOwnerStatsEarningsParams struct {
+	OwnerID    pgtype.Int8
+	FromTime   pgtype.Timestamptz
+	ToTime     pgtype.Timestamptz
+	PropertyID pgtype.Int8
+}
+
+func (q *Queries) GetOwnerStatsEarnings(ctx context.Context, arg GetOwnerStatsEarningsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getOwnerStatsEarnings,
+		arg.OwnerID,
+		arg.FromTime,
+		arg.ToTime,
+		arg.PropertyID,
+	)
+	var earnings int64
+	err := row.Scan(&earnings)
+	return earnings, err
+}
+
+const getOwnerStatsViews = `-- name: GetOwnerStatsViews :one
+SELECT COALESCE(SUM(v.views), 0)::bigint AS views
+FROM property_views_daily v
+JOIN properties p ON p.id = v.property_id
+WHERE p.owner_id = $1 AND ($2::bigint IS NULL OR p.id = $2)
+  AND v.view_date >= $3 AND v.view_date <= $4
+`
+
+type GetOwnerStatsViewsParams struct {
+	OwnerID    int64
+	PropertyID pgtype.Int8
+	FromDate   pgtype.Date
+	ToDate     pgtype.Date
+}
+
+func (q *Queries) GetOwnerStatsViews(ctx context.Context, arg GetOwnerStatsViewsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getOwnerStatsViews,
+		arg.OwnerID,
+		arg.PropertyID,
+		arg.FromDate,
+		arg.ToDate,
+	)
+	var views int64
+	err := row.Scan(&views)
+	return views, err
+}
+
 const listInvoicesForOwner = `-- name: ListInvoicesForOwner :many
 SELECT i.id, i.number, i.booking_id, i.type, i.status,
        i.period_start, i.period_end, i.rent_amount, i.discount, i.deposit, i.admin_fee, i.total,
@@ -111,6 +311,70 @@ func (q *Queries) ListInvoicesForOwner(ctx context.Context, arg ListInvoicesForO
 	return items, nil
 }
 
+const listOwnerLedgerEntries = `-- name: ListOwnerLedgerEntries :many
+SELECT l.id, l.occurred_at, l.type, l.amount, l.booking_id, i.number AS invoice_number, l.description
+FROM ledger_entries l
+LEFT JOIN invoices i ON i.id = l.invoice_id
+WHERE l.owner_id = $1 AND l.occurred_at >= $2 AND l.occurred_at < $3
+  AND ($4::varchar IS NULL OR l.type = $4)
+ORDER BY l.occurred_at DESC, l.id DESC
+LIMIT $6 OFFSET $5
+`
+
+type ListOwnerLedgerEntriesParams struct {
+	OwnerID   pgtype.Int8
+	FromTime  pgtype.Timestamptz
+	ToTime    pgtype.Timestamptz
+	Type      pgtype.Text
+	RowOffset int32
+	RowLimit  int32
+}
+
+type ListOwnerLedgerEntriesRow struct {
+	ID            int64
+	OccurredAt    pgtype.Timestamptz
+	Type          string
+	Amount        int64
+	BookingID     pgtype.Int8
+	InvoiceNumber pgtype.Text
+	Description   string
+}
+
+func (q *Queries) ListOwnerLedgerEntries(ctx context.Context, arg ListOwnerLedgerEntriesParams) ([]ListOwnerLedgerEntriesRow, error) {
+	rows, err := q.db.Query(ctx, listOwnerLedgerEntries,
+		arg.OwnerID,
+		arg.FromTime,
+		arg.ToTime,
+		arg.Type,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListOwnerLedgerEntriesRow{}
+	for rows.Next() {
+		var i ListOwnerLedgerEntriesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OccurredAt,
+			&i.Type,
+			&i.Amount,
+			&i.BookingID,
+			&i.InvoiceNumber,
+			&i.Description,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listOwnerPayouts = `-- name: ListOwnerPayouts :many
 SELECT id, booking_id, amount, status, transfer_reference, completed_at, created_at
 FROM payouts
@@ -159,6 +423,65 @@ func (q *Queries) ListOwnerPayouts(ctx context.Context, arg ListOwnerPayoutsPara
 			&i.TransferReference,
 			&i.CompletedAt,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const streamOwnerLedgerEntries = `-- name: StreamOwnerLedgerEntries :many
+SELECT l.id, l.occurred_at, l.type, l.amount, l.booking_id, i.number AS invoice_number, l.description
+FROM ledger_entries l
+LEFT JOIN invoices i ON i.id = l.invoice_id
+WHERE l.owner_id = $1 AND l.occurred_at >= $2 AND l.occurred_at < $3
+  AND ($4::varchar IS NULL OR l.type = $4)
+ORDER BY l.occurred_at DESC, l.id DESC
+`
+
+type StreamOwnerLedgerEntriesParams struct {
+	OwnerID  pgtype.Int8
+	FromTime pgtype.Timestamptz
+	ToTime   pgtype.Timestamptz
+	Type     pgtype.Text
+}
+
+type StreamOwnerLedgerEntriesRow struct {
+	ID            int64
+	OccurredAt    pgtype.Timestamptz
+	Type          string
+	Amount        int64
+	BookingID     pgtype.Int8
+	InvoiceNumber pgtype.Text
+	Description   string
+}
+
+func (q *Queries) StreamOwnerLedgerEntries(ctx context.Context, arg StreamOwnerLedgerEntriesParams) ([]StreamOwnerLedgerEntriesRow, error) {
+	rows, err := q.db.Query(ctx, streamOwnerLedgerEntries,
+		arg.OwnerID,
+		arg.FromTime,
+		arg.ToTime,
+		arg.Type,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []StreamOwnerLedgerEntriesRow{}
+	for rows.Next() {
+		var i StreamOwnerLedgerEntriesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OccurredAt,
+			&i.Type,
+			&i.Amount,
+			&i.BookingID,
+			&i.InvoiceNumber,
+			&i.Description,
 		); err != nil {
 			return nil, err
 		}

@@ -1,14 +1,19 @@
 package owner
 
 import (
+	"encoding/csv"
 	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/suwahadi/sewakos/backend/internal/authctx"
 	"github.com/suwahadi/sewakos/backend/internal/booking"
+	"github.com/suwahadi/sewakos/backend/internal/finance"
 	"github.com/suwahadi/sewakos/backend/internal/money"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres/dbgen"
 	"github.com/suwahadi/sewakos/backend/internal/response"
@@ -104,6 +109,130 @@ func PutBankAccountHandler(deps Deps, user authctx.User) http.HandlerFunc {
 		}
 		response.Success(w, http.StatusOK, "Rekening disimpan.", map[string]any{"bank_account": bankAccountBody(account)})
 	}
+}
+
+func respondInvalidDateRange(w http.ResponseWriter, r *http.Request, errs map[string][]string) {
+	response.Fail(w, http.StatusUnprocessableEntity, response.MsgValidationFailed, errs)
+}
+
+func ledgerType(r *http.Request) pgtype.Text {
+	return optionalQueryText(r, "type")
+}
+
+func FinanceSummaryHandler(deps Deps, user authctx.User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		from, toExclusive, errs := finance.ParseDateRange(r)
+		if errs != nil {
+			respondInvalidDateRange(w, r, errs)
+			return
+		}
+		ctx := r.Context()
+		ownerID := pgtype.Int8{Int64: user.UserID, Valid: true}
+
+		summary, err := deps.Store.GetOwnerFinanceSummary(ctx, dbgen.GetOwnerFinanceSummaryParams{
+			OwnerID: ownerID, FromTime: toPgTimestamptz(from), ToTime: toPgTimestamptz(toExclusive),
+		})
+		if err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		pendingBalance, err := deps.Store.GetOwnerPendingBalance(ctx, ownerID)
+		if err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		depositsHeld, err := deps.Store.GetOwnerDepositsHeld(ctx, user.UserID)
+		if err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+
+		response.Success(w, http.StatusOK, "", map[string]any{"summary": map[string]any{
+			"from": from.Format("2006-01-02"), "to": toExclusive.AddDate(0, 0, -1).Format("2006-01-02"),
+			"earnings": summary.Earnings, "earnings_label": money.FormatRupiah(summary.Earnings),
+			"payouts_completed": summary.PayoutsCompleted, "payouts_completed_label": money.FormatRupiah(summary.PayoutsCompleted),
+			"pending_balance": pendingBalance, "pending_balance_label": money.FormatRupiah(pendingBalance),
+			"deposits_held": depositsHeld, "deposits_held_label": money.FormatRupiah(depositsHeld),
+			"paid_invoices": summary.PaidInvoices,
+		}})
+	}
+}
+
+func ledgerEntryBody(id int64, occurredAt pgtype.Timestamptz, entryType string, amount int64, bookingID pgtype.Int8, invoiceNumber pgtype.Text, description string) map[string]any {
+	return map[string]any{
+		"id": id, "occurred_at": money.FormatExpiresAt(occurredAt.Time), "type": entryType,
+		"amount": amount, "amount_label": money.FormatRupiah(amount),
+		"booking_id": nullableInt8(bookingID), "invoice_number": nullableText(invoiceNumber), "description": description,
+	}
+}
+
+func FinanceLedgerHandler(deps Deps, user authctx.User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		from, toExclusive, errs := finance.ParseDateRange(r)
+		if errs != nil {
+			respondInvalidDateRange(w, r, errs)
+			return
+		}
+		page, limit := pageParam(r), limitParam(r)
+		rows, err := deps.Store.ListOwnerLedgerEntries(r.Context(), dbgen.ListOwnerLedgerEntriesParams{
+			OwnerID: pgtype.Int8{Int64: user.UserID, Valid: true}, FromTime: toPgTimestamptz(from), ToTime: toPgTimestamptz(toExclusive),
+			Type: ledgerType(r), RowLimit: limit, RowOffset: (page - 1) * limit,
+		})
+		if err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		entries := make([]map[string]any, len(rows))
+		for i, row := range rows {
+			entries[i] = ledgerEntryBody(row.ID, row.OccurredAt, row.Type, row.Amount, row.BookingID, row.InvoiceNumber, row.Description)
+		}
+		response.Success(w, http.StatusOK, "", map[string]any{"entries": entries, "current_page": page})
+	}
+}
+
+func FinanceLedgerCSVHandler(deps Deps, user authctx.User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		from, toExclusive, errs := finance.ParseDateRange(r)
+		if errs != nil {
+			respondInvalidDateRange(w, r, errs)
+			return
+		}
+		rows, err := deps.Store.StreamOwnerLedgerEntries(r.Context(), dbgen.StreamOwnerLedgerEntriesParams{
+			OwnerID: pgtype.Int8{Int64: user.UserID, Valid: true}, FromTime: toPgTimestamptz(from), ToTime: toPgTimestamptz(toExclusive),
+			Type: ledgerType(r),
+		})
+		if err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+
+		lastDay := toExclusive.AddDate(0, 0, -1).Format("2006-01-02")
+		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="ledger-%s-%s.csv"`, from.Format("2006-01-02"), lastDay))
+		writer := csv.NewWriter(w)
+		_ = writer.Write([]string{"id", "occurred_at_wib", "type", "amount", "booking_id", "invoice_number", "description"})
+		for _, row := range rows {
+			_ = writer.Write([]string{
+				strconv.FormatInt(row.ID, 10), money.FormatHumanWIB(row.OccurredAt.Time), row.Type, strconv.FormatInt(row.Amount, 10),
+				csvNullableInt8(row.BookingID), csvNullableText(row.InvoiceNumber), row.Description,
+			})
+		}
+		writer.Flush()
+	}
+}
+
+func csvNullableInt8(n pgtype.Int8) string {
+	if !n.Valid {
+		return ""
+	}
+	return strconv.FormatInt(n.Int64, 10)
+}
+
+func csvNullableText(t pgtype.Text) string {
+	if !t.Valid {
+		return ""
+	}
+	return t.String
 }
 
 func ListPayoutsHandler(deps Deps, user authctx.User) http.HandlerFunc {
