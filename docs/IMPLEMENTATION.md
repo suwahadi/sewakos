@@ -145,7 +145,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 - [x] **F4.2 Properti & kamar.** `/owner/properti`, `/owner/properti/{id}`: form, Switch aktif/promo, status moderasi,
   InlineAlert alasan ditolak, form kamar (durasi bulanan, Rupiah).
 - [x] **F4.3 Foto.** PhotoUploader (DESIGN §6.47).
-- [ ] **F4.4 Booking masuk & keuangan dasar.** `/owner/booking/{id}` (setujui/tolak), `/owner/keuangan` bagian rekening
+- [x] **F4.4 Booking masuk & keuangan dasar.** `/owner/booking/{id}` (setujui/tolak), `/owner/keuangan` bagian rekening
   & payout.
 
 ## B6 — Admin
