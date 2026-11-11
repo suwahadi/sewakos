@@ -190,7 +190,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 
 ## Q2 — Gerbang Rilis 2
 
-- [ ] **Q2.1** Contract test & E2E fitur Rilis 2; uji perpanjangan bulanan & harian end-to-end dengan jam yang dimajukan.
+- [x] **Q2.1** Contract test & E2E fitur Rilis 2; uji perpanjangan bulanan & harian end-to-end dengan jam yang dimajukan.
 
 ## B9 — Rilis 3 backend
 
