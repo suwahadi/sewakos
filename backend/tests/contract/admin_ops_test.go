@@ -2,12 +2,43 @@ package contract
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 )
+
+type adminListRow struct {
+	id     int64
+	status string
+}
+
+func adminListIDs(t *testing.T, srv *httptest.Server, token, path, field string) []adminListRow {
+	t.Helper()
+	resp, body := bookingAuthedRequest(t, srv, http.MethodGet, path, token, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("%s: status = %d, body = %s", path, resp.StatusCode, body)
+	}
+	var envelope map[string]json.RawMessage
+	var list []struct {
+		ID     int64  `json:"id"`
+		Status string `json:"status"`
+	}
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		t.Fatalf("parse %s: %v", path, err)
+	}
+	if err := json.Unmarshal(envelope[field], &list); err != nil {
+		t.Fatalf("parse %s.%s: %v", path, field, err)
+	}
+	rows := make([]adminListRow, len(list))
+	for i, row := range list {
+		rows[i] = adminListRow{row.ID, row.Status}
+	}
+	return rows
+}
 
 func TestAdminPropertyModeration(t *testing.T) {
 	t.Setenv("OTP_DEBUG_ECHO", "true")
@@ -95,6 +126,21 @@ func TestAdminBookingsAndInvoices(t *testing.T) {
 	if resp.StatusCode != http.StatusOK || !strings.Contains(string(body), `"status":"pending"`) {
 		t.Errorf("unpaid booking visible to admin: status = %d, body = %s", resp.StatusCode, body)
 	}
+	for status, want := range map[string]int64{"pending": unpaidID, "approved": paidID} {
+		ids := adminListIDs(t, srv, token, "/api/admin/bookings?status="+status+"&page=1&limit=5", "bookings")
+		if len(ids) == 0 || ids[0].id != want {
+			t.Errorf("admin bookings status=%s = %+v, want newest first starting with %d", status, ids, want)
+		}
+		for _, row := range ids {
+			if row.status != status {
+				t.Errorf("admin bookings status=%s returned %+v", status, row)
+			}
+		}
+	}
+	resp, body = bookingAuthedRequest(t, srv, http.MethodGet, "/api/admin/bookings", ownerToken, "")
+	if resp.StatusCode != http.StatusForbidden {
+		t.Errorf("owner on admin route: status = %d, body = %s, want 403", resp.StatusCode, body)
+	}
 	resp, body = bookingAuthedRequest(t, srv, http.MethodGet, fmt.Sprintf("/api/admin/invoices?booking_id=%d&type=initial", paidID), token, "")
 	if resp.StatusCode != http.StatusOK || strings.Count(string(body), `"number":`) != 1 {
 		t.Errorf("admin invoices: status = %d, body = %s", resp.StatusCode, body)
@@ -123,6 +169,25 @@ func TestAdminRefundAndPayoutCompletion(t *testing.T) {
 	}
 	refundPath := fmt.Sprintf("/api/admin/refunds/%d/complete", refundID)
 	payoutPath := fmt.Sprintf("/api/admin/payouts/%d/complete", payoutID)
+	refundListed := func(status string) bool {
+		var before int
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM refunds WHERE status = $1 AND (created_at, id) < (SELECT created_at, id FROM refunds WHERE id = $2)`,
+			status, refundID).Scan(&before); err != nil {
+			t.Fatal(err)
+		}
+		rows := adminListIDs(t, srv, token, fmt.Sprintf("/api/admin/refunds?status=%s&limit=50&page=%d", status, before/50+1), "refunds")
+		found := false
+		for _, row := range rows {
+			found = found || row.id == refundID
+			if row.status != status {
+				t.Errorf("refunds status=%s returned %+v", status, row)
+			}
+		}
+		return found
+	}
+	if !refundListed("awaiting_account") {
+		t.Errorf("refund %d missing from awaiting_account list (oldest first)", refundID)
+	}
 
 	resp, body := bookingAuthedRequest(t, srv, http.MethodPost, refundPath, token, `{"transfer_reference":"TRX-1"}`)
 	if resp.StatusCode != http.StatusBadRequest || !strings.Contains(string(body), "Refund belum siap diproses.") {
@@ -131,6 +196,9 @@ func TestAdminRefundAndPayoutCompletion(t *testing.T) {
 	if resp, body := bookingAuthedRequest(t, srv, http.MethodPut, fmt.Sprintf("/api/booking/%d/refund-account", rejectedID), tenantToken,
 		`{"bank_name":"BCA","account_number":"1234567890","account_name":"Penyewa"}`); resp.StatusCode != http.StatusOK {
 		t.Fatalf("refund account: status = %d, body = %s", resp.StatusCode, body)
+	}
+	if !refundListed("ready") {
+		t.Errorf("refund %d missing from ready list after the tenant added an account", refundID)
 	}
 	resp, body = bookingAuthedRequest(t, srv, http.MethodPost, refundPath, token, `{}`)
 	if resp.StatusCode != http.StatusUnprocessableEntity || !strings.Contains(string(body), "The transfer reference field is required.") {
