@@ -127,3 +127,20 @@ WHERE id = sqlc.arg(id);
 
 -- name: MarkPaymentFailure :exec
 UPDATE payments SET status = 'failure', updated_at = now() WHERE id = sqlc.arg(id);
+
+-- name: LockBookingForExtend :one
+SELECT b.id, b.tenant_id, b.room_id, b.rent_type, b.status, b.start_date, b.end_date, b.duration, b.period_price,
+       r.name AS room_name, r.monthly_duration_options
+FROM bookings b
+JOIN rooms r ON r.id = b.room_id
+WHERE b.id = sqlc.arg(id)
+FOR UPDATE OF b;
+
+-- name: ExistsUnpaidExtensionInvoice :one
+SELECT EXISTS(SELECT 1 FROM invoices WHERE booking_id = sqlc.arg(booking_id) AND type = 'extension' AND status = 'unpaid');
+
+-- name: InsertExtensionInvoice :one
+INSERT INTO invoices (booking_id, number, type, period_start, period_end, periods, rent_amount, admin_fee, total, due_date, issued_at)
+VALUES (sqlc.arg(booking_id), '', 'extension', sqlc.arg(period_start), sqlc.arg(period_end), sqlc.arg(periods),
+        sqlc.arg(rent_amount), sqlc.arg(admin_fee), sqlc.arg(total), sqlc.arg(due_date), sqlc.arg(issued_at))
+RETURNING id;

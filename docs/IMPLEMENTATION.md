@@ -175,7 +175,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 
 ## B8 — Rilis 2 backend
 
-- [ ] **B8.1 Perpanjangan.** API.md §12.5, job `void_extensions`, `ApplyPaymentStatus` untuk `extension`.
+- [x] **B8.1 Perpanjangan.** API.md §12.5, job `void_extensions`, `ApplyPaymentStatus` untuk `extension`.
 - [ ] **B8.2 PDF invoice.** API.md §12.4, SPEC §13.7.
 - [ ] **B8.3 Deposit.** API-OWNER.md §5.5.
 - [ ] **B8.4 Keuangan & statistik owner.** API-OWNER.md §8–9 (CSV streaming).

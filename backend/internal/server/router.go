@@ -164,6 +164,7 @@ func NewRouter(deps Deps) chi.Router {
 				tenant.Post("/booking/{booking}/checkout", withAuthedUser(bookingDeps, booking.CheckoutHandler))
 				tenant.Post("/booking/{booking}/cancel", withAuthedUser(bookingDeps, booking.CancelHandler))
 				tenant.Put("/booking/{booking}/refund-account", withAuthedUser(bookingDeps, booking.RefundAccountHandler))
+				tenant.Post("/booking/{booking}/extend", withAuthedUser(bookingDeps, booking.ExtendHandler))
 				tenant.Post("/invoices/{invoice}/checkout", withAuthedUser(bookingDeps, booking.InvoiceCheckoutHandler))
 			})
 

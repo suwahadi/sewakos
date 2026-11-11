@@ -2,16 +2,20 @@ package contract
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/suwahadi/sewakos/backend/internal/auth"
 	"github.com/suwahadi/sewakos/backend/internal/booking"
 	"github.com/suwahadi/sewakos/backend/internal/midtrans"
 	"github.com/suwahadi/sewakos/backend/internal/money"
+	"github.com/suwahadi/sewakos/backend/internal/platform/postgres/dbgen"
 	"github.com/suwahadi/sewakos/backend/internal/worker"
 )
 
@@ -200,5 +204,92 @@ func TestCompleteTenanciesReleasesTheRoom(t *testing.T) {
 	}
 	if title, body := latestNotification(t, pool, f.ownerID); title != "Masa sewa selesai" || !strings.Contains(body, "kembalikan deposit Rp2.000.000") {
 		t.Errorf("owner notification = %q / %q", title, body)
+	}
+}
+
+func mintTenantToken(t *testing.T, pool *pgxpool.Pool, tenantID int64) string {
+	t.Helper()
+	token, err := auth.NewService(dbgen.New(pool)).Issue(context.Background(), tenantID)
+	if err != nil {
+		t.Fatalf("issue token: %v", err)
+	}
+	return token
+}
+
+func TestExtendHandlerCreatesInvoiceAndBlocksSecondRequest(t *testing.T) {
+	srv, pool := newTestServerAndPool(t)
+	start := money.TodayWIB().AddDate(0, 0, 2)
+	f := insertApprovedMonthlyBooking(t, pool, start.Format(time.DateOnly), 1)
+	token := mintTenantToken(t, pool, f.tenantID)
+	wantPeriodStart := money.AddPeriod(start, "monthly", 1)
+	wantPeriodEnd := money.AddPeriod(start, "monthly", 2)
+	wantDueDate := wantPeriodStart.AddDate(0, 0, -1)
+
+	resp, body := bookingAuthedRequest(t, srv, http.MethodPost, fmt.Sprintf("/api/booking/%d/extend", f.bookingID), token, `{"duration":1}`)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("extend: status = %d, body = %s", resp.StatusCode, body)
+	}
+	var extended struct {
+		Invoice struct {
+			Type        string `json:"type"`
+			PeriodStart string `json:"period_start"`
+			PeriodEnd   string `json:"period_end"`
+			DueDate     string `json:"due_date"`
+			RentAmount  int64  `json:"rent_amount"`
+			Total       int64  `json:"total"`
+		} `json:"invoice"`
+	}
+	if err := json.Unmarshal(body, &extended); err != nil {
+		t.Fatalf("parse extend body: %v", err)
+	}
+	if extended.Invoice.Type != "extension" || extended.Invoice.PeriodStart != wantPeriodStart.Format(time.DateOnly) ||
+		extended.Invoice.PeriodEnd != wantPeriodEnd.Format(time.DateOnly) || extended.Invoice.DueDate != wantDueDate.Format(time.DateOnly) ||
+		extended.Invoice.RentAmount != 2000000 || extended.Invoice.Total != 2000000 {
+		t.Fatalf("invoice = %+v", extended.Invoice)
+	}
+
+	resp, body = bookingAuthedRequest(t, srv, http.MethodPost, fmt.Sprintf("/api/booking/%d/extend", f.bookingID), token, `{"duration":1}`)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("second extend: status = %d, body = %s", resp.StatusCode, body)
+	}
+}
+
+func TestVoidExtensionsVoidsUnpaidInvoicePastEndDate(t *testing.T) {
+	_, pool := newTestServerAndPool(t)
+	ctx := context.Background()
+	f := insertApprovedMonthlyBooking(t, pool, "2024-01-10", 1)
+	var invoiceID int64
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO invoices (booking_id, number, type, status, period_start, period_end, periods, rent_amount, total, due_date, issued_at)
+		VALUES ($1, $2, 'extension', 'unpaid', '2024-02-10', '2024-03-10', 1, 2000000, 2000000, '2024-02-09', now())
+		RETURNING id`, f.bookingID, fmt.Sprintf("INV/TEST/EXT/%d", f.bookingID)).Scan(&invoiceID); err != nil {
+		t.Fatalf("insert extension invoice: %v", err)
+	}
+	var paymentID int64
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO payments (invoice_id, order_id, status, gross_amount, expires_at)
+		VALUES ($1, $2, 'pending', 2000000, now() + interval '15 minutes')
+		RETURNING id`, invoiceID, fmt.Sprintf("KOS-TEST-EXT-%d", f.bookingID)).Scan(&paymentID); err != nil {
+		t.Fatalf("insert pending payment: %v", err)
+	}
+	deps := tenancyDeps(pool)
+
+	worker.VoidExtensions(ctx, deps, discardLogger(), wibDate(t, "2024-02-09"))
+	var status string
+	if err := pool.QueryRow(ctx, `SELECT status FROM invoices WHERE id = $1`, invoiceID).Scan(&status); err != nil || status != "unpaid" {
+		t.Fatalf("status before end_date = %q (err %v)", status, err)
+	}
+
+	worker.VoidExtensions(ctx, deps, discardLogger(), wibDate(t, "2024-03-10"))
+	var voidReason string
+	if err := pool.QueryRow(ctx, `SELECT status, void_reason FROM invoices WHERE id = $1`, invoiceID).Scan(&status, &voidReason); err != nil {
+		t.Fatal(err)
+	}
+	if status != "void" || voidReason != "extension_expired" {
+		t.Errorf("invoice = (status=%q, void_reason=%q), want void/extension_expired", status, voidReason)
+	}
+	var paymentStatus string
+	if err := pool.QueryRow(ctx, `SELECT status FROM payments WHERE id = $1`, paymentID).Scan(&paymentStatus); err != nil || paymentStatus != "expire" {
+		t.Errorf("payment status = %q (err %v), want expire", paymentStatus, err)
 	}
 }

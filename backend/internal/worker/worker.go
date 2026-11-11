@@ -27,6 +27,7 @@ func RunJobs(ctx context.Context, deps Deps, logger *slog.Logger) {
 	IssueRenewals(ctx, deps, logger, today)
 	RemindRenewalsDue(ctx, deps, logger, today)
 	TerminateOverdue(ctx, deps, logger, today)
+	VoidExtensions(ctx, deps, logger, today)
 	CompleteTenancies(ctx, deps, logger, today)
 	PurgeStorage(ctx, deps, logger)
 	SendEmails(ctx, deps, logger)

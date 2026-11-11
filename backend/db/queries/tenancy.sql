@@ -81,3 +81,18 @@ FOR UPDATE OF b;
 
 -- name: CompleteBooking :exec
 UPDATE bookings SET status = 'completed', ended_at = now(), stock_held = false, updated_at = now() WHERE id = sqlc.arg(id);
+
+-- name: SelectVoidableExtensionInvoiceIDs :many
+SELECT i.id FROM invoices i
+JOIN bookings b ON b.id = i.booking_id
+WHERE i.type = 'extension' AND i.status = 'unpaid' AND sqlc.arg(today)::date >= b.end_date
+ORDER BY i.id
+LIMIT 100
+FOR UPDATE OF i SKIP LOCKED;
+
+-- name: LockVoidableExtension :one
+SELECT i.id, i.status AS invoice_status, i.booking_id, b.end_date
+FROM invoices i
+JOIN bookings b ON b.id = i.booking_id
+WHERE i.id = sqlc.arg(id)
+FOR UPDATE OF i;

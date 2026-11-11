@@ -24,6 +24,17 @@ func (q *Queries) DecrementRoomAvailable(ctx context.Context, id int64) (int64, 
 	return result.RowsAffected(), nil
 }
 
+const existsUnpaidExtensionInvoice = `-- name: ExistsUnpaidExtensionInvoice :one
+SELECT EXISTS(SELECT 1 FROM invoices WHERE booking_id = $1 AND type = 'extension' AND status = 'unpaid')
+`
+
+func (q *Queries) ExistsUnpaidExtensionInvoice(ctx context.Context, bookingID int64) (bool, error) {
+	row := q.db.QueryRow(ctx, existsUnpaidExtensionInvoice, bookingID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const getActivePaymentForInvoice = `-- name: GetActivePaymentForInvoice :one
 SELECT id, order_id, gross_amount, snap_token, redirect_url, expires_at
 FROM payments
@@ -335,6 +346,42 @@ func (q *Queries) InsertBooking(ctx context.Context, arg InsertBookingParams) (I
 	return i, err
 }
 
+const insertExtensionInvoice = `-- name: InsertExtensionInvoice :one
+INSERT INTO invoices (booking_id, number, type, period_start, period_end, periods, rent_amount, admin_fee, total, due_date, issued_at)
+VALUES ($1, '', 'extension', $2, $3, $4,
+        $5, $6, $7, $8, $9)
+RETURNING id
+`
+
+type InsertExtensionInvoiceParams struct {
+	BookingID   int64
+	PeriodStart pgtype.Date
+	PeriodEnd   pgtype.Date
+	Periods     int16
+	RentAmount  int64
+	AdminFee    int64
+	Total       int64
+	DueDate     pgtype.Date
+	IssuedAt    pgtype.Timestamptz
+}
+
+func (q *Queries) InsertExtensionInvoice(ctx context.Context, arg InsertExtensionInvoiceParams) (int64, error) {
+	row := q.db.QueryRow(ctx, insertExtensionInvoice,
+		arg.BookingID,
+		arg.PeriodStart,
+		arg.PeriodEnd,
+		arg.Periods,
+		arg.RentAmount,
+		arg.AdminFee,
+		arg.Total,
+		arg.DueDate,
+		arg.IssuedAt,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const insertInvoice = `-- name: InsertInvoice :one
 INSERT INTO invoices (
   booking_id, number, type, period_start, period_end, periods,
@@ -476,6 +523,48 @@ func (q *Queries) ListBookingsForUser(ctx context.Context, arg ListBookingsForUs
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockBookingForExtend = `-- name: LockBookingForExtend :one
+SELECT b.id, b.tenant_id, b.room_id, b.rent_type, b.status, b.start_date, b.end_date, b.duration, b.period_price,
+       r.name AS room_name, r.monthly_duration_options
+FROM bookings b
+JOIN rooms r ON r.id = b.room_id
+WHERE b.id = $1
+FOR UPDATE OF b
+`
+
+type LockBookingForExtendRow struct {
+	ID                     int64
+	TenantID               int64
+	RoomID                 int64
+	RentType               string
+	Status                 string
+	StartDate              pgtype.Date
+	EndDate                pgtype.Date
+	Duration               int16
+	PeriodPrice            int64
+	RoomName               string
+	MonthlyDurationOptions []byte
+}
+
+func (q *Queries) LockBookingForExtend(ctx context.Context, id int64) (LockBookingForExtendRow, error) {
+	row := q.db.QueryRow(ctx, lockBookingForExtend, id)
+	var i LockBookingForExtendRow
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.RoomID,
+		&i.RentType,
+		&i.Status,
+		&i.StartDate,
+		&i.EndDate,
+		&i.Duration,
+		&i.PeriodPrice,
+		&i.RoomName,
+		&i.MonthlyDurationOptions,
+	)
+	return i, err
 }
 
 const markPaymentFailure = `-- name: MarkPaymentFailure :exec

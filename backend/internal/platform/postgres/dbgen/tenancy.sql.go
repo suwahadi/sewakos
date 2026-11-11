@@ -171,6 +171,33 @@ func (q *Queries) LockOverdueRenewal(ctx context.Context, id int64) (LockOverdue
 	return i, err
 }
 
+const lockVoidableExtension = `-- name: LockVoidableExtension :one
+SELECT i.id, i.status AS invoice_status, i.booking_id, b.end_date
+FROM invoices i
+JOIN bookings b ON b.id = i.booking_id
+WHERE i.id = $1
+FOR UPDATE OF i
+`
+
+type LockVoidableExtensionRow struct {
+	ID            int64
+	InvoiceStatus string
+	BookingID     int64
+	EndDate       pgtype.Date
+}
+
+func (q *Queries) LockVoidableExtension(ctx context.Context, id int64) (LockVoidableExtensionRow, error) {
+	row := q.db.QueryRow(ctx, lockVoidableExtension, id)
+	var i LockVoidableExtensionRow
+	err := row.Scan(
+		&i.ID,
+		&i.InvoiceStatus,
+		&i.BookingID,
+		&i.EndDate,
+	)
+	return i, err
+}
+
 const markInvoiceReminderSent = `-- name: MarkInvoiceReminderSent :one
 UPDATE invoices i SET reminder_sent_at = now(), updated_at = now()
 FROM bookings b
@@ -311,6 +338,35 @@ type SelectOverdueRenewalIDsParams struct {
 
 func (q *Queries) SelectOverdueRenewalIDs(ctx context.Context, arg SelectOverdueRenewalIDsParams) ([]int64, error) {
 	rows, err := q.db.Query(ctx, selectOverdueRenewalIDs, arg.Today, arg.GraceDays)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const selectVoidableExtensionInvoiceIDs = `-- name: SelectVoidableExtensionInvoiceIDs :many
+SELECT i.id FROM invoices i
+JOIN bookings b ON b.id = i.booking_id
+WHERE i.type = 'extension' AND i.status = 'unpaid' AND $1::date >= b.end_date
+ORDER BY i.id
+LIMIT 100
+FOR UPDATE OF i SKIP LOCKED
+`
+
+func (q *Queries) SelectVoidableExtensionInvoiceIDs(ctx context.Context, today pgtype.Date) ([]int64, error) {
+	rows, err := q.db.Query(ctx, selectVoidableExtensionInvoiceIDs, today)
 	if err != nil {
 		return nil, err
 	}

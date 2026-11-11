@@ -189,6 +189,49 @@ func terminateOverdue(ctx context.Context, deps Deps, q *dbgen.Queries, invoiceI
 	return err
 }
 
+func VoidExtensions(ctx context.Context, deps Deps, logger *slog.Logger, today time.Time) {
+	var ids []int64
+	if err := inTx(ctx, deps, func(q *dbgen.Queries) (err error) {
+		ids, err = q.SelectVoidableExtensionInvoiceIDs(ctx, pgDate(today))
+		return err
+	}); err != nil {
+		logger.Error("void_extensions: select", "error", err)
+		return
+	}
+	for _, id := range ids {
+		if err := inTx(ctx, deps, func(q *dbgen.Queries) error { return voidExtension(ctx, deps, q, id, today) }); err != nil {
+			logger.Error("void_extensions: process", "invoice_id", id, "error", err)
+		}
+	}
+}
+
+func voidExtension(ctx context.Context, deps Deps, q *dbgen.Queries, invoiceID int64, today time.Time) error {
+	inv, err := q.LockVoidableExtension(ctx, invoiceID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if inv.InvoiceStatus != "unpaid" || calendarDate(today).Before(calendarDate(inv.EndDate.Time)) {
+		return nil
+	}
+	if err := q.VoidInvoice(ctx, dbgen.VoidInvoiceParams{ID: inv.ID, VoidReason: pgtype.Text{String: "extension_expired", Valid: true}}); err != nil {
+		return err
+	}
+	payment, err := q.GetPendingPaymentOrderID(ctx, inv.ID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if deps.Booking.Midtrans != nil {
+		_ = deps.Booking.Midtrans.ExpireTransaction(ctx, payment.OrderID)
+	}
+	return q.MarkPaymentExpired(ctx, payment.ID)
+}
+
 func CompleteTenancies(ctx context.Context, deps Deps, logger *slog.Logger, today time.Time) {
 	var ids []int64
 	if err := inTx(ctx, deps, func(q *dbgen.Queries) (err error) {
