@@ -24,10 +24,17 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } },
     },
   ],
-  webServer: {
-    command: "npm run build && npm run start",
-    url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: "npm run build && npm run start",
+      url: "http://localhost:3000",
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+    {
+      command: "node e2e/fake-midtrans.mjs",
+      port: Number(process.env.E2E_MIDTRANS_PORT ?? 8125),
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
 });
