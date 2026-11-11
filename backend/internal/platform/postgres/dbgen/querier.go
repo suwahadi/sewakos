@@ -45,6 +45,7 @@ type Querier interface {
 	GetInvoiceForTenant(ctx context.Context, id int64) (GetInvoiceForTenantRow, error)
 	GetLatestPaymentForInvoice(ctx context.Context, invoiceID int64) (GetLatestPaymentForInvoiceRow, error)
 	GetListingProperty(ctx context.Context, id int64) (GetListingPropertyRow, error)
+	GetOwnerBankAccount(ctx context.Context, userID int64) (GetOwnerBankAccountRow, error)
 	GetPaymentByOrderID(ctx context.Context, orderID string) (GetPaymentByOrderIDRow, error)
 	GetPaymentForWebhook(ctx context.Context, orderID string) (GetPaymentForWebhookRow, error)
 	GetPendingPaymentOrderID(ctx context.Context, invoiceID int64) (GetPendingPaymentOrderIDRow, error)
@@ -72,11 +73,13 @@ type Querier interface {
 	ListAreasByType(ctx context.Context, arg ListAreasByTypeParams) ([]ListAreasByTypeRow, error)
 	ListBookingsForUser(ctx context.Context, arg ListBookingsForUserParams) ([]ListBookingsForUserRow, error)
 	ListGalleryRooms(ctx context.Context, propertyID int64) ([]ListGalleryRoomsRow, error)
+	ListInvoicesForOwner(ctx context.Context, arg ListInvoicesForOwnerParams) ([]ListInvoicesForOwnerRow, error)
 	ListInvoicesForTenant(ctx context.Context, arg ListInvoicesForTenantParams) ([]ListInvoicesForTenantRow, error)
 	ListListingPropertyPhotos(ctx context.Context, propertyID int64) ([]ListListingPropertyPhotosRow, error)
 	ListListingRoomPhotos(ctx context.Context, propertyID int64) ([]ListListingRoomPhotosRow, error)
 	ListListingRooms(ctx context.Context, propertyID int64) ([]ListListingRoomsRow, error)
 	ListOwnerBookings(ctx context.Context, arg ListOwnerBookingsParams) ([]ListOwnerBookingsRow, error)
+	ListOwnerPayouts(ctx context.Context, arg ListOwnerPayoutsParams) ([]ListOwnerPayoutsRow, error)
 	ListOwnerProperties(ctx context.Context, arg ListOwnerPropertiesParams) ([]ListOwnerPropertiesRow, error)
 	ListOwnerRooms(ctx context.Context, arg ListOwnerRoomsParams) ([]ListOwnerRoomsRow, error)
 	ListPhotoObjectKeys(ctx context.Context) ([]ListPhotoObjectKeysRow, error)
@@ -139,6 +142,7 @@ type Querier interface {
 	UpdateUserPasswordAndVerify(ctx context.Context, arg UpdateUserPasswordAndVerifyParams) error
 	UpdateUserPhone(ctx context.Context, arg UpdateUserPhoneParams) error
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error
+	UpsertOwnerBankAccount(ctx context.Context, arg UpsertOwnerBankAccountParams) error
 	UpsertPropertyViewDaily(ctx context.Context, arg UpsertPropertyViewDailyParams) error
 	VerifyUserPhone(ctx context.Context, id int64) error
 }

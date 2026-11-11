@@ -137,7 +137,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 - [x] **B5.2 Properti.** API-OWNER.md §2 (moderasi, slug, ajukan ulang).
 - [x] **B5.3 Kamar.** API-OWNER.md §3 (`held`, `occupied`, `monthly_duration_options`).
 - [x] **B5.4 Booking masuk.** API-OWNER.md §5.1–5.4 + payout & ledger saat disetujui; job `owner_timeout`, `owner_reminder`.
-- [ ] **B5.5 Rekening, payout, invoice owner.** API-OWNER.md §5.6, §6.
+- [x] **B5.5 Rekening, payout, invoice owner.** API-OWNER.md §5.6, §6.
 
 ## F4 — Pemilik (UI)
 

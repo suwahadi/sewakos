@@ -20,7 +20,7 @@ func parseInvoiceID(r *http.Request) (int64, bool) {
 	return id, err == nil && id > 0
 }
 
-func invoiceBody(id int64, number string, bookingID int64, invoiceType, status string, periodStart, periodEnd pgtype.Date,
+func InvoiceBody(id int64, number string, bookingID int64, invoiceType, status string, periodStart, periodEnd pgtype.Date,
 	rentAmount, discount, deposit, adminFee, total int64, dueDate pgtype.Date, paidAt pgtype.Timestamptz, issuedAt pgtype.Timestamptz,
 ) map[string]any {
 	return map[string]any{
@@ -61,7 +61,7 @@ func InvoiceListHandler(deps Deps, user authctx.User) http.HandlerFunc {
 
 		invoices := make([]map[string]any, len(rows))
 		for i, row := range rows {
-			invoices[i] = invoiceBody(row.ID, row.Number, row.BookingID, row.Type, row.Status,
+			invoices[i] = InvoiceBody(row.ID, row.Number, row.BookingID, row.Type, row.Status,
 				row.PeriodStart, row.PeriodEnd, row.RentAmount, row.Discount, row.Deposit, row.AdminFee, row.Total,
 				row.DueDate, row.PaidAt, row.IssuedAt)
 		}
@@ -138,7 +138,7 @@ func InvoiceDetailHandler(deps Deps, user authctx.User) http.HandlerFunc {
 		}
 
 		response.Success(w, http.StatusOK, "", map[string]any{
-			"invoice": invoiceBody(invoice.ID, invoice.Number, invoice.BookingID, invoice.Type, invoice.Status,
+			"invoice": InvoiceBody(invoice.ID, invoice.Number, invoice.BookingID, invoice.Type, invoice.Status,
 				invoice.PeriodStart, invoice.PeriodEnd, invoice.RentAmount, invoice.Discount, invoice.Deposit, invoice.AdminFee,
 				invoice.Total, invoice.DueDate, invoice.PaidAt, invoice.IssuedAt),
 			"payment": paymentBody,
