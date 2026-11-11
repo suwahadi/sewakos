@@ -17,12 +17,13 @@ function changesText(changes: AuditLogEntry["changes"]): string {
     .join("; ");
 }
 
-export interface AuditLogListProps {
+export interface AuditLogListProps<T extends AuditLogEntry> {
   path: string;
-  initialEntries: AuditLogEntry[];
+  initialEntries: T[];
+  extraColumns?: DataTableColumn<T>[];
 }
 
-export function AuditLogList({ path, initialEntries }: AuditLogListProps) {
+export function AuditLogList<T extends AuditLogEntry>({ path, initialEntries, extraColumns = [] }: AuditLogListProps<T>) {
   const router = useRouter();
   const [entries, setEntries] = useState(initialEntries);
   const [page, setPage] = useState(1);
@@ -32,7 +33,7 @@ export function AuditLogList({ path, initialEntries }: AuditLogListProps) {
   async function loadMore() {
     setLoading(true);
     const nextPage = page + 1;
-    const result = await callBff<{ audit_logs: AuditLogEntry[] }>(`${path}?page=${nextPage}&limit=${PAGE_SIZE}`);
+    const result = await callBff<{ audit_logs: T[] }>(`${path}?page=${nextPage}&limit=${PAGE_SIZE}`);
     setLoading(false);
     if (!result.ok) return showApiError(result, (href) => router.push(href), loadMore);
     setEntries((current) => [...current, ...result.data.audit_logs]);
@@ -42,12 +43,13 @@ export function AuditLogList({ path, initialEntries }: AuditLogListProps) {
 
   if (entries.length === 0) return <p className="text-body text-neutral-600">Belum ada aktivitas tercatat.</p>;
 
-  const columns: DataTableColumn<AuditLogEntry>[] = [
+  const columns: DataTableColumn<T>[] = [
     { key: "time", header: "Waktu", render: (row) => `${formatDateShort(row.created_at)}, ${formatTimeWIB(row.created_at)}` },
     { key: "actor", header: "Aktor", render: (row) => (row.actor ? `${row.actor.name} (${row.actor.role})` : "Sistem") },
     { key: "action", header: "Aksi", render: (row) => row.action },
     { key: "entity", header: "Entitas", render: (row) => `${row.entity_type} #${row.entity_id}` },
     { key: "changes", header: "Perubahan", render: (row) => changesText(row.changes) },
+    ...extraColumns,
   ];
 
   return (

@@ -35,6 +35,21 @@ describe("AuditLogList", () => {
     expect(screen.getAllByText("Sistem").length).toBeGreaterThan(0);
   });
 
+  it("renders extra columns when given (e.g. admin's ip/user_agent)", () => {
+    render(
+      <AuditLogList
+        path="/api/admin/audit-logs"
+        initialEntries={[{ ...entry, ip: "127.0.0.1", user_agent: "curl/8.0" }]}
+        extraColumns={[
+          { key: "ip", header: "IP", render: (row) => row.ip },
+          { key: "user_agent", header: "User agent", render: (row) => row.user_agent },
+        ]}
+      />,
+    );
+    expect(screen.getAllByText("127.0.0.1").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("curl/8.0").length).toBeGreaterThan(0);
+  });
+
   it("loads more entries from the given path", async () => {
     const user = userEvent.setup();
     const entries = Array.from({ length: 20 }, (_, i) => ({ ...entry, id: i + 1 }));

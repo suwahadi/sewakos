@@ -1,4 +1,4 @@
-import type { OwnerBooking, OwnerProperty } from "./owner";
+import type { AuditLogEntry, OwnerBooking, OwnerProperty } from "./owner";
 
 export const ADMIN_PAGE_SIZE = 20;
 
@@ -74,6 +74,48 @@ export interface AdminInvoice {
   status: string;
   total_label: string;
   due_date: string;
+}
+
+export interface AdminFinanceSummary {
+  from: string;
+  to: string;
+  payments_received_label: string;
+  admin_fee_revenue_label: string;
+  refunds_completed_label: string;
+  refunds_outstanding_label: string;
+  payouts_completed_label: string;
+  payouts_outstanding_label: string;
+  open_reconciliation_issues: number;
+}
+
+export interface AdminLedgerEntry {
+  id: number;
+  occurred_at: string;
+  type: string;
+  amount: number;
+  amount_label: string;
+  owner_id: number | null;
+  booking_id: number | null;
+  invoice_number: string | null;
+  description: string;
+}
+
+export interface AdminReconciliationIssue {
+  id: number;
+  order_id: string;
+  kind: string;
+  local_status: string;
+  midtrans_status: string | null;
+  local_amount: number;
+  midtrans_amount: number | null;
+  status: "open" | "resolved";
+  note: string | null;
+  detected_at: string;
+}
+
+export interface AdminAuditLogEntry extends AuditLogEntry {
+  ip: string | null;
+  user_agent: string | null;
 }
 
 const AREA_TYPE_LABEL: Record<string, string> = { city: "Kota", campus: "Kampus", mrt: "Stasiun MRT" };
