@@ -26,7 +26,8 @@ export default function MasukPage() {
 
 function MasukForm() {
   const router = useRouter();
-  const next = useSearchParams().get("next") ?? "/";
+  const next = useSearchParams().get("next");
+  const destination = (role: string) => next ?? (role === "admin" ? "/admin" : role === "owner" ? "/owner" : "/");
   const [method, setMethod] = useState<Method>("password");
 
   const [phone, setPhone] = useState("");
@@ -47,7 +48,7 @@ function MasukForm() {
     }
     setSubmitting(true);
     setLoginError(null);
-    const result = await callBff("/api/auth/login", {
+    const result = await callBff<{ user: { role: string } }>("/api/auth/login", {
       method: "POST",
       body: { phone_number: phone, password },
     });
@@ -58,7 +59,7 @@ function MasukForm() {
       return;
     }
     toast.success("Login berhasil.");
-    router.push(next);
+    router.push(destination(result.data.user.role));
   }
 
   async function sendLoginOtp() {
@@ -85,7 +86,7 @@ function MasukForm() {
 
   async function checkOtp(code: string) {
     setOtpError(undefined);
-    const result = await callBff("/api/auth/otp/check", {
+    const result = await callBff<{ user: { role: string } }>("/api/auth/otp/check", {
       method: "POST",
       body: { for: "login", destination: phone, code },
     });
@@ -94,7 +95,7 @@ function MasukForm() {
       return;
     }
     toast.success("Login berhasil.");
-    router.push(next);
+    router.push(destination(result.data.user.role));
   }
 
   return (
