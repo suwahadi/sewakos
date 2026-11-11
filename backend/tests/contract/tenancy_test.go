@@ -80,7 +80,7 @@ func renewalPeriods(t *testing.T, pool *pgxpool.Pool, bookingID int64) []string 
 }
 
 func tenancyDeps(pool *pgxpool.Pool) worker.Deps {
-	return worker.Deps{Booking: booking.Deps{DB: pool}}
+	return worker.Deps{Booking: booking.Deps{DB: pool}, RenewalGraceDays: 3}
 }
 
 func TestIssueRenewalsFromHMinus3WithMonthEndClamping(t *testing.T) {

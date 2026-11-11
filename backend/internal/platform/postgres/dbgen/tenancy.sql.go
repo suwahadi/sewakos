@@ -298,14 +298,19 @@ func (q *Queries) SelectDueRenewals(ctx context.Context, today pgtype.Date) ([]S
 const selectOverdueRenewalIDs = `-- name: SelectOverdueRenewalIDs :many
 SELECT i.id FROM invoices i
 JOIN bookings b ON b.id = i.booking_id
-WHERE i.type = 'renewal' AND i.status = 'unpaid' AND b.status = 'approved' AND $1::date > i.due_date + 3
+WHERE i.type = 'renewal' AND i.status = 'unpaid' AND b.status = 'approved' AND $1::date > i.due_date + $2::int
 ORDER BY i.id
 LIMIT 100
 FOR UPDATE OF i SKIP LOCKED
 `
 
-func (q *Queries) SelectOverdueRenewalIDs(ctx context.Context, today pgtype.Date) ([]int64, error) {
-	rows, err := q.db.Query(ctx, selectOverdueRenewalIDs, today)
+type SelectOverdueRenewalIDsParams struct {
+	Today     pgtype.Date
+	GraceDays int32
+}
+
+func (q *Queries) SelectOverdueRenewalIDs(ctx context.Context, arg SelectOverdueRenewalIDsParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, selectOverdueRenewalIDs, arg.Today, arg.GraceDays)
 	if err != nil {
 		return nil, err
 	}

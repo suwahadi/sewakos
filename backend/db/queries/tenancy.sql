@@ -39,7 +39,7 @@ RETURNING i.id, i.number, i.due_date, i.booking_id, b.tenant_id;
 -- name: SelectOverdueRenewalIDs :many
 SELECT i.id FROM invoices i
 JOIN bookings b ON b.id = i.booking_id
-WHERE i.type = 'renewal' AND i.status = 'unpaid' AND b.status = 'approved' AND sqlc.arg(today)::date > i.due_date + 3
+WHERE i.type = 'renewal' AND i.status = 'unpaid' AND b.status = 'approved' AND sqlc.arg(today)::date > i.due_date + sqlc.arg(grace_days)::int
 ORDER BY i.id
 LIMIT 100
 FOR UPDATE OF i SKIP LOCKED;

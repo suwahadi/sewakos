@@ -153,7 +153,7 @@ type Querier interface {
 	SelectExpiredBookingIDsWithoutPendingPayment(ctx context.Context) ([]int64, error)
 	SelectExpiredPendingPaymentOrderIDs(ctx context.Context) ([]string, error)
 	SelectInvoiceForCheckout(ctx context.Context, id int64) (SelectInvoiceForCheckoutRow, error)
-	SelectOverdueRenewalIDs(ctx context.Context, today pgtype.Date) ([]int64, error)
+	SelectOverdueRenewalIDs(ctx context.Context, arg SelectOverdueRenewalIDsParams) ([]int64, error)
 	SelectOwnerReminderBookingIDs(ctx context.Context, beforeMinutes int32) ([]int64, error)
 	SelectOwnerTimeoutBookingIDs(ctx context.Context) ([]int64, error)
 	SetBookingStockHeld(ctx context.Context, arg SetBookingStockHeldParams) error

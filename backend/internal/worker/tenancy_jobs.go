@@ -19,8 +19,6 @@ import (
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres/dbgen"
 )
 
-const renewalGraceDays = 3
-
 // Postgres dates decode as UTC midnight while "today" is WIB midnight, so both are compared as calendar dates.
 func calendarDate(t time.Time) time.Time {
 	year, month, day := t.Date()
@@ -115,7 +113,7 @@ func RemindRenewalsDue(ctx context.Context, deps Deps, logger *slog.Logger, toda
 			if err != nil {
 				return err
 			}
-			lastDay := invoice.DueDate.Time.AddDate(0, 0, renewalGraceDays)
+			lastDay := invoice.DueDate.Time.AddDate(0, 0, deps.RenewalGraceDays)
 			return owner.NotifyUser(ctx, q, deps.Booking.AppPublicURL, invoice.TenantID, notification.CategoryPayment, "Tagihan jatuh tempo hari ini",
 				fmt.Sprintf("Bayar tagihan %s paling lambat %s agar sewa tidak berakhir.", invoice.Number, money.FormatDateWIB(lastDay)),
 				fmt.Sprintf("/booking/%d", invoice.BookingID))
@@ -128,7 +126,7 @@ func RemindRenewalsDue(ctx context.Context, deps Deps, logger *slog.Logger, toda
 func TerminateOverdue(ctx context.Context, deps Deps, logger *slog.Logger, today time.Time) {
 	var ids []int64
 	if err := inTx(ctx, deps, func(q *dbgen.Queries) (err error) {
-		ids, err = q.SelectOverdueRenewalIDs(ctx, pgDate(today))
+		ids, err = q.SelectOverdueRenewalIDs(ctx, dbgen.SelectOverdueRenewalIDsParams{Today: pgDate(today), GraceDays: int32(deps.RenewalGraceDays)})
 		return err
 	}); err != nil {
 		logger.Error("terminate_overdue: select", "error", err)
@@ -150,7 +148,7 @@ func terminateOverdue(ctx context.Context, deps Deps, q *dbgen.Queries, invoiceI
 		return err
 	}
 	if r.InvoiceStatus != "unpaid" || r.BookingStatus != "approved" ||
-		!calendarDate(today).After(calendarDate(r.DueDate.Time).AddDate(0, 0, renewalGraceDays)) {
+		!calendarDate(today).After(calendarDate(r.DueDate.Time).AddDate(0, 0, deps.RenewalGraceDays)) {
 		return nil
 	}
 	if err := q.TerminateBooking(ctx, r.BookingID); err != nil {

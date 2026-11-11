@@ -70,6 +70,7 @@ func main() {
 		Storage: objectStore,
 
 		OwnerReminderBeforeMinutes: cfg.OwnerReminderBeforeMinutes,
+		RenewalGraceDays:           cfg.RenewalGraceDays,
 	}
 	scheduler := &worker.Scheduler{}
 

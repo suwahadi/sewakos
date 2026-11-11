@@ -15,6 +15,7 @@ type Deps struct {
 	Storage ObjectStore
 
 	OwnerReminderBeforeMinutes int
+	RenewalGraceDays           int
 }
 
 func RunJobs(ctx context.Context, deps Deps, logger *slog.Logger) {
