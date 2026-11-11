@@ -84,3 +84,11 @@ export function previousDay(dateOnly: string): string {
   const d = String(date.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
+
+export function digitsOnly(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
+export function formatThousands(digits: string): string {
+  return digits === "" ? "" : Number(digits).toLocaleString("id-ID");
+}

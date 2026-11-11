@@ -8,9 +8,10 @@ export interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;
   helper?: string;
+  prefix?: string;
 }
 
-export function TextField({ label, error, helper, id, className, type = "text", ...props }: TextFieldProps) {
+export function TextField({ label, error, helper, prefix, id, className, type = "text", ...props }: TextFieldProps) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
   const [showPassword, setShowPassword] = useState(false);
@@ -24,6 +25,11 @@ export function TextField({ label, error, helper, id, className, type = "text", 
         {label}
       </label>
       <div className="relative">
+        {prefix && (
+          <span aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-body text-neutral-600">
+            {prefix}
+          </span>
+        )}
         <input
           id={inputId}
           type={resolvedType}
@@ -35,6 +41,7 @@ export function TextField({ label, error, helper, id, className, type = "text", 
             "disabled:border-neutral-300 disabled:bg-neutral-50",
             error ? "border-danger" : "border-neutral-400",
             isPassword && "pr-11",
+            prefix && "pl-10",
             className,
           )}
           {...props}
