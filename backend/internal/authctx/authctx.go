@@ -10,4 +10,5 @@ type User struct {
 	UserID  int64
 	TokenID int64
 	Role    string
+	IP      string
 }

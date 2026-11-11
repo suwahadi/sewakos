@@ -15,6 +15,7 @@ import (
 	"github.com/suwahadi/sewakos/backend/internal/email"
 	"github.com/suwahadi/sewakos/backend/internal/midtrans"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres"
+	"github.com/suwahadi/sewakos/backend/internal/platform/storage"
 	"github.com/suwahadi/sewakos/backend/internal/worker"
 )
 
@@ -49,6 +50,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	objectStore, err := storage.New(storage.Config{
+		Endpoint: cfg.StorageEndpoint, Region: cfg.StorageRegion, Bucket: cfg.StorageBucket,
+		AccessKey: cfg.StorageAccessKey, SecretKey: cfg.StorageSecretKey, UseSSL: cfg.StorageUseSSL,
+	})
+	if err != nil {
+		logger.Error("create storage client", "error", err)
+		os.Exit(1)
+	}
+
 	deps := worker.Deps{
 		Booking: booking.Deps{
 			DB:                pool,
@@ -56,8 +66,10 @@ func main() {
 			MidtransServerKey: cfg.MidtransServerKey,
 			AppPublicURL:      cfg.AppPublicURL,
 		},
-		Email: email.LogSender{Logger: logger},
+		Email:   email.LogSender{Logger: logger},
+		Storage: objectStore,
 	}
+	scheduler := &worker.Scheduler{}
 
 	logger.Info("worker started")
 	ticker := time.NewTicker(60 * time.Second)
@@ -70,6 +82,7 @@ func main() {
 			return
 		case <-ticker.C:
 			worker.RunJobs(ctx, deps, logger)
+			scheduler.RunDue(ctx, deps, logger, time.Now())
 		}
 	}
 }

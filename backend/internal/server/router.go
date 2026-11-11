@@ -21,6 +21,7 @@ import (
 	"github.com/suwahadi/sewakos/backend/internal/midtrans"
 	"github.com/suwahadi/sewakos/backend/internal/notification"
 	"github.com/suwahadi/sewakos/backend/internal/otp"
+	"github.com/suwahadi/sewakos/backend/internal/owner"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres/dbgen"
 	"github.com/suwahadi/sewakos/backend/internal/response"
 	"github.com/suwahadi/sewakos/backend/internal/search"
@@ -36,6 +37,8 @@ type Deps struct {
 	Redis    *redis.Client
 	Logger   *slog.Logger
 	Midtrans midtrans.Client
+	Storage  owner.Storage
+	Images   owner.ImageProcessor
 }
 
 // NewRouter assembles the full middleware chain (SPEC-GO.md §5.1) and mounts
@@ -96,6 +99,11 @@ func NewRouter(deps Deps) chi.Router {
 		AppPublicURL:         deps.Config.AppPublicURL,
 	}
 
+	ownerDeps := owner.Deps{
+		Store: queries, DB: deps.DB, Storage: deps.Storage, Images: deps.Images,
+		StorageBaseURL: deps.Config.StoragePublicBaseURL, UploadMaxBytes: deps.Config.UploadMaxBytes,
+	}
+
 	r.Post("/api/payments/midtrans/notification", booking.WebhookHandler(bookingDeps))
 
 	r.Route("/api", func(api chi.Router) {
@@ -148,6 +156,14 @@ func NewRouter(deps Deps) chi.Router {
 				tenant.Put("/booking/{booking}/refund-account", withAuthedUser(bookingDeps, booking.RefundAccountHandler))
 				tenant.Post("/invoices/{invoice}/checkout", withAuthedUser(bookingDeps, booking.InvoiceCheckoutHandler))
 			})
+
+			authed.Group(func(ownerRoutes chi.Router) {
+				ownerRoutes.Use(RequireRole("owner"))
+				ownerRoutes.Post("/owner/uploads/presign", withAuthedUser(ownerDeps, owner.PresignHandler))
+				ownerRoutes.Post("/owner/properties/{property}/photos", withAuthedUser(ownerDeps, owner.AddPhotoHandler))
+				ownerRoutes.Patch("/owner/photos/{photo}", withAuthedUser(ownerDeps, owner.UpdatePhotoHandler))
+				ownerRoutes.Delete("/owner/photos/{photo}", withAuthedUser(ownerDeps, owner.DeletePhotoHandler))
+			})
 		})
 		// Remaining endpoint groups (area, search, booking, owner, admin, ...)
 		// mount here in later tasks, each behind the auth/role middleware it
@@ -165,7 +181,7 @@ func NewRouter(deps Deps) chi.Router {
 func withAuthedUser[Deps any](deps Deps, handler func(Deps, authctx.User) http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, _ := UserFromContext(r.Context())
-		handler(deps, authctx.User{UserID: user.ID, TokenID: user.TokenID, Role: user.Role})(w, r)
+		handler(deps, authctx.User{UserID: user.ID, TokenID: user.TokenID, Role: user.Role, IP: clientIP(r)})(w, r)
 	}
 }
 

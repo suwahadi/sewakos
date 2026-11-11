@@ -18,8 +18,10 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/suwahadi/sewakos/backend/internal/config"
+	"github.com/suwahadi/sewakos/backend/internal/media"
 	"github.com/suwahadi/sewakos/backend/internal/midtrans"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres"
+	"github.com/suwahadi/sewakos/backend/internal/platform/storage"
 	"github.com/suwahadi/sewakos/backend/internal/server"
 )
 
@@ -66,13 +68,25 @@ func newTestServerAndPoolWithMidtrans(t *testing.T, midtransClient midtrans.Clie
 		t.Fatalf("load config: %v", err)
 	}
 
-	router := server.NewRouter(server.Deps{
+	deps := server.Deps{
 		Config:   cfg,
 		DB:       pool,
 		Redis:    redisClient,
 		Logger:   slog.New(slog.NewJSONHandler(os.Stderr, nil)),
 		Midtrans: midtransClient,
-	})
+		Images: media.NewProcessor(media.Config{
+			MaxPixels: cfg.ImageMaxPixels, LargePx: cfg.ImageLargePx, ThumbPx: cfg.ImageThumbPx,
+			LargeQuality: cfg.ImageLargeQuality, ThumbQuality: cfg.ImageThumbQuality, Concurrency: cfg.ImageMaxConcurrency,
+		}),
+	}
+	if cfg.StorageEndpoint != "" {
+		objectStore, err := storage.New(testStorageConfig(cfg))
+		if err != nil {
+			t.Fatalf("create storage client: %v", err)
+		}
+		deps.Storage = objectStore
+	}
+	router := server.NewRouter(deps)
 	srv := httptest.NewServer(router)
 	t.Cleanup(srv.Close)
 	return srv, pool

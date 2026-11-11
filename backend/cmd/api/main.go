@@ -14,7 +14,9 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/suwahadi/sewakos/backend/internal/config"
+	"github.com/suwahadi/sewakos/backend/internal/media"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres"
+	"github.com/suwahadi/sewakos/backend/internal/platform/storage"
 	"github.com/suwahadi/sewakos/backend/internal/server"
 )
 
@@ -49,7 +51,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	router := server.NewRouter(server.Deps{Config: cfg, DB: pool, Redis: redisClient, Logger: logger})
+	objectStore, err := storage.New(storage.Config{
+		Endpoint: cfg.StorageEndpoint, Region: cfg.StorageRegion, Bucket: cfg.StorageBucket,
+		AccessKey: cfg.StorageAccessKey, SecretKey: cfg.StorageSecretKey, UseSSL: cfg.StorageUseSSL,
+	})
+	if err != nil {
+		logger.Error("create storage client", "error", err)
+		os.Exit(1)
+	}
+	images := media.NewProcessor(media.Config{
+		MaxPixels: cfg.ImageMaxPixels, LargePx: cfg.ImageLargePx, ThumbPx: cfg.ImageThumbPx,
+		LargeQuality: cfg.ImageLargeQuality, ThumbQuality: cfg.ImageThumbQuality, Concurrency: cfg.ImageMaxConcurrency,
+	})
+
+	router := server.NewRouter(server.Deps{
+		Config: cfg, DB: pool, Redis: redisClient, Logger: logger, Storage: objectStore, Images: images,
+	})
 	httpServer := &http.Server{Addr: cfg.HTTPAddr, Handler: router}
 
 	go func() {

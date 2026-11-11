@@ -131,7 +131,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 
 ## B5 — Pemilik
 
-- [ ] **B5.1 Storage & media.** Klien MinIO/S3, presign, pengolahan gambar SPEC §18 (libvips), foto API-OWNER.md §4,
+- [x] **B5.1 Storage & media.** Klien MinIO/S3, presign, pengolahan gambar SPEC §18 (libvips), foto API-OWNER.md §4,
   job `purge_storage`, `cleanup_uploads`, `reconcile_storage`. *Selesai bila:* test JPEG/PNG/WebP → dua WebP benar,
   EXIF/GPS hilang, file rusak 400, retry hapus saat storage gagal.
 - [ ] **B5.2 Properti.** API-OWNER.md §2 (moderasi, slug, ajukan ulang).
