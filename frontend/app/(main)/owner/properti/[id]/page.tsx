@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/features/app-header";
 import { OwnerPropertyDetail } from "@/components/features/owner-property-detail";
+import { PhotoUploader } from "@/components/features/photo-uploader";
 import type { AreaOption } from "@/components/features/owner-property-form";
 import { ErrorState, ForbiddenState } from "@/components/ui/error-state";
 import { apiFetch } from "@/lib/api/client";
@@ -34,6 +35,7 @@ export default async function OwnerPropertyPage({ params }: { params: Promise<{ 
           property={property.data.property}
           rooms={rooms.ok ? rooms.data.rooms : []}
           areas={areas.ok ? areas.data.areas : []}
+          photos={<PhotoUploader propertyId={property.data.property.id} initialPhotos={property.data.property.photos} />}
         />
       )}
     </>
