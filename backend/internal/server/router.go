@@ -18,6 +18,7 @@ import (
 	"github.com/suwahadi/sewakos/backend/internal/booking"
 	"github.com/suwahadi/sewakos/backend/internal/config"
 	"github.com/suwahadi/sewakos/backend/internal/listing"
+	"github.com/suwahadi/sewakos/backend/internal/midtrans"
 	"github.com/suwahadi/sewakos/backend/internal/notification"
 	"github.com/suwahadi/sewakos/backend/internal/otp"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres/dbgen"
@@ -26,12 +27,15 @@ import (
 	"github.com/suwahadi/sewakos/backend/internal/settings"
 )
 
-// Deps are the shared dependencies every route handler may need.
+// Deps are the shared dependencies every route handler may need. Midtrans is
+// optional: tests set it to a mock so no suite run reaches the real Midtrans
+// sandbox; cmd/api leaves it nil and gets the real HTTP client.
 type Deps struct {
-	Config config.Config
-	DB     *pgxpool.Pool
-	Redis  *redis.Client
-	Logger *slog.Logger
+	Config   config.Config
+	DB       *pgxpool.Pool
+	Redis    *redis.Client
+	Logger   *slog.Logger
+	Midtrans midtrans.Client
 }
 
 // NewRouter assembles the full middleware chain (SPEC-GO.md §5.1) and mounts
@@ -79,7 +83,16 @@ func NewRouter(deps Deps) chi.Router {
 		StorageBaseURL: deps.Config.StoragePublicBaseURL,
 	}
 	listingDeps := listing.Deps{Store: queries, DB: deps.DB, StorageBaseURL: deps.Config.StoragePublicBaseURL}
-	bookingDeps := booking.Deps{Store: queries, DB: deps.DB, AdminFee: settings.NewAdminFeeCache(queries)}
+	midtransClient := deps.Midtrans
+	if midtransClient == nil {
+		midtransClient = midtrans.NewHTTPClient(deps.Config.MidtransServerKey, deps.Config.MidtransIsProduction)
+	}
+	bookingDeps := booking.Deps{
+		Store: queries, DB: deps.DB, AdminFee: settings.NewAdminFeeCache(queries),
+		Midtrans:             midtransClient,
+		PaymentExpiryMinutes: deps.Config.PaymentExpiryMinutes,
+		MidtransFinishURL:    deps.Config.MidtransFinishURL,
+	}
 
 	r.Route("/api", func(api chi.Router) {
 		api.Use(ClientCheck(deps.Config.APIClientID))
@@ -124,6 +137,7 @@ func NewRouter(deps Deps) chi.Router {
 			authed.Group(func(tenant chi.Router) {
 				tenant.Use(RequireRole("tenant"))
 				tenant.Post("/booking/submit", withAuthedUser(bookingDeps, booking.SubmitHandler))
+				tenant.Post("/booking/{booking}/checkout", withAuthedUser(bookingDeps, booking.CheckoutHandler))
 			})
 		})
 		// Remaining endpoint groups (area, search, booking, owner, admin, ...)

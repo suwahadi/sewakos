@@ -20,6 +20,7 @@ type Querier interface {
 	CreateAdminUser(ctx context.Context, arg CreateAdminUserParams) (int64, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (int64, error)
 	CreateUserNotification(ctx context.Context, arg CreateUserNotificationParams) (int64, error)
+	DecrementRoomAvailable(ctx context.Context, id int64) (int64, error)
 	DeleteAccessToken(ctx context.Context, id int64) error
 	DeleteAllAccessTokensForUser(ctx context.Context, userID int64) error
 	DeleteOtherAccessTokensForUser(ctx context.Context, arg DeleteOtherAccessTokensForUserParams) error
@@ -28,6 +29,7 @@ type Querier interface {
 	ExistsUserByEmail(ctx context.Context, email pgtype.Text) (bool, error)
 	ExistsUserByPhone(ctx context.Context, phone string) (bool, error)
 	GetAccessTokenForVerification(ctx context.Context, id int64) (GetAccessTokenForVerificationRow, error)
+	GetActivePaymentForInvoice(ctx context.Context, invoiceID int64) (GetActivePaymentForInvoiceRow, error)
 	GetAreaByID(ctx context.Context, id int64) (GetAreaByIDRow, error)
 	GetBookingByID(ctx context.Context, arg GetBookingByIDParams) (GetBookingByIDRow, error)
 	GetInitialInvoiceForBooking(ctx context.Context, bookingID int64) (GetInitialInvoiceForBookingRow, error)
@@ -46,6 +48,8 @@ type Querier interface {
 	InsertBooking(ctx context.Context, arg InsertBookingParams) (InsertBookingRow, error)
 	InsertInvoice(ctx context.Context, arg InsertInvoiceParams) (int64, error)
 	InsertLedgerEntry(ctx context.Context, arg InsertLedgerEntryParams) (int64, error)
+	InsertPendingPayment(ctx context.Context, arg InsertPendingPaymentParams) (int64, error)
+	IsPropertyListedForRoom(ctx context.Context, roomID int64) (bool, error)
 	ListAreasByType(ctx context.Context, arg ListAreasByTypeParams) ([]ListAreasByTypeRow, error)
 	ListBookingsForUser(ctx context.Context, arg ListBookingsForUserParams) ([]ListBookingsForUserRow, error)
 	ListGalleryRooms(ctx context.Context, propertyID int64) ([]ListGalleryRoomsRow, error)
@@ -53,7 +57,9 @@ type Querier interface {
 	ListListingRoomPhotos(ctx context.Context, propertyID int64) ([]ListListingRoomPhotosRow, error)
 	ListListingRooms(ctx context.Context, propertyID int64) ([]ListListingRoomsRow, error)
 	ListUserNotifications(ctx context.Context, arg ListUserNotificationsParams) ([]ListUserNotificationsRow, error)
+	MarkPaymentFailure(ctx context.Context, id int64) error
 	MarkUserNotificationRead(ctx context.Context, id int64) error
+	ReleaseRoomLock(ctx context.Context, id int64) error
 	SearchRooms(ctx context.Context, arg SearchRoomsParams) ([]SearchRoomsRow, error)
 	SeedCreateArea(ctx context.Context, arg SeedCreateAreaParams) (int64, error)
 	SeedCreateOwnerBankAccount(ctx context.Context, arg SeedCreateOwnerBankAccountParams) error
@@ -61,7 +67,11 @@ type Querier interface {
 	SeedCreateRoom(ctx context.Context, arg SeedCreateRoomParams) (int64, error)
 	SeedCreateUser(ctx context.Context, arg SeedCreateUserParams) (int64, error)
 	SeedUpsertSetting(ctx context.Context, arg SeedUpsertSettingParams) error
+	SelectBookingForCheckout(ctx context.Context, id int64) (SelectBookingForCheckoutRow, error)
+	SetBookingStockHeld(ctx context.Context, arg SetBookingStockHeldParams) error
 	SetInvoiceNumber(ctx context.Context, arg SetInvoiceNumberParams) error
+	SetPaymentOrderID(ctx context.Context, arg SetPaymentOrderIDParams) error
+	SetPaymentSnapDetails(ctx context.Context, arg SetPaymentSnapDetailsParams) error
 	SuggestAreas(ctx context.Context, keyword string) ([]SuggestAreasRow, error)
 	SuggestLandings(ctx context.Context, keyword string) ([]SuggestLandingsRow, error)
 	SuggestRoomTypes(ctx context.Context, keyword string) ([]SuggestRoomTypesRow, error)

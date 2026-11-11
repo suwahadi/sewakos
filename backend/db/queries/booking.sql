@@ -80,3 +80,50 @@ LIMIT 1;
 
 -- name: GetRefundForInvoice :one
 SELECT amount, status, completed_at FROM refunds WHERE invoice_id = sqlc.arg(invoice_id);
+
+-- name: SelectBookingForCheckout :one
+SELECT b.id, b.tenant_id, b.room_id, b.rent_type, b.status, b.expires_at,
+       b.price, b.deposit, b.admin_fee, b.stock_held, r.name AS room_name
+FROM bookings b
+JOIN rooms r ON r.id = b.room_id
+WHERE b.id = sqlc.arg(id)
+FOR UPDATE OF b;
+
+-- name: IsPropertyListedForRoom :one
+SELECT (p.is_active AND p.moderation_status = 'approved' AND o.suspended_at IS NULL)::bool
+FROM rooms r
+JOIN properties p ON p.id = r.property_id
+JOIN users o ON o.id = p.owner_id
+WHERE r.id = sqlc.arg(room_id);
+
+-- name: GetActivePaymentForInvoice :one
+SELECT id, order_id, gross_amount, snap_token, redirect_url, expires_at
+FROM payments
+WHERE invoice_id = sqlc.arg(invoice_id) AND status = 'pending' AND expires_at > now()
+ORDER BY id DESC
+LIMIT 1;
+
+-- name: DecrementRoomAvailable :execrows
+UPDATE rooms SET available = available - 1, updated_at = now()
+WHERE id = sqlc.arg(id) AND available > 0;
+
+-- name: ReleaseRoomLock :exec
+UPDATE rooms SET available = available + 1, updated_at = now() WHERE id = sqlc.arg(id);
+
+-- name: SetBookingStockHeld :exec
+UPDATE bookings SET stock_held = sqlc.arg(stock_held), updated_at = now() WHERE id = sqlc.arg(id);
+
+-- name: InsertPendingPayment :one
+INSERT INTO payments (invoice_id, order_id, gross_amount, expires_at)
+VALUES (sqlc.arg(invoice_id), 'tmp-' || txid_current(), sqlc.arg(gross_amount), sqlc.arg(expires_at))
+RETURNING id;
+
+-- name: SetPaymentOrderID :exec
+UPDATE payments SET order_id = sqlc.arg(order_id), updated_at = now() WHERE id = sqlc.arg(id);
+
+-- name: SetPaymentSnapDetails :exec
+UPDATE payments SET snap_token = sqlc.arg(snap_token), redirect_url = sqlc.arg(redirect_url), updated_at = now()
+WHERE id = sqlc.arg(id);
+
+-- name: MarkPaymentFailure :exec
+UPDATE payments SET status = 'failure', updated_at = now() WHERE id = sqlc.arg(id);

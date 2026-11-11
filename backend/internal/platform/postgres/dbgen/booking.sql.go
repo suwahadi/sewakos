@@ -11,6 +11,50 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const decrementRoomAvailable = `-- name: DecrementRoomAvailable :execrows
+UPDATE rooms SET available = available - 1, updated_at = now()
+WHERE id = $1 AND available > 0
+`
+
+func (q *Queries) DecrementRoomAvailable(ctx context.Context, id int64) (int64, error) {
+	result, err := q.db.Exec(ctx, decrementRoomAvailable, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const getActivePaymentForInvoice = `-- name: GetActivePaymentForInvoice :one
+SELECT id, order_id, gross_amount, snap_token, redirect_url, expires_at
+FROM payments
+WHERE invoice_id = $1 AND status = 'pending' AND expires_at > now()
+ORDER BY id DESC
+LIMIT 1
+`
+
+type GetActivePaymentForInvoiceRow struct {
+	ID          int64
+	OrderID     string
+	GrossAmount int64
+	SnapToken   pgtype.Text
+	RedirectUrl pgtype.Text
+	ExpiresAt   pgtype.Timestamptz
+}
+
+func (q *Queries) GetActivePaymentForInvoice(ctx context.Context, invoiceID int64) (GetActivePaymentForInvoiceRow, error) {
+	row := q.db.QueryRow(ctx, getActivePaymentForInvoice, invoiceID)
+	var i GetActivePaymentForInvoiceRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrderID,
+		&i.GrossAmount,
+		&i.SnapToken,
+		&i.RedirectUrl,
+		&i.ExpiresAt,
+	)
+	return i, err
+}
+
 const getBookingByID = `-- name: GetBookingByID :one
 SELECT b.id, b.tenant_id, b.status, b.rent_type, b.room_id, r.name AS room_name,
        p.id AS property_id, p.name AS property_name,
@@ -338,6 +382,40 @@ func (q *Queries) InsertInvoice(ctx context.Context, arg InsertInvoiceParams) (i
 	return id, err
 }
 
+const insertPendingPayment = `-- name: InsertPendingPayment :one
+INSERT INTO payments (invoice_id, order_id, gross_amount, expires_at)
+VALUES ($1, 'tmp-' || txid_current(), $2, $3)
+RETURNING id
+`
+
+type InsertPendingPaymentParams struct {
+	InvoiceID   int64
+	GrossAmount int64
+	ExpiresAt   pgtype.Timestamptz
+}
+
+func (q *Queries) InsertPendingPayment(ctx context.Context, arg InsertPendingPaymentParams) (int64, error) {
+	row := q.db.QueryRow(ctx, insertPendingPayment, arg.InvoiceID, arg.GrossAmount, arg.ExpiresAt)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const isPropertyListedForRoom = `-- name: IsPropertyListedForRoom :one
+SELECT (p.is_active AND p.moderation_status = 'approved' AND o.suspended_at IS NULL)::bool
+FROM rooms r
+JOIN properties p ON p.id = r.property_id
+JOIN users o ON o.id = p.owner_id
+WHERE r.id = $1
+`
+
+func (q *Queries) IsPropertyListedForRoom(ctx context.Context, roomID int64) (bool, error) {
+	row := q.db.QueryRow(ctx, isPropertyListedForRoom, roomID)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const listBookingsForUser = `-- name: ListBookingsForUser :many
 SELECT b.id, b.status, b.rent_type, b.room_id, r.name AS room_name,
        b.start_date, b.duration, b.end_date, b.price, b.expires_at, b.created_at
@@ -400,6 +478,80 @@ func (q *Queries) ListBookingsForUser(ctx context.Context, arg ListBookingsForUs
 	return items, nil
 }
 
+const markPaymentFailure = `-- name: MarkPaymentFailure :exec
+UPDATE payments SET status = 'failure', updated_at = now() WHERE id = $1
+`
+
+func (q *Queries) MarkPaymentFailure(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, markPaymentFailure, id)
+	return err
+}
+
+const releaseRoomLock = `-- name: ReleaseRoomLock :exec
+UPDATE rooms SET available = available + 1, updated_at = now() WHERE id = $1
+`
+
+func (q *Queries) ReleaseRoomLock(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, releaseRoomLock, id)
+	return err
+}
+
+const selectBookingForCheckout = `-- name: SelectBookingForCheckout :one
+SELECT b.id, b.tenant_id, b.room_id, b.rent_type, b.status, b.expires_at,
+       b.price, b.deposit, b.admin_fee, b.stock_held, r.name AS room_name
+FROM bookings b
+JOIN rooms r ON r.id = b.room_id
+WHERE b.id = $1
+FOR UPDATE OF b
+`
+
+type SelectBookingForCheckoutRow struct {
+	ID        int64
+	TenantID  int64
+	RoomID    int64
+	RentType  string
+	Status    string
+	ExpiresAt pgtype.Timestamptz
+	Price     int64
+	Deposit   int64
+	AdminFee  int64
+	StockHeld bool
+	RoomName  string
+}
+
+func (q *Queries) SelectBookingForCheckout(ctx context.Context, id int64) (SelectBookingForCheckoutRow, error) {
+	row := q.db.QueryRow(ctx, selectBookingForCheckout, id)
+	var i SelectBookingForCheckoutRow
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.RoomID,
+		&i.RentType,
+		&i.Status,
+		&i.ExpiresAt,
+		&i.Price,
+		&i.Deposit,
+		&i.AdminFee,
+		&i.StockHeld,
+		&i.RoomName,
+	)
+	return i, err
+}
+
+const setBookingStockHeld = `-- name: SetBookingStockHeld :exec
+UPDATE bookings SET stock_held = $1, updated_at = now() WHERE id = $2
+`
+
+type SetBookingStockHeldParams struct {
+	StockHeld bool
+	ID        int64
+}
+
+func (q *Queries) SetBookingStockHeld(ctx context.Context, arg SetBookingStockHeldParams) error {
+	_, err := q.db.Exec(ctx, setBookingStockHeld, arg.StockHeld, arg.ID)
+	return err
+}
+
 const setInvoiceNumber = `-- name: SetInvoiceNumber :exec
 UPDATE invoices SET number = $1, updated_at = now() WHERE id = $2
 `
@@ -411,5 +563,35 @@ type SetInvoiceNumberParams struct {
 
 func (q *Queries) SetInvoiceNumber(ctx context.Context, arg SetInvoiceNumberParams) error {
 	_, err := q.db.Exec(ctx, setInvoiceNumber, arg.Number, arg.ID)
+	return err
+}
+
+const setPaymentOrderID = `-- name: SetPaymentOrderID :exec
+UPDATE payments SET order_id = $1, updated_at = now() WHERE id = $2
+`
+
+type SetPaymentOrderIDParams struct {
+	OrderID string
+	ID      int64
+}
+
+func (q *Queries) SetPaymentOrderID(ctx context.Context, arg SetPaymentOrderIDParams) error {
+	_, err := q.db.Exec(ctx, setPaymentOrderID, arg.OrderID, arg.ID)
+	return err
+}
+
+const setPaymentSnapDetails = `-- name: SetPaymentSnapDetails :exec
+UPDATE payments SET snap_token = $1, redirect_url = $2, updated_at = now()
+WHERE id = $3
+`
+
+type SetPaymentSnapDetailsParams struct {
+	SnapToken   pgtype.Text
+	RedirectUrl pgtype.Text
+	ID          int64
+}
+
+func (q *Queries) SetPaymentSnapDetails(ctx context.Context, arg SetPaymentSnapDetailsParams) error {
+	_, err := q.db.Exec(ctx, setPaymentSnapDetails, arg.SnapToken, arg.RedirectUrl, arg.ID)
 	return err
 }

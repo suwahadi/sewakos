@@ -18,6 +18,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/suwahadi/sewakos/backend/internal/config"
+	"github.com/suwahadi/sewakos/backend/internal/midtrans"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres"
 	"github.com/suwahadi/sewakos/backend/internal/server"
 )
@@ -31,6 +32,13 @@ func newTestServer(t *testing.T) *httptest.Server {
 // newTestServerAndPool is newTestServer plus the pool, for tests that need to
 // seed data directly (e.g. notifications, which no endpoint creates yet).
 func newTestServerAndPool(t *testing.T) (*httptest.Server, *pgxpool.Pool) {
+	t.Helper()
+	return newTestServerAndPoolWithMidtrans(t, defaultMockMidtransClient())
+}
+
+// newTestServerAndPoolWithMidtrans is newTestServerAndPool with an explicit
+// Midtrans double, for tests that assert on checkout's call to it.
+func newTestServerAndPoolWithMidtrans(t *testing.T, midtransClient midtrans.Client) (*httptest.Server, *pgxpool.Pool) {
 	t.Helper()
 
 	databaseURL := envOr("TEST_DATABASE_URL", "postgres://kos:kos@localhost:5432/kos?sslmode=disable")
@@ -59,14 +67,26 @@ func newTestServerAndPool(t *testing.T) (*httptest.Server, *pgxpool.Pool) {
 	}
 
 	router := server.NewRouter(server.Deps{
-		Config: cfg,
-		DB:     pool,
-		Redis:  redisClient,
-		Logger: slog.New(slog.NewJSONHandler(os.Stderr, nil)),
+		Config:   cfg,
+		DB:       pool,
+		Redis:    redisClient,
+		Logger:   slog.New(slog.NewJSONHandler(os.Stderr, nil)),
+		Midtrans: midtransClient,
 	})
 	srv := httptest.NewServer(router)
 	t.Cleanup(srv.Close)
 	return srv, pool
+}
+
+func defaultMockMidtransClient() *midtrans.MockClient {
+	return &midtrans.MockClient{
+		CreateTransactionFunc: func(_ context.Context, req midtrans.TransactionRequest) (midtrans.TransactionResponse, error) {
+			return midtrans.TransactionResponse{
+				Token:       "mock-snap-token",
+				RedirectURL: "https://app.sandbox.midtrans.com/snap/v4/redirection/mock-" + req.TransactionDetails.OrderID,
+			}, nil
+		},
+	}
 }
 
 func envOr(key, fallback string) string {

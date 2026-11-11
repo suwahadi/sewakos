@@ -5,6 +5,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/suwahadi/sewakos/backend/internal/midtrans"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres/dbgen"
 )
 
@@ -27,7 +28,10 @@ type TxBeginner interface {
 }
 
 type Deps struct {
-	Store    Store
-	DB       TxBeginner
-	AdminFee AdminFee
+	Store                Store
+	DB                   TxBeginner
+	AdminFee             AdminFee
+	Midtrans             midtrans.Client
+	PaymentExpiryMinutes int
+	MidtransFinishURL    string
 }
