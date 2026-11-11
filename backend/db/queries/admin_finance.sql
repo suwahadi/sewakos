@@ -51,7 +51,8 @@ WHERE id = sqlc.arg(id);
 -- name: SelectPaymentsForReconciliation :many
 SELECT id, order_id, status, gross_amount
 FROM payments
-WHERE updated_at >= sqlc.arg(since) OR (status = 'pending' AND expires_at < now())
+WHERE id > sqlc.arg(after_id)
+  AND (updated_at >= sqlc.arg(since) OR (status = 'pending' AND expires_at < now()))
 ORDER BY id
 LIMIT 500;
 

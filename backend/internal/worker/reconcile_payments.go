@@ -15,16 +15,24 @@ import (
 const reconcilePaymentsLockKey = int64(7303)
 
 func ReconcilePayments(ctx context.Context, deps Deps, logger *slog.Logger, now time.Time) {
-	var payments []dbgen.SelectPaymentsForReconciliationRow
-	if err := inTx(ctx, deps, func(q *dbgen.Queries) (err error) {
-		payments, err = q.SelectPaymentsForReconciliation(ctx, pgtype.Timestamptz{Time: now.Add(-3 * 24 * time.Hour), Valid: true})
-		return err
-	}); err != nil {
-		logger.Error("reconcile_payments: select", "error", err)
-		return
-	}
-	for _, payment := range payments {
-		reconcileOnePayment(ctx, deps, logger, payment)
+	since := pgtype.Timestamptz{Time: now.Add(-3 * 24 * time.Hour), Valid: true}
+	var afterID int64
+	for {
+		var payments []dbgen.SelectPaymentsForReconciliationRow
+		if err := inTx(ctx, deps, func(q *dbgen.Queries) (err error) {
+			payments, err = q.SelectPaymentsForReconciliation(ctx, dbgen.SelectPaymentsForReconciliationParams{AfterID: afterID, Since: since})
+			return err
+		}); err != nil {
+			logger.Error("reconcile_payments: select", "error", err)
+			return
+		}
+		for _, payment := range payments {
+			reconcileOnePayment(ctx, deps, logger, payment)
+			afterID = payment.ID
+		}
+		if len(payments) < 500 {
+			return
+		}
 	}
 }
 

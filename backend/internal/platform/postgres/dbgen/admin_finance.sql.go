@@ -256,10 +256,16 @@ func (q *Queries) ResolveReconciliationIssue(ctx context.Context, arg ResolveRec
 const selectPaymentsForReconciliation = `-- name: SelectPaymentsForReconciliation :many
 SELECT id, order_id, status, gross_amount
 FROM payments
-WHERE updated_at >= $1 OR (status = 'pending' AND expires_at < now())
+WHERE id > $1
+  AND (updated_at >= $2 OR (status = 'pending' AND expires_at < now()))
 ORDER BY id
 LIMIT 500
 `
+
+type SelectPaymentsForReconciliationParams struct {
+	AfterID int64
+	Since   pgtype.Timestamptz
+}
 
 type SelectPaymentsForReconciliationRow struct {
 	ID          int64
@@ -268,8 +274,8 @@ type SelectPaymentsForReconciliationRow struct {
 	GrossAmount int64
 }
 
-func (q *Queries) SelectPaymentsForReconciliation(ctx context.Context, since pgtype.Timestamptz) ([]SelectPaymentsForReconciliationRow, error) {
-	rows, err := q.db.Query(ctx, selectPaymentsForReconciliation, since)
+func (q *Queries) SelectPaymentsForReconciliation(ctx context.Context, arg SelectPaymentsForReconciliationParams) ([]SelectPaymentsForReconciliationRow, error) {
+	rows, err := q.db.Query(ctx, selectPaymentsForReconciliation, arg.AfterID, arg.Since)
 	if err != nil {
 		return nil, err
 	}
