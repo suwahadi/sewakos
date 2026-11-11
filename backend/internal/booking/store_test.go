@@ -37,3 +37,11 @@ func (baseStubStore) GetLatestPaymentForInvoice(ctx context.Context, invoiceID i
 func (baseStubStore) GetRefundForInvoice(ctx context.Context, invoiceID int64) (dbgen.GetRefundForInvoiceRow, error) {
 	return dbgen.GetRefundForInvoiceRow{}, pgx.ErrNoRows
 }
+
+func (baseStubStore) ListInvoicesForTenant(ctx context.Context, arg dbgen.ListInvoicesForTenantParams) ([]dbgen.ListInvoicesForTenantRow, error) {
+	return nil, nil
+}
+
+func (baseStubStore) GetInvoiceForTenant(ctx context.Context, id int64) (dbgen.GetInvoiceForTenantRow, error) {
+	return dbgen.GetInvoiceForTenantRow{}, pgx.ErrNoRows
+}

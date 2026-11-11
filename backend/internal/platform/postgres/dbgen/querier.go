@@ -36,6 +36,7 @@ type Querier interface {
 	GetAreaByID(ctx context.Context, id int64) (GetAreaByIDRow, error)
 	GetBookingByID(ctx context.Context, arg GetBookingByIDParams) (GetBookingByIDRow, error)
 	GetInitialInvoiceForBooking(ctx context.Context, bookingID int64) (GetInitialInvoiceForBookingRow, error)
+	GetInvoiceForTenant(ctx context.Context, id int64) (GetInvoiceForTenantRow, error)
 	GetLatestPaymentForInvoice(ctx context.Context, invoiceID int64) (GetLatestPaymentForInvoiceRow, error)
 	GetListingProperty(ctx context.Context, id int64) (GetListingPropertyRow, error)
 	GetPaymentByOrderID(ctx context.Context, orderID string) (GetPaymentByOrderIDRow, error)
@@ -62,6 +63,7 @@ type Querier interface {
 	ListAreasByType(ctx context.Context, arg ListAreasByTypeParams) ([]ListAreasByTypeRow, error)
 	ListBookingsForUser(ctx context.Context, arg ListBookingsForUserParams) ([]ListBookingsForUserRow, error)
 	ListGalleryRooms(ctx context.Context, propertyID int64) ([]ListGalleryRoomsRow, error)
+	ListInvoicesForTenant(ctx context.Context, arg ListInvoicesForTenantParams) ([]ListInvoicesForTenantRow, error)
 	ListListingPropertyPhotos(ctx context.Context, propertyID int64) ([]ListListingPropertyPhotosRow, error)
 	ListListingRoomPhotos(ctx context.Context, propertyID int64) ([]ListListingRoomPhotosRow, error)
 	ListListingRooms(ctx context.Context, propertyID int64) ([]ListListingRoomsRow, error)
@@ -82,6 +84,7 @@ type Querier interface {
 	SeedUpsertSetting(ctx context.Context, arg SeedUpsertSettingParams) error
 	SelectBookingForCancel(ctx context.Context, id int64) (SelectBookingForCancelRow, error)
 	SelectBookingForCheckout(ctx context.Context, id int64) (SelectBookingForCheckoutRow, error)
+	SelectInvoiceForCheckout(ctx context.Context, id int64) (SelectInvoiceForCheckoutRow, error)
 	SetBookingStockHeld(ctx context.Context, arg SetBookingStockHeldParams) error
 	SetInvoiceNumber(ctx context.Context, arg SetInvoiceNumberParams) error
 	SetPaymentOrderID(ctx context.Context, arg SetPaymentOrderIDParams) error

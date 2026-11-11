@@ -17,6 +17,8 @@ type Store interface {
 	GetInitialInvoiceForBooking(ctx context.Context, bookingID int64) (dbgen.GetInitialInvoiceForBookingRow, error)
 	GetLatestPaymentForInvoice(ctx context.Context, invoiceID int64) (dbgen.GetLatestPaymentForInvoiceRow, error)
 	GetRefundForInvoice(ctx context.Context, invoiceID int64) (dbgen.GetRefundForInvoiceRow, error)
+	ListInvoicesForTenant(ctx context.Context, arg dbgen.ListInvoicesForTenantParams) ([]dbgen.ListInvoicesForTenantRow, error)
+	GetInvoiceForTenant(ctx context.Context, id int64) (dbgen.GetInvoiceForTenantRow, error)
 }
 
 type AdminFee interface {

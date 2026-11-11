@@ -137,6 +137,8 @@ func NewRouter(deps Deps) chi.Router {
 
 			authed.Get("/booking/my", withAuthedUser(bookingDeps, booking.ListHandler))
 			authed.Get("/booking/{booking}", withAuthedUser(bookingDeps, booking.DetailHandler))
+			authed.Get("/invoices", withAuthedUser(bookingDeps, booking.InvoiceListHandler))
+			authed.Get("/invoices/{invoice}", withAuthedUser(bookingDeps, booking.InvoiceDetailHandler))
 
 			authed.Group(func(tenant chi.Router) {
 				tenant.Use(RequireRole("tenant"))
@@ -144,6 +146,7 @@ func NewRouter(deps Deps) chi.Router {
 				tenant.Post("/booking/{booking}/checkout", withAuthedUser(bookingDeps, booking.CheckoutHandler))
 				tenant.Post("/booking/{booking}/cancel", withAuthedUser(bookingDeps, booking.CancelHandler))
 				tenant.Put("/booking/{booking}/refund-account", withAuthedUser(bookingDeps, booking.RefundAccountHandler))
+				tenant.Post("/invoices/{invoice}/checkout", withAuthedUser(bookingDeps, booking.InvoiceCheckoutHandler))
 			})
 		})
 		// Remaining endpoint groups (area, search, booking, owner, admin, ...)
