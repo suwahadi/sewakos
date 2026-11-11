@@ -85,7 +85,7 @@ func NewRouter(deps Deps) chi.Router {
 	listingDeps := listing.Deps{Store: queries, DB: deps.DB, StorageBaseURL: deps.Config.StoragePublicBaseURL}
 	midtransClient := deps.Midtrans
 	if midtransClient == nil {
-		midtransClient = midtrans.NewHTTPClient(deps.Config.MidtransServerKey, deps.Config.MidtransIsProduction)
+		midtransClient = midtrans.NewHTTPClient(deps.Config.MidtransServerKey, deps.Config.MidtransIsProduction, deps.Config.MidtransBaseURL)
 	}
 	bookingDeps := booking.Deps{
 		Store: queries, DB: deps.DB, AdminFee: settings.NewAdminFeeCache(queries),

@@ -12,10 +12,7 @@ func newTestClient(t *testing.T, handler http.HandlerFunc) *HTTPClient {
 	t.Helper()
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
-	c := NewHTTPClient("test-server-key", false)
-	c.snapBaseURL = srv.URL
-	c.apiBaseURL = srv.URL
-	return c
+	return NewHTTPClient("test-server-key", false, srv.URL)
 }
 
 func TestCreateTransactionSendsAuthAndBody(t *testing.T) {

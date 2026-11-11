@@ -20,10 +20,13 @@ type HTTPClient struct {
 	httpClient  *http.Client
 }
 
-func NewHTTPClient(serverKey string, isProduction bool) *HTTPClient {
+func NewHTTPClient(serverKey string, isProduction bool, baseURLOverride string) *HTTPClient {
 	snapBase, apiBase := "https://app.sandbox.midtrans.com", "https://api.sandbox.midtrans.com"
 	if isProduction {
 		snapBase, apiBase = "https://app.midtrans.com", "https://api.midtrans.com"
+	}
+	if baseURLOverride != "" {
+		snapBase, apiBase = baseURLOverride, baseURLOverride
 	}
 	return &HTTPClient{
 		serverKey:   serverKey,

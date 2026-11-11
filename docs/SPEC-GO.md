@@ -184,6 +184,7 @@ di produksi memakai image dari `Dockerfile` lewat `deploy/install.sh`.
 | `MIDTRANS_CLIENT_KEY` | — | Untuk frontend (Snap.js) |
 | `MIDTRANS_IS_PRODUCTION` | `false` | Pilih base URL sandbox/production |
 | `MIDTRANS_FINISH_URL` | kosong | `callbacks.finish` Snap (halaman frontend setelah bayar) |
+| `MIDTRANS_BASE_URL` | kosong | Mengganti base URL Snap & API Midtrans (Midtrans tiruan untuk E2E). **Server menolak start jika diisi dan `APP_ENV=production`** |
 | `PAYMENT_EXPIRY_MINUTES` | `15` | Kunci stok = masa berlaku transaksi |
 | `OWNER_RESPONSE_HOURS` | `24` | Batas respons owner |
 | `OWNER_REMINDER_BEFORE_MINUTES` | `120` | Pengingat sebelum batas |
@@ -895,6 +896,7 @@ Seed harus idempoten dan **menolak jalan jika `APP_ENV=production`**. Data minim
   - filter `area_id` city vs campus (radius), ulasan sekali per booking, ulasan tersembunyi tidak dihitung
   - CSV ledger: header, rentang > 366 hari → 422
   - `OTP_DEBUG_ECHO=true` + `APP_ENV=production` → server gagal start
+  - `MIDTRANS_BASE_URL` terisi + `APP_ENV=production` → server gagal start
 
 ## 12. Urutan pengerjaan
 

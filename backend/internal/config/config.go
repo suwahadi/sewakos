@@ -27,6 +27,7 @@ type Config struct {
 	MidtransClientKey    string
 	MidtransIsProduction bool
 	MidtransFinishURL    string
+	MidtransBaseURL      string
 
 	PaymentExpiryMinutes       int
 	OwnerResponseHours         int
@@ -76,6 +77,7 @@ func Load() (Config, error) {
 		MidtransServerKey: os.Getenv("MIDTRANS_SERVER_KEY"),
 		MidtransClientKey: os.Getenv("MIDTRANS_CLIENT_KEY"),
 		MidtransFinishURL: os.Getenv("MIDTRANS_FINISH_URL"),
+		MidtransBaseURL:   os.Getenv("MIDTRANS_BASE_URL"),
 
 		StorageEndpoint:      os.Getenv("STORAGE_ENDPOINT"),
 		StorageRegion:        getString("STORAGE_REGION", "us-east-1"),
@@ -160,6 +162,10 @@ func Load() (Config, error) {
 	// OTP_DEBUG_ECHO must never leak real codes in production (API.md §2.2, SPEC-GO.md §3).
 	if cfg.AppEnv == "production" && cfg.OTPDebugEcho {
 		return Config{}, fmt.Errorf("OTP_DEBUG_ECHO must be false when APP_ENV=production")
+	}
+	// A base URL override points payments at a fake Midtrans that settles anything it is asked about.
+	if cfg.AppEnv == "production" && cfg.MidtransBaseURL != "" {
+		return Config{}, fmt.Errorf("MIDTRANS_BASE_URL must be empty when APP_ENV=production")
 	}
 
 	return cfg, nil
