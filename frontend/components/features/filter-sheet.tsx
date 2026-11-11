@@ -8,6 +8,7 @@ import { Chip, ChipRow } from "@/components/ui/chip";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Switch } from "@/components/ui/switch";
 import { TextField } from "@/components/ui/text-field";
+import { DEFAULT_SEARCH_FILTERS } from "@/lib/listings";
 
 export interface SearchFilters {
   rentType: 1 | 2 | 3;
@@ -17,8 +18,6 @@ export interface SearchFilters {
   flashSale?: boolean;
   isAvailable?: boolean;
 }
-
-export const DEFAULT_SEARCH_FILTERS: SearchFilters = { rentType: 3, gender: [] };
 
 const GENDER_OPTIONS = [
   { value: 1, label: "Putra" },

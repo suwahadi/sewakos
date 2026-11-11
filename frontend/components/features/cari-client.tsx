@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { ListingCard, ListingCardSkeleton } from "@/components/features/listing-card";
 import {
-  DEFAULT_SEARCH_FILTERS,
   FilterSheet,
   SortSheet,
   type SearchFilters,
@@ -22,7 +21,7 @@ import { FilterBar, type ActiveFilterChip } from "@/components/features/filter-b
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadMore } from "@/components/ui/load-more";
 import { callBff } from "@/lib/api/browser";
-import { buildSearchBody, type SearchResponseBody } from "@/lib/listings";
+import { buildSearchBody, DEFAULT_SEARCH_FILTERS, type SearchResponseBody } from "@/lib/listings";
 import { toast } from "@/lib/toast";
 
 const PAGE_LIMIT = 20;

@@ -1,10 +1,9 @@
 import { AppHeader } from "@/components/features/app-header";
 import { CariClient } from "@/components/features/cari-client";
-import { DEFAULT_SEARCH_FILTERS } from "@/components/features/filter-sheet";
 import type { PopularArea } from "@/components/features/suggestion-list";
 import { apiFetch } from "@/lib/api/client";
 import { getNavRole } from "@/lib/auth/nav-role";
-import { buildSearchBody, type SearchResponseBody } from "@/lib/listings";
+import { buildSearchBody, DEFAULT_SEARCH_FILTERS, type SearchResponseBody } from "@/lib/listings";
 
 const RESULT_LIMIT = 20;
 

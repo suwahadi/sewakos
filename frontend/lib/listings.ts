@@ -1,6 +1,8 @@
 import type { ListingCardRoom } from "@/components/features/listing-card";
 import type { SearchFilters, SortOption } from "@/components/features/filter-sheet";
 
+export const DEFAULT_SEARCH_FILTERS: SearchFilters = { rentType: 3, gender: [] };
+
 export interface SearchResponseBody {
   property_total: number;
   total: number;

@@ -5,8 +5,7 @@ import { ListingCard } from "@/components/features/listing-card";
 import { apiFetch } from "@/lib/api/client";
 import { getNavRole } from "@/lib/auth/nav-role";
 import { getSessionToken } from "@/lib/auth/session";
-import { buildSearchBody, type SearchResponseBody } from "@/lib/listings";
-import { DEFAULT_SEARCH_FILTERS } from "@/components/features/filter-sheet";
+import { buildSearchBody, DEFAULT_SEARCH_FILTERS, type SearchResponseBody } from "@/lib/listings";
 
 async function getUnreadCount(): Promise<number> {
   const token = await getSessionToken();
