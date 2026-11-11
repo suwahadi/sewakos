@@ -91,68 +91,82 @@ func (q *Queries) CountSearchRooms(ctx context.Context, arg CountSearchRoomsPara
 }
 
 const searchRooms = `-- name: SearchRooms :many
+WITH page AS (
+  SELECT r.id,
+    (CASE $3::smallint
+      WHEN 1 THEN r.price_daily
+      WHEN 2 THEN r.price_weekly
+      ELSE r.price_monthly
+    END)::bigint AS active_price,
+    r.available
+  FROM rooms r
+  JOIN properties p ON p.id = r.property_id
+  JOIN users o ON o.id = p.owner_id
+  WHERE p.is_active = true AND p.moderation_status = 'approved' AND o.suspended_at IS NULL
+    AND (CASE $3::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) IS NOT NULL
+    AND ($4::bool IS NULL OR NOT $4 OR p.gender = ANY($5::text[]))
+    AND ($6::bigint IS NULL OR (CASE $3::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) >= $6)
+    AND ($7::bigint IS NULL OR (CASE $3::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) <= $7)
+    AND ($8::bool IS NULL OR p.is_flash_sale = $8)
+    AND ($9::bool IS NULL OR r.available >= 1)
+    AND (
+      $10::bigint IS NULL
+      OR ($11::text = 'city' AND p.area_id = $10)
+      OR (
+        $11::text IN ('campus', 'mrt')
+        AND p.latitude BETWEEN $12::float8 AND $13::float8
+        AND p.longitude BETWEEN $14::float8 AND $15::float8
+        AND (
+          6371 * acos(
+            greatest(-1, least(1,
+              cos(radians($16::float8)) * cos(radians(p.latitude)) * cos(radians(p.longitude) - radians($17::float8))
+              + sin(radians($16::float8)) * sin(radians(p.latitude))
+            ))
+          )
+        ) <= $18::float8
+      )
+    )
+  ORDER BY
+    CASE WHEN $1::text = 'price' AND $2::text = '-' THEN (CASE $3::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) END DESC,
+    CASE WHEN $1::text = 'price' AND $2::text = '+' THEN (CASE $3::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) END ASC,
+    CASE WHEN $1::text = 'availability' AND $2::text = '-' THEN r.available END DESC,
+    CASE WHEN $1::text = 'availability' AND $2::text = '+' THEN r.available END ASC,
+    r.id ASC
+  LIMIT $20::int OFFSET $19::int
+)
 SELECT
-  r.id, r.property_id, r.name AS room_name, p.name AS property_name, a.name AS area_name,
+  page.id, r.property_id, r.name AS room_name, p.name AS property_name, a.name AS area_name,
   -- Empty string means "no thumbnail"; rating_count = 0 means "no reviews yet",
   -- used instead of NULL columns because sqlc does not infer nullability
   -- through these LEFT JOIN subqueries (see DECISIONS.md).
   coalesce(thumb.object_key, '') AS thumbnail_key,
-  p.gender,
-  (CASE $1::smallint
-    WHEN 1 THEN r.price_daily
-    WHEN 2 THEN r.price_weekly
-    ELSE r.price_monthly
-  END)::bigint AS active_price,
-  r.available, p.is_flash_sale,
+  p.gender, page.active_price, page.available, p.is_flash_sale,
   coalesce(rv.rating_average, 0) AS rating_average,
   coalesce(rv.rating_count, 0) AS rating_count
-FROM rooms r
+FROM page
+JOIN rooms r ON r.id = page.id
 JOIN properties p ON p.id = r.property_id
 JOIN areas a ON a.id = p.area_id
-JOIN users o ON o.id = p.owner_id
 LEFT JOIN LATERAL (
   SELECT ph.object_key FROM property_photos ph
   WHERE ph.property_id = p.id AND ph.room_id IS NULL
   ORDER BY ph.sort_order, ph.id LIMIT 1
 ) thumb ON true
-LEFT JOIN (
-  SELECT property_id, round(avg(rating)::numeric, 1)::float8 AS rating_average, count(*) AS rating_count
-  FROM reviews WHERE NOT is_hidden GROUP BY property_id
-) rv ON rv.property_id = p.id
-WHERE p.is_active = true AND p.moderation_status = 'approved' AND o.suspended_at IS NULL
-  AND (CASE $1::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) IS NOT NULL
-  AND ($2::bool IS NULL OR NOT $2 OR p.gender = ANY($3::text[]))
-  AND ($4::bigint IS NULL OR (CASE $1::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) >= $4)
-  AND ($5::bigint IS NULL OR (CASE $1::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) <= $5)
-  AND ($6::bool IS NULL OR p.is_flash_sale = $6)
-  AND ($7::bool IS NULL OR r.available >= 1)
-  AND (
-    $8::bigint IS NULL
-    OR ($9::text = 'city' AND p.area_id = $8)
-    OR (
-      $9::text IN ('campus', 'mrt')
-      AND p.latitude BETWEEN $10::float8 AND $11::float8
-      AND p.longitude BETWEEN $12::float8 AND $13::float8
-      AND (
-        6371 * acos(
-          greatest(-1, least(1,
-            cos(radians($14::float8)) * cos(radians(p.latitude)) * cos(radians(p.longitude) - radians($15::float8))
-            + sin(radians($14::float8)) * sin(radians(p.latitude))
-          ))
-        )
-      ) <= $16::float8
-    )
-  )
+LEFT JOIN LATERAL (
+  SELECT round(avg(rating)::numeric, 1)::float8 AS rating_average, count(*) AS rating_count
+  FROM reviews WHERE property_id = p.id AND NOT is_hidden
+) rv ON true
 ORDER BY
-  CASE WHEN $17::text = 'price' AND $18::text = '-' THEN (CASE $1::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) END DESC,
-  CASE WHEN $17::text = 'price' AND $18::text = '+' THEN (CASE $1::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) END ASC,
-  CASE WHEN $17::text = 'availability' AND $18::text = '-' THEN r.available END DESC,
-  CASE WHEN $17::text = 'availability' AND $18::text = '+' THEN r.available END ASC,
-  r.id ASC
-LIMIT $20::int OFFSET $19::int
+  CASE WHEN $1::text = 'price' AND $2::text = '-' THEN page.active_price END DESC,
+  CASE WHEN $1::text = 'price' AND $2::text = '+' THEN page.active_price END ASC,
+  CASE WHEN $1::text = 'availability' AND $2::text = '-' THEN page.available END DESC,
+  CASE WHEN $1::text = 'availability' AND $2::text = '+' THEN page.available END ASC,
+  page.id ASC
 `
 
 type SearchRoomsParams struct {
+	SortField       string
+	SortDir         string
 	RentType        int16
 	HasGenderFilter pgtype.Bool
 	Genders         []string
@@ -169,8 +183,6 @@ type SearchRoomsParams struct {
 	AreaLat         pgtype.Float8
 	AreaLng         pgtype.Float8
 	AreaRadiusKm    pgtype.Float8
-	SortField       string
-	SortDir         string
 	ResultOffset    int32
 	ResultLimit     int32
 }
@@ -192,6 +204,8 @@ type SearchRoomsRow struct {
 
 func (q *Queries) SearchRooms(ctx context.Context, arg SearchRoomsParams) ([]SearchRoomsRow, error) {
 	rows, err := q.db.Query(ctx, searchRooms,
+		arg.SortField,
+		arg.SortDir,
 		arg.RentType,
 		arg.HasGenderFilter,
 		arg.Genders,
@@ -208,8 +222,6 @@ func (q *Queries) SearchRooms(ctx context.Context, arg SearchRoomsParams) ([]Sea
 		arg.AreaLat,
 		arg.AreaLng,
 		arg.AreaRadiusKm,
-		arg.SortField,
-		arg.SortDir,
 		arg.ResultOffset,
 		arg.ResultLimit,
 	)
