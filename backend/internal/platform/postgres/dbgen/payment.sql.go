@@ -11,6 +11,15 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const cancelBooking = `-- name: CancelBooking :exec
+UPDATE bookings SET status = 'cancelled', cancelled_by = 'tenant', updated_at = now() WHERE id = $1
+`
+
+func (q *Queries) CancelBooking(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, cancelBooking, id)
+	return err
+}
+
 const extendBookingDuration = `-- name: ExtendBookingDuration :exec
 UPDATE bookings SET duration = duration + $1, end_date = $2, updated_at = now()
 WHERE id = $3
@@ -150,6 +159,52 @@ func (q *Queries) GetPaymentForWebhook(ctx context.Context, orderID string) (Get
 	return i, err
 }
 
+const getPendingPaymentOrderID = `-- name: GetPendingPaymentOrderID :one
+SELECT id, order_id FROM payments WHERE invoice_id = $1 AND status = 'pending'
+`
+
+type GetPendingPaymentOrderIDRow struct {
+	ID      int64
+	OrderID string
+}
+
+func (q *Queries) GetPendingPaymentOrderID(ctx context.Context, invoiceID int64) (GetPendingPaymentOrderIDRow, error) {
+	row := q.db.QueryRow(ctx, getPendingPaymentOrderID, invoiceID)
+	var i GetPendingPaymentOrderIDRow
+	err := row.Scan(&i.ID, &i.OrderID)
+	return i, err
+}
+
+const getRefundForBookingInitialInvoice = `-- name: GetRefundForBookingInitialInvoice :one
+SELECT r.id, r.status, r.amount, r.completed_at, b.tenant_id
+FROM refunds r
+JOIN invoices i ON i.id = r.invoice_id
+JOIN bookings b ON b.id = i.booking_id
+WHERE i.booking_id = $1 AND i.type = 'initial'
+FOR UPDATE OF r
+`
+
+type GetRefundForBookingInitialInvoiceRow struct {
+	ID          int64
+	Status      string
+	Amount      int64
+	CompletedAt pgtype.Timestamptz
+	TenantID    int64
+}
+
+func (q *Queries) GetRefundForBookingInitialInvoice(ctx context.Context, bookingID int64) (GetRefundForBookingInitialInvoiceRow, error) {
+	row := q.db.QueryRow(ctx, getRefundForBookingInitialInvoice, bookingID)
+	var i GetRefundForBookingInitialInvoiceRow
+	err := row.Scan(
+		&i.ID,
+		&i.Status,
+		&i.Amount,
+		&i.CompletedAt,
+		&i.TenantID,
+	)
+	return i, err
+}
+
 const insertPayout = `-- name: InsertPayout :one
 INSERT INTO payouts (booking_id, invoice_id, owner_id, amount)
 VALUES ($1, $2, $3, $4)
@@ -231,6 +286,15 @@ func (q *Queries) MarkInvoicePaid(ctx context.Context, arg MarkInvoicePaidParams
 	return err
 }
 
+const markPaymentExpired = `-- name: MarkPaymentExpired :exec
+UPDATE payments SET status = 'expire', updated_at = now() WHERE id = $1
+`
+
+func (q *Queries) MarkPaymentExpired(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, markPaymentExpired, id)
+	return err
+}
+
 const rejectBookingForStockUnavailable = `-- name: RejectBookingForStockUnavailable :exec
 UPDATE bookings SET status = 'rejected', rejected_by = 'system', reject_reason = $1,
   responded_at = now(), updated_at = now()
@@ -244,5 +308,75 @@ type RejectBookingForStockUnavailableParams struct {
 
 func (q *Queries) RejectBookingForStockUnavailable(ctx context.Context, arg RejectBookingForStockUnavailableParams) error {
 	_, err := q.db.Exec(ctx, rejectBookingForStockUnavailable, arg.RejectReason, arg.ID)
+	return err
+}
+
+const selectBookingForCancel = `-- name: SelectBookingForCancel :one
+SELECT b.id, b.tenant_id, b.room_id, b.status, b.stock_held, r.name AS room_name,
+       pr.id AS property_id, pr.name AS property_name, pr.owner_id,
+       i.id AS invoice_id, i.total AS invoice_total, i.admin_fee AS invoice_admin_fee
+FROM bookings b
+JOIN rooms r ON r.id = b.room_id
+JOIN properties pr ON pr.id = r.property_id
+JOIN invoices i ON i.booking_id = b.id AND i.type = 'initial'
+WHERE b.id = $1
+FOR UPDATE OF b
+`
+
+type SelectBookingForCancelRow struct {
+	ID              int64
+	TenantID        int64
+	RoomID          int64
+	Status          string
+	StockHeld       bool
+	RoomName        string
+	PropertyID      int64
+	PropertyName    string
+	OwnerID         int64
+	InvoiceID       int64
+	InvoiceTotal    int64
+	InvoiceAdminFee int64
+}
+
+func (q *Queries) SelectBookingForCancel(ctx context.Context, id int64) (SelectBookingForCancelRow, error) {
+	row := q.db.QueryRow(ctx, selectBookingForCancel, id)
+	var i SelectBookingForCancelRow
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.RoomID,
+		&i.Status,
+		&i.StockHeld,
+		&i.RoomName,
+		&i.PropertyID,
+		&i.PropertyName,
+		&i.OwnerID,
+		&i.InvoiceID,
+		&i.InvoiceTotal,
+		&i.InvoiceAdminFee,
+	)
+	return i, err
+}
+
+const setRefundAccount = `-- name: SetRefundAccount :exec
+UPDATE refunds SET bank_name = $1, account_number = $2,
+  account_name = $3, status = 'ready', updated_at = now()
+WHERE id = $4
+`
+
+type SetRefundAccountParams struct {
+	BankName      pgtype.Text
+	AccountNumber pgtype.Text
+	AccountName   pgtype.Text
+	ID            int64
+}
+
+func (q *Queries) SetRefundAccount(ctx context.Context, arg SetRefundAccountParams) error {
+	_, err := q.db.Exec(ctx, setRefundAccount,
+		arg.BankName,
+		arg.AccountNumber,
+		arg.AccountName,
+		arg.ID,
+	)
 	return err
 }

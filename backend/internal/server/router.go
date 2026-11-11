@@ -142,6 +142,8 @@ func NewRouter(deps Deps) chi.Router {
 				tenant.Use(RequireRole("tenant"))
 				tenant.Post("/booking/submit", withAuthedUser(bookingDeps, booking.SubmitHandler))
 				tenant.Post("/booking/{booking}/checkout", withAuthedUser(bookingDeps, booking.CheckoutHandler))
+				tenant.Post("/booking/{booking}/cancel", withAuthedUser(bookingDeps, booking.CancelHandler))
+				tenant.Put("/booking/{booking}/refund-account", withAuthedUser(bookingDeps, booking.RefundAccountHandler))
 			})
 		})
 		// Remaining endpoint groups (area, search, booking, owner, admin, ...)

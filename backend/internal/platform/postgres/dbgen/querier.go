@@ -11,6 +11,7 @@ import (
 )
 
 type Querier interface {
+	CancelBooking(ctx context.Context, id int64) error
 	CountAreasBySlug(ctx context.Context, slug string) (int64, error)
 	CountSearchRooms(ctx context.Context, arg CountSearchRoomsParams) (CountSearchRoomsRow, error)
 	CountUnreadNotifications(ctx context.Context, userID int64) (int64, error)
@@ -39,6 +40,8 @@ type Querier interface {
 	GetListingProperty(ctx context.Context, id int64) (GetListingPropertyRow, error)
 	GetPaymentByOrderID(ctx context.Context, orderID string) (GetPaymentByOrderIDRow, error)
 	GetPaymentForWebhook(ctx context.Context, orderID string) (GetPaymentForWebhookRow, error)
+	GetPendingPaymentOrderID(ctx context.Context, invoiceID int64) (GetPendingPaymentOrderIDRow, error)
+	GetRefundForBookingInitialInvoice(ctx context.Context, bookingID int64) (GetRefundForBookingInitialInvoiceRow, error)
 	GetRefundForInvoice(ctx context.Context, invoiceID int64) (GetRefundForInvoiceRow, error)
 	GetRoomForDraftPrice(ctx context.Context, id int64) (GetRoomForDraftPriceRow, error)
 	GetRoomForSubmit(ctx context.Context, id int64) (GetRoomForSubmitRow, error)
@@ -65,6 +68,7 @@ type Querier interface {
 	ListUserNotifications(ctx context.Context, arg ListUserNotificationsParams) ([]ListUserNotificationsRow, error)
 	MarkBookingPaid(ctx context.Context, arg MarkBookingPaidParams) error
 	MarkInvoicePaid(ctx context.Context, arg MarkInvoicePaidParams) error
+	MarkPaymentExpired(ctx context.Context, id int64) error
 	MarkPaymentFailure(ctx context.Context, id int64) error
 	MarkUserNotificationRead(ctx context.Context, id int64) error
 	RejectBookingForStockUnavailable(ctx context.Context, arg RejectBookingForStockUnavailableParams) error
@@ -76,11 +80,13 @@ type Querier interface {
 	SeedCreateRoom(ctx context.Context, arg SeedCreateRoomParams) (int64, error)
 	SeedCreateUser(ctx context.Context, arg SeedCreateUserParams) (int64, error)
 	SeedUpsertSetting(ctx context.Context, arg SeedUpsertSettingParams) error
+	SelectBookingForCancel(ctx context.Context, id int64) (SelectBookingForCancelRow, error)
 	SelectBookingForCheckout(ctx context.Context, id int64) (SelectBookingForCheckoutRow, error)
 	SetBookingStockHeld(ctx context.Context, arg SetBookingStockHeldParams) error
 	SetInvoiceNumber(ctx context.Context, arg SetInvoiceNumberParams) error
 	SetPaymentOrderID(ctx context.Context, arg SetPaymentOrderIDParams) error
 	SetPaymentSnapDetails(ctx context.Context, arg SetPaymentSnapDetailsParams) error
+	SetRefundAccount(ctx context.Context, arg SetRefundAccountParams) error
 	SuggestAreas(ctx context.Context, keyword string) ([]SuggestAreasRow, error)
 	SuggestLandings(ctx context.Context, keyword string) ([]SuggestLandingsRow, error)
 	SuggestRoomTypes(ctx context.Context, keyword string) ([]SuggestRoomTypesRow, error)

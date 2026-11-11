@@ -49,3 +49,36 @@ RETURNING id;
 INSERT INTO payouts (booking_id, invoice_id, owner_id, amount)
 VALUES (sqlc.arg(booking_id), sqlc.arg(invoice_id), sqlc.arg(owner_id), sqlc.arg(amount))
 RETURNING id;
+
+-- name: SelectBookingForCancel :one
+SELECT b.id, b.tenant_id, b.room_id, b.status, b.stock_held, r.name AS room_name,
+       pr.id AS property_id, pr.name AS property_name, pr.owner_id,
+       i.id AS invoice_id, i.total AS invoice_total, i.admin_fee AS invoice_admin_fee
+FROM bookings b
+JOIN rooms r ON r.id = b.room_id
+JOIN properties pr ON pr.id = r.property_id
+JOIN invoices i ON i.booking_id = b.id AND i.type = 'initial'
+WHERE b.id = sqlc.arg(id)
+FOR UPDATE OF b;
+
+-- name: GetPendingPaymentOrderID :one
+SELECT id, order_id FROM payments WHERE invoice_id = sqlc.arg(invoice_id) AND status = 'pending';
+
+-- name: MarkPaymentExpired :exec
+UPDATE payments SET status = 'expire', updated_at = now() WHERE id = sqlc.arg(id);
+
+-- name: CancelBooking :exec
+UPDATE bookings SET status = 'cancelled', cancelled_by = 'tenant', updated_at = now() WHERE id = sqlc.arg(id);
+
+-- name: GetRefundForBookingInitialInvoice :one
+SELECT r.id, r.status, r.amount, r.completed_at, b.tenant_id
+FROM refunds r
+JOIN invoices i ON i.id = r.invoice_id
+JOIN bookings b ON b.id = i.booking_id
+WHERE i.booking_id = sqlc.arg(booking_id) AND i.type = 'initial'
+FOR UPDATE OF r;
+
+-- name: SetRefundAccount :exec
+UPDATE refunds SET bank_name = sqlc.arg(bank_name), account_number = sqlc.arg(account_number),
+  account_name = sqlc.arg(account_name), status = 'ready', updated_at = now()
+WHERE id = sqlc.arg(id);
