@@ -1,0 +1,25 @@
+# Let's Encrypt only issues IP-address certificates under the short-lived (~6 day) profile; Caddy renews them.
+(public_tls) {
+	tls {
+		issuer acme {
+			profile shortlived
+		}
+	}
+}
+
+https://{$PUBLIC_HOST} {
+	import public_tls
+	encode zstd gzip
+	handle /api/payments/midtrans/notification {
+		reverse_proxy api:8121
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}
+
+# Presigned S3 URLs are signed for this exact host:port, so MinIO is served on its own port, not under a path.
+https://{$PUBLIC_HOST}:9000 {
+	import public_tls
+	reverse_proxy minio:9000
+}

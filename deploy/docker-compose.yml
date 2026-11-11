@@ -1,0 +1,166 @@
+name: sewakos
+
+x-backend-env: &backend-env
+  APP_ENV: production
+  HTTP_ADDR: ":8121"
+  DATABASE_URL: postgres://kos_app:${APP_DB_PASSWORD}@postgres:5432/kos?sslmode=disable
+  REDIS_URL: redis://redis:6379/0
+  API_CLIENT_ID: ${API_CLIENT_ID}
+  TRUSTED_PROXIES: 172.30.0.0/24
+  OTP_DEBUG_ECHO: "false"
+  MIDTRANS_SERVER_KEY: ${MIDTRANS_SERVER_KEY:-}
+  MIDTRANS_CLIENT_KEY: ${MIDTRANS_CLIENT_KEY:-}
+  MIDTRANS_IS_PRODUCTION: ${MIDTRANS_IS_PRODUCTION:-false}
+  MIDTRANS_FINISH_URL: https://${PUBLIC_HOST}/booking
+  STORAGE_ENDPOINT: ${PUBLIC_HOST}:9000
+  STORAGE_USE_SSL: "true"
+  STORAGE_REGION: us-east-1
+  STORAGE_BUCKET: kos-bucket
+  STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+  STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+  STORAGE_PUBLIC_BASE_URL: https://${PUBLIC_HOST}:9000/kos-bucket
+  APP_PUBLIC_URL: https://${PUBLIC_HOST}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: kos
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kos -d kos"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  minio:
+    image: bitnamilegacy/minio:latest
+    restart: unless-stopped
+    entrypoint: ["minio"]
+    command: server /bitnami/minio/data
+    environment:
+      MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_KEY}
+    volumes:
+      - minio_data:/bitnami/minio/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  minio-init:
+    image: bitnamilegacy/minio-client:latest
+    profiles: ["tools"]
+    environment:
+      HOME: /tmp
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c '
+      mc alias set local http://minio:9000 "$$STORAGE_ACCESS_KEY" "$$STORAGE_SECRET_KEY" &&
+      mc mb -p local/kos-bucket &&
+      mc anonymous set download local/kos-bucket &&
+      (mc ilm rule ls local/kos-bucket | grep -q uploads/ || mc ilm rule add --expire-days 1 --prefix uploads/ local/kos-bucket)
+      '
+
+  migrate:
+    image: sewakos-backend:latest
+    profiles: ["tools"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      GOOSE_DRIVER: postgres
+      GOOSE_DBSTRING: postgres://kos:${POSTGRES_PASSWORD}@postgres:5432/kos?sslmode=disable
+      GOOSE_MIGRATION_DIR: /migrations
+    command: ["goose", "up"]
+
+  api:
+    build: ../backend
+    image: sewakos-backend:latest
+    restart: unless-stopped
+    command: ["api"]
+    environment: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    image: sewakos-backend:latest
+    restart: unless-stopped
+    command: ["worker"]
+    environment: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ../frontend
+      args:
+        STORAGE_PUBLIC_BASE_URL: https://${PUBLIC_HOST}:9000/kos-bucket
+        NEXT_PUBLIC_MIDTRANS_CLIENT_KEY: ${MIDTRANS_CLIENT_KEY:-}
+        NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION: ${MIDTRANS_IS_PRODUCTION:-false}
+    image: sewakos-web:latest
+    restart: unless-stopped
+    environment:
+      API_BASE_URL: http://api:8121/api
+      API_CLIENT_ID: ${API_CLIENT_ID}
+      STORAGE_PUBLIC_BASE_URL: https://${PUBLIC_HOST}:9000/kos-bucket
+    depends_on:
+      - api
+
+  caddy:
+    image: caddy:2.11.9-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "9000:9000"
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+      - minio
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  caddy_data:
+  caddy_config:
