@@ -17,12 +17,12 @@ export interface ApiRequestOptions {
   searchParams?: Record<string, string | number | boolean | undefined>;
 }
 
-function requireConfig(name: string, value: string | undefined): string {
+export function requireConfig(name: string, value: string | undefined): string {
   if (!value) throw new Error(`${name} is not configured`);
   return value;
 }
 
-function buildUrl(baseUrl: string, path: string, searchParams?: ApiRequestOptions["searchParams"]): string {
+export function buildUrl(baseUrl: string, path: string, searchParams?: ApiRequestOptions["searchParams"]): string {
   const url = new URL(path.replace(/^\//, ""), `${baseUrl.replace(/\/$/, "")}/`);
   if (searchParams) {
     for (const [key, value] of Object.entries(searchParams)) {

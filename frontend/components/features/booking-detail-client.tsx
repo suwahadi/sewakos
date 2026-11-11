@@ -4,6 +4,7 @@ import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { BookingTimeline } from "@/components/features/booking-timeline";
+import { ExtendSheet } from "@/components/features/extend-sheet";
 import { InvoiceCard } from "@/components/features/invoice-card";
 import { PaymentPanel } from "@/components/features/payment-panel";
 import { RefundPanel } from "@/components/features/refund-panel";
@@ -29,9 +30,16 @@ export interface BookingDetailClientProps {
   payment: Payment | null;
   refund: Refund | null;
   invoices: Invoice[];
+  monthlyDurationOptions?: number[];
 }
 
-export function BookingDetailClient({ booking, payment, refund, invoices }: BookingDetailClientProps) {
+export function BookingDetailClient({
+  booking,
+  payment,
+  refund,
+  invoices,
+  monthlyDurationOptions = [],
+}: BookingDetailClientProps) {
   const router = useRouter();
   const refresh = useCallback(() => router.refresh(), [router]);
   const navigate = useCallback((href: string) => router.push(href), [router]);
@@ -39,6 +47,7 @@ export function BookingDetailClient({ booking, payment, refund, invoices }: Book
   const [statusCheck, setStatusCheck] = useState<{ from: string; attempts: number } | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [extendOpen, setExtendOpen] = useState(false);
 
   const status = bookingStatusLabel(booking.status);
   const statusKey = [booking.status, ...invoices.map((invoice) => invoice.status)].join();
@@ -143,6 +152,12 @@ export function BookingDetailClient({ booking, payment, refund, invoices }: Book
         </section>
       )}
 
+      {booking.can_extend && (
+        <Button variant="outline" fullWidth onClick={() => setExtendOpen(true)}>
+          Perpanjang sewa
+        </Button>
+      )}
+
       {CANCELLABLE_STATUSES.includes(booking.status) && (
         <Button
           variant="ghost"
@@ -163,6 +178,20 @@ export function BookingDetailClient({ booking, payment, refund, invoices }: Book
         onConfirm={cancel}
         loading={cancelling}
       />
+
+      {booking.can_extend && (
+        <ExtendSheet
+          open={extendOpen}
+          onClose={() => setExtendOpen(false)}
+          bookingId={booking.id}
+          rentType={booking.rent_type}
+          startDate={booking.start_date}
+          currentDuration={booking.duration}
+          monthlyOptions={monthlyDurationOptions}
+          navigate={navigate}
+          onExtended={refresh}
+        />
+      )}
     </div>
   );
 }

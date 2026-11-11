@@ -1,3 +1,4 @@
+import { Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Invoice } from "@/lib/booking";
@@ -11,7 +12,16 @@ export function InvoiceCard({ invoice, paying, onPay }: { invoice: Invoice; payi
     <article className="flex min-w-0 flex-col gap-2 rounded-lg border border-neutral-200 p-3">
       <div className="flex items-center justify-between gap-2">
         <p className="min-w-0 break-words text-caption text-neutral-600">{invoice.number}</p>
-        <Badge color={status.color}>{status.label}</Badge>
+        <div className="flex items-center gap-1">
+          <Badge color={status.color}>{status.label}</Badge>
+          <a
+            href={`/api/invoices/${invoice.id}/pdf`}
+            aria-label="Unduh PDF"
+            className="relative inline-flex size-9 items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100"
+          >
+            <Download aria-hidden="true" size={18} strokeWidth={1.75} />
+          </a>
+        </div>
       </div>
       <p className="text-title-sm font-semibold text-neutral-900">{invoiceTypeLabel(invoice.type)}</p>
       <p className="text-caption text-neutral-600">

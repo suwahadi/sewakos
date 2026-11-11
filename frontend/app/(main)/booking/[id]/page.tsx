@@ -17,6 +17,10 @@ interface BookingDetailResponse {
   refund: Refund | null;
 }
 
+interface ListingRoomsResponse {
+  rooms: { id: number; monthly_duration_options: number[] }[];
+}
+
 export default async function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   await requireAuthenticated(`/booking/${encodeURIComponent(id)}`);
@@ -38,6 +42,14 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
 
   const { booking, payment, refund } = detail.data;
 
+  let monthlyDurationOptions: number[] = [];
+  if (booking.can_extend && booking.rent_type === "monthly") {
+    const listing = await apiFetch<ListingRoomsResponse>(`/listings/${booking.property.id}`);
+    monthlyDurationOptions = listing.ok
+      ? (listing.data.rooms.find((room) => room.id === booking.room.id)?.monthly_duration_options ?? [])
+      : [];
+  }
+
   return (
     <>
       <AppHeader variant="inner" title={`Booking #${booking.id}`} role={role} />
@@ -46,6 +58,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         payment={payment}
         refund={refund}
         invoices={invoices.ok ? invoices.data.invoices : []}
+        monthlyDurationOptions={monthlyDurationOptions}
       />
     </>
   );

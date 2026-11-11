@@ -184,7 +184,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 
 ## F6 — Rilis 2 UI
 
-- [ ] **F6.1 Tenant.** Perpanjang sewa (DurationPicker + PaymentPanel), unduh PDF di InvoiceCard.
+- [x] **F6.1 Tenant.** Perpanjang sewa (DurationPicker + PaymentPanel), unduh PDF di InvoiceCard.
 - [ ] **F6.2 Owner.** StatCard di beranda, `/owner/keuangan` (ringkasan, ledger MoneyRow, CSV), catat deposit, audit log.
 - [ ] **F6.3 Admin.** Laporan keuangan, ledger, rekonsiliasi, audit log.
 

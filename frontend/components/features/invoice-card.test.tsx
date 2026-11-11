@@ -19,6 +19,7 @@ describe("InvoiceCard", () => {
     expect(screen.getByText("Tagihan bulanan")).toBeInTheDocument();
     expect(screen.getByText("31 Des 2026 – 30 Jan 2027")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Bayar" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Unduh PDF" })).toHaveAttribute("href", "/api/invoices/7/pdf");
   });
 
   it("hides the pay action once paid", () => {

@@ -30,6 +30,7 @@ const booking: BookingDetail = {
   expires_at: new Date(Date.now() + 23 * 3_600_000).toISOString(),
   paid_at: null,
   reject_reason: null,
+  can_extend: false,
 };
 
 const invoice: Invoice = {
@@ -104,6 +105,25 @@ describe("BookingDetailClient", () => {
     const buttons = screen.getAllByRole("button", { name: "Batalkan booking" });
     await user.click(buttons[buttons.length - 1]!);
     expect(callBffMock).toHaveBeenCalledWith("/api/booking/2/cancel", { method: "POST" });
+    expect(refreshMock).toHaveBeenCalled();
+  });
+
+  it("extends an approved booking through the duration picker", async () => {
+    const user = userEvent.setup();
+    callBffMock.mockResolvedValue(ok({ invoice: { id: 9 } }));
+    render(
+      <BookingDetailClient
+        booking={{ ...booking, status: "approved", can_extend: true }}
+        payment={null}
+        refund={null}
+        invoices={[]}
+        monthlyDurationOptions={[1, 3, 6]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Perpanjang sewa" }));
+    await user.click(screen.getByRole("button", { name: "Lanjutkan" }));
+    expect(callBffMock).toHaveBeenCalledWith("/api/booking/2/extend", { method: "POST", body: { duration: 1 } });
     expect(refreshMock).toHaveBeenCalled();
   });
 });
