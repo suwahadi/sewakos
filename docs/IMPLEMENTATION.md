@@ -156,7 +156,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 
 ## F5 — Admin (UI)
 
-- [ ] **F5.1 Panel admin.** Layout desktop-first yang tetap responsif, DataTable, halaman untuk setiap bagian B6.
+- [x] **F5.1 Panel admin.** Layout desktop-first yang tetap responsif, DataTable, halaman untuk setiap bagian B6.
 
 ## B7 — Siklus sewa (wajib Rilis 1)
 

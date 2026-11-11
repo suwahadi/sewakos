@@ -23,7 +23,7 @@ export function Badge({ color, icon, className, children }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex h-[22px] items-center gap-1 rounded-sm px-2 text-caption-strong",
+        "inline-flex h-[22px] items-center gap-1 whitespace-nowrap rounded-sm px-2 text-caption-strong",
         COLOR_CLASSES[color],
         className,
       )}
