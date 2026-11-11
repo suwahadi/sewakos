@@ -124,7 +124,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 
 - [x] **F3.1 Form sewa.** `/kost/{id}/sewa`: SegmentedControl tipe sewa, DurationPicker, DateField (min hari ini WIB),
   PriceBreakdown, submit.
-- [ ] **F3.2 Booking.** `/booking`, `/booking/{id}`: BookingCard, BookingTimeline, PaymentPanel + Snap.js, Countdown,
+- [x] **F3.2 Booking.** `/booking`, `/booking/{id}`: BookingCard, BookingTimeline, PaymentPanel + Snap.js, Countdown,
   RefundPanel + form rekening, InvoiceCard (tanpa unduh PDF), batal (ConfirmDialog).
 - [ ] **F3.3 E2E Rilis 1 tenant.** Playwright: daftar → OTP (debug echo) → cari → detail → sewa → checkout (Snap di-mock
   di level BFF) → status `paid` setelah webhook uji.
