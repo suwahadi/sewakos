@@ -160,7 +160,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 
 ## B7 — Siklus sewa (wajib Rilis 1)
 
-- [ ] **B7.1 Tagihan bulanan & akhir sewa.** Job `issue_renewals`, `renewal_due_reminder`, `terminate_overdue`,
+- [x] **B7.1 Tagihan bulanan & akhir sewa.** Job `issue_renewals`, `renewal_due_reminder`, `terminate_overdue`,
   `complete_tenancies` (SPEC §14) + `ApplyPaymentStatus` untuk invoice `renewal`.
   *Selesai bila:* test mencakup H-3, H+3, pelepasan kamar, pembayaran setelah `void` → refund.
 

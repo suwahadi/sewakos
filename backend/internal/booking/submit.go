@@ -2,7 +2,6 @@ package booking
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -167,7 +166,7 @@ func SubmitHandler(deps Deps, user authctx.User) http.HandlerFunc {
 			return
 		}
 
-		number := fmt.Sprintf("INV/%04d/%02d/%06d", issuedAt.In(money.WIB).Year(), issuedAt.In(money.WIB).Month(), invoiceID)
+		number := InvoiceNumber(issuedAt, invoiceID)
 		if err := queries.SetInvoiceNumber(ctx, dbgen.SetInvoiceNumberParams{ID: invoiceID, Number: number}); err != nil {
 			response.InternalErrorHandler(w, r)
 			return

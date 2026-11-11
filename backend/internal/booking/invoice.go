@@ -2,8 +2,10 @@ package booking
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
@@ -18,6 +20,11 @@ import (
 func parseInvoiceID(r *http.Request) (int64, bool) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "invoice"), 10, 64)
 	return id, err == nil && id > 0
+}
+
+func InvoiceNumber(issuedAt time.Time, id int64) string {
+	wib := issuedAt.In(money.WIB)
+	return fmt.Sprintf("INV/%04d/%02d/%06d", wib.Year(), wib.Month(), id)
 }
 
 func InvoiceBody(id int64, number string, bookingID int64, invoiceType, status string, periodStart, periodEnd pgtype.Date,
