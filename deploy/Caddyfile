@@ -1,3 +1,8 @@
+# Clients send no SNI when connecting to an IP address, so the certificate must be chosen by default_sni.
+{
+	default_sni {$PUBLIC_HOST}
+}
+
 # Let's Encrypt only issues IP-address certificates under the short-lived (~6 day) profile; Caddy renews them.
 (public_tls) {
 	tls {
