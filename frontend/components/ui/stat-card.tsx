@@ -4,7 +4,6 @@ export interface StatCardProps {
   caption?: string;
 }
 
-/** DESIGN.md §6.44 — caption is always rendered (as a non-breaking space when absent) so cards in the same row stay equal height. */
 export function StatCard({ label, value, caption }: StatCardProps) {
   return (
     <div className="flex h-full flex-col gap-1 rounded-lg bg-neutral-50 p-4">

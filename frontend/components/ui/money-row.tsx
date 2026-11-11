@@ -8,7 +8,6 @@ export interface MoneyRowProps {
   isNote?: boolean;
 }
 
-/** DESIGN.md §6.45 — negative amounts are money leaving the platform, not an error, so they stay neutral, never red. */
 export function MoneyRow({ description, date, amount, isNote }: MoneyRowProps) {
   const negative = amount < 0;
   return (
