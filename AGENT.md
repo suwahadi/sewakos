@@ -8,7 +8,7 @@ aturan ini yang berlaku, kecuali pemilik repository memberi izin eksplisit di pe
 
 | Kunci | Nilai |
 |---|---|
-| `INSTALL_SH_URL` | `{{ISI: URL unduhan deploy/install.sh, mis. raw URL file di branch main}}` |
+| `INSTALL_SH_URL` | `https://raw.githubusercontent.com/suwahadi/sewakos/main/deploy/install.sh` |
 
 Jika nilai di atas masih berupa `{{ISI: ...}}`: pekerjaan, commit, dan push **tetap berjalan** sesuai §7, tetapi blok
 deploy diganti satu kalimat di laporan bahwa `INSTALL_SH_URL` belum diisi. Jangan menebak URL.
