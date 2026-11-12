@@ -19,6 +19,27 @@ const SIZE_CLASSES: Record<ButtonSize, string> = {
 
 const ICON_SIZE: Record<ButtonSize, number> = { sm: 16, md: 20, lg: 20 };
 
+export function buttonClassName({
+  variant = "success",
+  size = "md",
+  fullWidth,
+  className,
+}: {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  fullWidth?: boolean;
+  className?: string;
+}): string {
+  return cn(
+    "inline-flex items-center justify-center gap-2 rounded-md border transition-[background-color,filter] duration-[var(--duration-fast)] ease-standard active:scale-[0.98]",
+    "disabled:border-neutral-200 disabled:bg-neutral-100 disabled:text-neutral-400",
+    VARIANT_CLASSES[variant],
+    SIZE_CLASSES[size],
+    fullWidth && "w-full",
+    className,
+  );
+}
+
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
@@ -37,14 +58,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       type={props.type ?? "button"}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-md border transition-[background-color,filter] duration-[var(--duration-fast)] ease-standard active:scale-[0.98]",
-        "disabled:border-neutral-200 disabled:bg-neutral-100 disabled:text-neutral-400",
-        VARIANT_CLASSES[variant],
-        SIZE_CLASSES[size],
-        fullWidth && "w-full",
-        className,
-      )}
+      className={buttonClassName({ variant, size, fullWidth, className })}
       {...props}
     >
       {loading ? (

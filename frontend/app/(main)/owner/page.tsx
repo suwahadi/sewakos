@@ -1,7 +1,9 @@
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import { AppHeader } from "@/components/features/app-header";
 import { OwnerBookingCard } from "@/components/features/owner-booking-card";
 import { OwnerPropertyCard } from "@/components/features/owner-property-card";
+import { buttonClassName } from "@/components/ui/button";
 import { ForbiddenState } from "@/components/ui/error-state";
 import { StatCard } from "@/components/ui/stat-card";
 import { apiFetch } from "@/lib/api/client";
@@ -81,10 +83,8 @@ export default async function OwnerHomePage() {
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-title-md font-semibold text-neutral-900">Properti</h2>
-            <Link
-              href="/owner/properti/baru"
-              className="inline-flex h-11 items-center justify-center rounded-md bg-brand-50 px-4 text-body-strong text-brand-800 hover:bg-brand-100"
-            >
+            <Link href="/owner/properti/baru" className={buttonClassName({ size: "md" })}>
+              <Plus aria-hidden="true" size={20} strokeWidth={1.75} />
               Tambah properti
             </Link>
           </div>

@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   if (token) {
     // Issued only for for=tenant_verification / for=login; for=reset_password never reaches
     // here with a token (API.md §2.3 — its code is consumed by /auth/password/reset instead).
-    await setSessionToken(token);
+    await setSessionToken(token, rest.user?.role);
   }
   return NextResponse.json(rest, { status: result.httpStatus });
 }

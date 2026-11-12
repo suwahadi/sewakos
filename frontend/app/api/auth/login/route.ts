@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   }
 
   // The token stays server-side in an httpOnly cookie; it is never sent to the browser's JS.
-  await setSessionToken(result.data.token);
+  await setSessionToken(result.data.token, result.data.user.role);
   return NextResponse.json(
     { status: true, meta: result.data.meta, user: result.data.user },
     { status: result.httpStatus },

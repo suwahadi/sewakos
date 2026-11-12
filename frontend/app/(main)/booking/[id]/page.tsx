@@ -30,6 +30,15 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
     apiFetch<{ invoices: Invoice[] }>("/invoices", { searchParams: { booking_id: id, limit: INVOICE_LIMIT } }),
   ]);
 
+  if (role === "owner") {
+    return (
+      <>
+        <AppHeader variant="inner" title="Booking" role={role} />
+        <ForbiddenState />
+      </>
+    );
+  }
+
   if (!detail.ok) {
     if (detail.httpStatus === 404) notFound();
     return (
