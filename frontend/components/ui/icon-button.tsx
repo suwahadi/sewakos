@@ -18,9 +18,9 @@ const TOUCH_PADDING: Record<IconButtonSize, string> = {
 };
 
 const VARIANT_CLASSES: Record<IconButtonVariant, string> = {
-  plain: "border-neutral-400 bg-neutral-0 text-neutral-700 hover:bg-neutral-50 active:bg-neutral-100",
-  overlay: "border-neutral-400 bg-neutral-0/92 text-neutral-700 shadow-raised hover:bg-neutral-0",
-  onBrand: "border-neutral-0/70 bg-transparent text-neutral-0 hover:bg-brand-700",
+  plain: "bg-transparent text-neutral-700 hover:bg-neutral-100",
+  overlay: "bg-neutral-0/92 text-neutral-700 shadow-raised hover:bg-neutral-0",
+  onBrand: "bg-transparent text-neutral-0 hover:bg-brand-700",
 };
 
 export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -40,7 +40,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       type={props.type ?? "button"}
       disabled={disabled}
       className={cn(
-        "relative inline-flex items-center justify-center rounded-md border transition-[background-color] duration-[var(--duration-fast)] ease-standard active:scale-[0.98] disabled:border-neutral-200 disabled:bg-neutral-100 disabled:text-neutral-400",
+        "relative inline-flex items-center justify-center rounded-full transition-[background-color] duration-[var(--duration-fast)] ease-standard active:scale-[0.98] disabled:text-neutral-400",
         VISUAL_SIZE[size],
         TOUCH_PADDING[size],
         VARIANT_CLASSES[variant],
