@@ -90,6 +90,7 @@ export function PhotoUploader({ propertyId, initialPhotos }: { propertyId: numbe
     });
     if (!added.ok) return patchTask(task.key, { stage: "failed", error: added.meta.message });
     setPhotos((current) => [...current, added.data.photo]);
+    router.refresh();
     dropTask(task);
   }
 
@@ -184,6 +185,7 @@ export function PhotoUploader({ propertyId, initialPhotos }: { propertyId: numbe
       }
     }
     setPhotos(next.map((photo, index) => ({ ...photo, sort_order: index + 1 })));
+    router.refresh();
   }
 
   function move(photo: OwnerPhoto, offset: -1 | 1) {
@@ -271,6 +273,7 @@ export function PhotoUploader({ propertyId, initialPhotos }: { propertyId: numbe
         }}
         onDeleted={(id) => {
           setPhotos((current) => current.filter((photo) => photo.id !== id));
+          router.refresh();
           setSelected(null);
         }}
       />
