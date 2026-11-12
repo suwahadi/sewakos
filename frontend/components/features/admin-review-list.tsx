@@ -92,7 +92,7 @@ export function AdminReviewList({ initial }: { initial: AdminReview[] }) {
                 </div>
               ),
             },
-            { key: "date", header: "Tanggal", render: (review) => formatDateShort(review.created_at) },
+            { key: "date", header: "Tanggal", render: (review) => <span className="whitespace-nowrap">{formatDateShort(review.created_at)}</span> },
             {
               key: "action",
               header: "Aksi",
