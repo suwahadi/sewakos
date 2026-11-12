@@ -1,14 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { OwnerSummary, ownerInitials } from "./owner-summary";
-
-describe("ownerInitials", () => {
-  it("uses the first letters of the first two words", () => {
-    expect(ownerInitials("renny swarnasari")).toBe("RS");
-    expect(ownerInitials("  Budi  ")).toBe("B");
-    expect(ownerInitials("Siti Aminah Putri")).toBe("SA");
-  });
-});
+import { OwnerSummary } from "./owner-summary";
 
 describe("OwnerSummary", () => {
   it("shows initials, name, and active month without a link", () => {

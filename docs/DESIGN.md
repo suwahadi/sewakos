@@ -1318,8 +1318,8 @@ Jl. Contoh No. 42, Kota Depok  ← caption + tautan "Buka di peta"
                     Pemilik Kos · Aktif sejak {bulan tahun} (`caption`)
 [StickyActionBar: Mulai dari Rp2.250.000/bulan | Ajukan sewa]
 ```
-Bagian pemilik: pembatas atas `neutral-200` tipis; avatar lingkaran `brand-100` dengan inisial dua huruf
-(`brand-800`, `label` 600) setinggi dua baris teks, tidak bisa diklik. Data dari `owner.name` dan `owner.active_since`.
+Bagian pemilik: pembatas atas `neutral-200` tipis; avatar memakai komponen `Avatar` ukuran `list` (§6.13) seperti
+di ulasan, tidak bisa diklik. Data dari `owner.name` dan `owner.active_since`.
 Tautan peta: `https://www.google.com/maps/search/?api=1&query={latitude},{longitude}` (tab baru,
 ikon `ExternalLink`). Tidak ada peta tertanam di v1 (menjaga bobot halaman).
 Setelah halaman tampil, kirim `POST /listings/{id}/view` sekali per sesi per properti.
