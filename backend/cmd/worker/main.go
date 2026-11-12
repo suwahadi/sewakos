@@ -59,13 +59,21 @@ func main() {
 		os.Exit(1)
 	}
 
+	sender, err := email.NewSender(email.SMTPConfig{
+		Host: cfg.SMTPHost, Port: cfg.SMTPPort, Username: cfg.SMTPUsername, Password: cfg.SMTPPassword, From: cfg.EmailFrom,
+	}, logger)
+	if err != nil {
+		logger.Error("configure email sender", "error", err)
+		os.Exit(1)
+	}
+
 	deps := worker.Deps{
 		Booking: booking.Deps{
 			DB:           pool,
 			Midtrans:     midtrans.NewHTTPClient(cfg.MidtransServerKey, cfg.MidtransIsProduction, cfg.MidtransBaseURL),
 			AppPublicURL: cfg.AppPublicURL,
 		},
-		Email:   email.LogSender{Logger: logger},
+		Email:   sender,
 		Storage: objectStore,
 
 		OwnerReminderBeforeMinutes: cfg.OwnerReminderBeforeMinutes,

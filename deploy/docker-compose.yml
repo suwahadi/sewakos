@@ -21,6 +21,11 @@ x-backend-env: &backend-env
   STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
   STORAGE_PUBLIC_BASE_URL: https://${PUBLIC_HOST}:9000/kos-bucket
   APP_PUBLIC_URL: https://${PUBLIC_HOST}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_USERNAME: ${SMTP_USERNAME:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  EMAIL_FROM: ${EMAIL_FROM:-Sewa Kos <no-reply@${PUBLIC_HOST}>}
 
 services:
   postgres:

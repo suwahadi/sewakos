@@ -15,6 +15,7 @@ require (
 	github.com/jung-kurt/gofpdf v1.16.2
 	github.com/minio/minio-go/v7 v7.4.1
 	github.com/redis/go-redis/v9 v9.23.0
+	github.com/wneessen/go-mail v0.8.1
 	golang.org/x/crypto v0.58.0
 )
 

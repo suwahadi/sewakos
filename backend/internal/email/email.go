@@ -1,6 +1,5 @@
-// Package email defines the outbound mail interface (SPEC-GO.md §3, §17) and
-// the dev/log-only implementation. A real SMTP sender is a later task
-// (B9.3); nothing here depends on that yet.
+// Package email defines the outbound mail interface (SPEC-GO.md §3, §17) with a
+// log-only implementation for development and an SMTP implementation.
 package email
 
 import (

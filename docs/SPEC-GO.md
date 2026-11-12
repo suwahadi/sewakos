@@ -203,8 +203,8 @@ di produksi memakai image dari `Dockerfile` lewat `deploy/install.sh`.
 | `AREA_RADIUS_KM` | `3` | Radius filter kampus/MRT |
 | `RENEWAL_ISSUE_DAYS_BEFORE` | `3` | Tagihan bulanan dibuat H-n |
 | `RENEWAL_GRACE_DAYS` | `3` | Telat > n hari → `terminated` |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` | — | Kosong = `LogSender` |
-| `EMAIL_FROM` | — | Mis. `Kos API <no-reply@domain>` |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` | — / `587` / — / — | Kosong = `LogSender`; login tanpa password juga `LogSender` (peringatan di log). Dengan login wajib STARTTLS (port 465 = TLS langsung) |
+| `EMAIL_FROM` | — | Mis. `Kos API <no-reply@domain>`. Wajib bila `SMTP_HOST` diisi (worker gagal start tanpa ini) |
 | `APP_PUBLIC_URL` | — | Dasar tautan di email |
 
 ## 4. Skema database (migration)
