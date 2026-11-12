@@ -31,6 +31,7 @@ const booking: BookingDetail = {
   paid_at: null,
   reject_reason: null,
   can_extend: false,
+  can_review: false,
 };
 
 const invoice: Invoice = {
@@ -124,6 +125,33 @@ describe("BookingDetailClient", () => {
     await user.click(screen.getByRole("button", { name: "Perpanjang sewa" }));
     await user.click(screen.getByRole("button", { name: "Lanjutkan" }));
     expect(callBffMock).toHaveBeenCalledWith("/api/booking/2/extend", { method: "POST", body: { duration: 1 } });
+    expect(refreshMock).toHaveBeenCalled();
+  });
+
+  it("pairs the extend and review actions and requires a rating before sending a review", async () => {
+    const user = userEvent.setup();
+    callBffMock.mockResolvedValue(ok({ review: { id: 1 } }));
+    render(
+      <BookingDetailClient
+        booking={{ ...booking, status: "approved", can_extend: true, can_review: true }}
+        payment={null}
+        refund={null}
+        invoices={[]}
+        monthlyDurationOptions={[1]}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Perpanjang sewa" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Tulis ulasan" }));
+    await user.click(screen.getByRole("button", { name: "Kirim ulasan" }));
+    expect(screen.getByText("Pilih rating terlebih dahulu.")).toBeInTheDocument();
+    expect(callBffMock).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("radio", { name: "4 bintang" }));
+    expect(screen.getByText("Bagus")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Ulasan (opsional)"), "  Bersih dan tenang.  ");
+    await user.click(screen.getByRole("button", { name: "Kirim ulasan" }));
+    expect(callBffMock).toHaveBeenCalledWith("/api/booking/2/review", { method: "POST", body: { rating: 4, comment: "Bersih dan tenang." } });
     expect(refreshMock).toHaveBeenCalled();
   });
 });

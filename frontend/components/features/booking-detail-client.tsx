@@ -8,8 +8,10 @@ import { ExtendSheet } from "@/components/features/extend-sheet";
 import { InvoiceCard } from "@/components/features/invoice-card";
 import { PaymentPanel } from "@/components/features/payment-panel";
 import { RefundPanel } from "@/components/features/refund-panel";
+import { ReviewSheet } from "@/components/features/review-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ButtonPair } from "@/components/ui/button-pair";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { callBff } from "@/lib/api/browser";
@@ -48,6 +50,7 @@ export function BookingDetailClient({
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [extendOpen, setExtendOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   const status = bookingStatusLabel(booking.status);
   const statusKey = [booking.status, ...invoices.map((invoice) => invoice.status)].join();
@@ -152,10 +155,25 @@ export function BookingDetailClient({
         </section>
       )}
 
-      {booking.can_extend && (
+      {booking.can_extend && booking.can_review ? (
+        <ButtonPair>
+          <Button variant="outline" onClick={() => setExtendOpen(true)}>
+            Perpanjang sewa
+          </Button>
+          <Button variant="outline" onClick={() => setReviewOpen(true)}>
+            Tulis ulasan
+          </Button>
+        </ButtonPair>
+      ) : booking.can_extend ? (
         <Button variant="outline" fullWidth onClick={() => setExtendOpen(true)}>
           Perpanjang sewa
         </Button>
+      ) : (
+        booking.can_review && (
+          <Button variant="outline" fullWidth onClick={() => setReviewOpen(true)}>
+            Tulis ulasan
+          </Button>
+        )
       )}
 
       {CANCELLABLE_STATUSES.includes(booking.status) && (
@@ -178,6 +196,16 @@ export function BookingDetailClient({
         onConfirm={cancel}
         loading={cancelling}
       />
+
+      {booking.can_review && (
+        <ReviewSheet
+          open={reviewOpen}
+          onClose={() => setReviewOpen(false)}
+          bookingId={booking.id}
+          navigate={navigate}
+          onReviewed={refresh}
+        />
+      )}
 
       {booking.can_extend && (
         <ExtendSheet

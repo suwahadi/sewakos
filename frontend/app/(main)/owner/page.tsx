@@ -98,6 +98,10 @@ export default async function OwnerHomePage() {
             <p className="text-body text-neutral-600">Tambahkan kost pertamamu agar bisa tampil di pencarian.</p>
           )}
         </section>
+
+        <Link href="/owner/ulasan" className="text-label font-semibold text-brand-700">
+          Lihat ulasan penyewa
+        </Link>
       </main>
     </>
   );

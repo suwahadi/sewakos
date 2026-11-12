@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { RoomOption, type RoomOptionData } from "@/components/features/room-option";
 import { FacilityList } from "@/components/features/facility-list";
 import { AccordionItem } from "@/components/ui/accordion";
@@ -12,10 +12,12 @@ export function KostDetailClient({
   propertyId,
   description,
   rooms,
+  reviews,
 }: {
   propertyId: number;
   description: string;
   rooms: RoomOptionData[];
+  reviews?: ReactNode;
 }) {
   const router = useRouter();
   const firstAvailable = rooms.find((room) => room.available > 0) ?? rooms[0];
@@ -58,6 +60,8 @@ export function KostDetailClient({
           </AccordionItem>
         </section>
       )}
+
+      {reviews}
 
       {selectedRoom && (
         <StickyActionBar

@@ -23,6 +23,7 @@ export interface BookingDetail extends BookingSummary {
   paid_at: string | null;
   reject_reason: string | null;
   can_extend: boolean;
+  can_review: boolean;
 }
 
 export interface Payment {

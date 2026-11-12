@@ -1,14 +1,17 @@
 import { ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/features/app-header";
 import { KostDetailClient } from "@/components/features/kost-detail-client";
 import { PropertyGallery, type GalleryPhoto } from "@/components/features/property-gallery";
+import { ReviewCard } from "@/components/features/review-card";
 import type { RoomOptionData } from "@/components/features/room-option";
 import { Badge } from "@/components/ui/badge";
 import { GenderBadge } from "@/components/ui/gender-badge";
-import { RatingSummary } from "@/components/ui/rating";
+import { RatingInline, RatingSummary } from "@/components/ui/rating";
 import { apiFetch } from "@/lib/api/client";
 import { getNavRole } from "@/lib/auth/nav-role";
+import type { ReviewsResponse } from "@/lib/reviews";
 
 interface PropertyDetailResponse {
   property: {
@@ -29,13 +32,15 @@ interface PropertyDetailResponse {
 
 export default async function KostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [role, result] = await Promise.all([
+  const [role, result, reviewsResult] = await Promise.all([
     getNavRole(),
     apiFetch<PropertyDetailResponse>(`/listings/${encodeURIComponent(id)}`),
+    apiFetch<ReviewsResponse>(`/listings/${encodeURIComponent(id)}/reviews`, { auth: false, searchParams: { limit: 3 } }),
   ]);
 
   if (!result.ok) notFound();
   const { property, rooms } = result.data;
+  const reviews = reviewsResult.ok ? reviewsResult.data.reviews : [];
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${property.latitude},${property.longitude}`;
 
   return (
@@ -61,10 +66,32 @@ export default async function KostDetailPage({ params }: { params: Promise<{ id:
               <ExternalLink aria-hidden="true" size={14} strokeWidth={1.75} />
             </a>
           </p>
-          <RatingSummary average={property.rating.average} count={property.rating.count} />
+          <RatingInline average={property.rating.average} count={property.rating.count} />
         </div>
       </div>
-      <KostDetailClient propertyId={property.id} description={property.description} rooms={rooms} />
+      <KostDetailClient
+        propertyId={property.id}
+        description={property.description}
+        rooms={rooms}
+        reviews={
+          <section className="flex flex-col gap-3">
+            <p className="text-title-sm font-semibold text-neutral-900">Ulasan</p>
+            <RatingSummary average={property.rating.average} count={property.rating.count} />
+            {reviews.length > 0 && (
+              <div className="divide-y divide-neutral-200">
+                {reviews.map((review) => (
+                  <ReviewCard key={review.id} review={review} />
+                ))}
+              </div>
+            )}
+            {property.rating.count > reviews.length && (
+              <Link href={`/kost/${property.id}/ulasan`} className="text-label font-semibold text-brand-700">
+                Lihat semua ulasan ({property.rating.count})
+              </Link>
+            )}
+          </section>
+        }
+      />
     </>
   );
 }

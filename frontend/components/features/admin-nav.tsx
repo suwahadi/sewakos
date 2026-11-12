@@ -6,6 +6,7 @@ import { cn } from "@/lib/cn";
 
 const ITEMS = [
   { href: "/admin/properti", label: "Moderasi properti" },
+  { href: "/admin/ulasan", label: "Moderasi ulasan" },
   { href: "/admin/booking", label: "Booking" },
   { href: "/admin/tagihan", label: "Tagihan" },
   { href: "/admin/refund", label: "Refund" },
