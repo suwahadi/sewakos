@@ -32,10 +32,15 @@ type AdminFeeCache interface {
 	Invalidate()
 }
 
+type RatingCache interface {
+	Invalidate(ctx context.Context, propertyID int64)
+}
+
 type Deps struct {
 	Store          dbgen.Querier
 	DB             TxBeginner
 	AdminFee       AdminFeeCache
+	Ratings        RatingCache
 	StorageBaseURL string
 	AppPublicURL   string
 }

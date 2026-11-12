@@ -194,7 +194,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 
 ## B9 — Rilis 3 backend
 
-- [ ] **B9.1 Ulasan.** API.md §13.1–13.2, API-OWNER.md §10, API-ADMIN.md §11, cache rating, `can_review`.
+- [x] **B9.1 Ulasan.** API.md §13.1–13.2, API-OWNER.md §10, API-ADMIN.md §11, cache rating, `can_review`.
 - [ ] **B9.2 Favorit.** API.md §13.3.
 - [ ] **B9.3 Email produksi.** ⛔ menunggu pemilik (PRD §8 #4): pengirim SMTP nyata.
 

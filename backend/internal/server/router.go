@@ -25,6 +25,7 @@ import (
 	"github.com/suwahadi/sewakos/backend/internal/owner"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres/dbgen"
 	"github.com/suwahadi/sewakos/backend/internal/response"
+	"github.com/suwahadi/sewakos/backend/internal/review"
 	"github.com/suwahadi/sewakos/backend/internal/search"
 	"github.com/suwahadi/sewakos/backend/internal/settings"
 )
@@ -109,8 +110,11 @@ func NewRouter(deps Deps) chi.Router {
 		AppPublicURL: deps.Config.AppPublicURL,
 	}
 
+	ratingCache := review.NewRatingCache(deps.Redis)
+	reviewDeps := review.Deps{Store: queries, DB: deps.DB, Ratings: ratingCache, AppPublicURL: deps.Config.AppPublicURL}
+
 	adminDeps := admin.Deps{
-		Store: queries, DB: deps.DB, AdminFee: adminFeeCache,
+		Store: queries, DB: deps.DB, AdminFee: adminFeeCache, Ratings: ratingCache,
 		StorageBaseURL: deps.Config.StoragePublicBaseURL, AppPublicURL: deps.Config.AppPublicURL,
 	}
 
@@ -131,6 +135,7 @@ func NewRouter(deps Deps) chi.Router {
 		api.Post("/listings/search", search.SearchHandler(searchDeps))
 		api.Post("/listings/{property}/view", listing.ViewHandler(listingDeps))
 		api.Get("/listings/{property}/gallery", listing.GalleryHandler(listingDeps))
+		api.Get("/listings/{property}/reviews", review.ListHandler(reviewDeps))
 		api.Get("/config/ab-test/{experiment}", abtest.Handler())
 		api.Get("/booking/draft-price/{room}", booking.DraftPriceHandler(bookingDeps))
 
@@ -166,6 +171,7 @@ func NewRouter(deps Deps) chi.Router {
 				tenant.Post("/booking/{booking}/cancel", withAuthedUser(bookingDeps, booking.CancelHandler))
 				tenant.Put("/booking/{booking}/refund-account", withAuthedUser(bookingDeps, booking.RefundAccountHandler))
 				tenant.Post("/booking/{booking}/extend", withAuthedUser(bookingDeps, booking.ExtendHandler))
+				tenant.Post("/booking/{booking}/review", withAuthedUser(reviewDeps, review.CreateHandler))
 				tenant.Post("/invoices/{invoice}/checkout", withAuthedUser(bookingDeps, booking.InvoiceCheckoutHandler))
 			})
 
@@ -200,6 +206,9 @@ func NewRouter(deps Deps) chi.Router {
 				adminRoutes.Patch("/admin/settings", withAuthedUser(adminDeps, admin.PatchSettingsHandler))
 				adminRoutes.Post("/admin/notifications/broadcast", withAuthedUser(adminDeps, admin.BroadcastHandler))
 				adminRoutes.Get("/admin/audit-logs", withAuthedUser(adminDeps, admin.AuditLogsHandler))
+				adminRoutes.Get("/admin/reviews", withAuthedUser(adminDeps, admin.ListReviewsHandler))
+				adminRoutes.Post("/admin/reviews/{review}/hide", withAuthedUser(adminDeps, admin.HideReviewHandler))
+				adminRoutes.Post("/admin/reviews/{review}/unhide", withAuthedUser(adminDeps, admin.UnhideReviewHandler))
 			})
 
 			authed.Group(func(ownerRoutes chi.Router) {
@@ -227,6 +236,7 @@ func NewRouter(deps Deps) chi.Router {
 				ownerRoutes.Get("/owner/finance/ledger.csv", withAuthedUser(ownerDeps, owner.FinanceLedgerCSVHandler))
 				ownerRoutes.Get("/owner/stats", withAuthedUser(ownerDeps, owner.StatsHandler))
 				ownerRoutes.Get("/owner/audit-logs", withAuthedUser(ownerDeps, owner.AuditLogsHandler))
+				ownerRoutes.Get("/owner/reviews", withAuthedUser(ownerDeps, owner.ListReviewsHandler))
 				ownerRoutes.Post("/owner/uploads/presign", withAuthedUser(ownerDeps, owner.PresignHandler))
 				ownerRoutes.Post("/owner/properties/{property}/photos", withAuthedUser(ownerDeps, owner.AddPhotoHandler))
 				ownerRoutes.Patch("/owner/photos/{photo}", withAuthedUser(ownerDeps, owner.UpdatePhotoHandler))
