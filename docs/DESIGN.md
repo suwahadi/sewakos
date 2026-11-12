@@ -449,6 +449,7 @@ Aturan:
 | Transaksi | `Wallet`, `CreditCard`, `CalendarDays`, `FileText`, `Download`, `Banknote` |
 | Akun | `Phone`, `Mail`, `LockKeyhole`, `LogOut`, `Pencil`, `ShieldCheck` |
 | Owner/admin | `Plus`, `Trash2`, `Upload`, `ImagePlus`, `ChartColumn`, `ListChecks`, `Flag`, `EyeOff` |
+| Menu admin | `Menu`, `Building2`, `Star`, `ListChecks`, `ReceiptText`, `Undo2`, `Banknote`, `Wallet`, `Scale`, `History`, `Users`, `MapPin`, `Settings`, `UserRound` |
 | Lain | `Copy`, `ExternalLink`, `RefreshCw`, `LoaderCircle` (spinner), `ArrowUpDown` (urutkan), `MessageSquareText` (SMS) |
 
 **Pemetaan fasilitas** (`facilities` berupa teks bebas dari owner). Cocokkan tanpa membedakan huruf besar/kecil:
@@ -548,6 +549,9 @@ dialog.sheet::backdrop { background: rgb(22 22 28 / 0.48); transition: opacity 2
 @starting-style { dialog.sheet[open]::backdrop { opacity: 0; } }
 ```
 Dialog tengah memakai pola sama dengan `opacity` + `scale(0.98)` sebagai pengganti `translateY`.
+
+Laci (`dialog.drawer`, dipakai AdminSidebar §6.23a) memakai pola yang sama dengan arah geser dari kiri:
+`translateX(-100%)` → `translateX(0)`, backdrop sama.
 
 ### 5.4 Umpan balik tekan
 
@@ -828,6 +832,29 @@ di halaman dengan StickyActionBar (detail, checkout).
 Item: ikon 24px + teks `label` 500. Aktif: ikon & label `brand-700`, garis 3×24px `brand-600` di atas ikon.
 Tidak aktif: `neutral-500`. `<nav aria-label="Navigasi utama">`, item aktif `aria-current="page"`.
 Tamu yang membuka Favorit/Booking diarahkan ke halaman masuk.
+
+### 6.23a AdminSidebar (panel admin)
+
+Navigasi panel admin, `<nav aria-label="Menu admin">`. Item: ikon 20px + teks `label` 500, tinggi 44px, radius
+`radius-md`. Aktif: latar `brand-50`, teks & ikon `brand-800`, 600, `aria-current="page"`. Tidak aktif: `neutral-700`,
+hover `neutral-50`. Akun dipisah border atas `neutral-200` di akhir daftar.
+
+| Item | Ikon | Item | Ikon |
+|---|---|---|---|
+| Moderasi properti | `Building2` | Keuangan | `Wallet` |
+| Moderasi ulasan | `Star` | Rekonsiliasi | `Scale` |
+| Booking | `ListChecks` | Riwayat | `History` |
+| Tagihan | `ReceiptText` | Pengguna | `Users` |
+| Refund | `Undo2` | Area | `MapPin` |
+| Payout | `Banknote` | Pengaturan | `Settings` |
+| Akun | `UserRound` | | |
+
+- ≥ 1024px: sidebar tetap 240px di kiri, tinggi layar penuh, border kanan `neutral-200`, logo teks di atas, daftar
+  bisa di-scroll sendiri.
+- < 1024px: bilah atas 56px menempel (`z-sticky`, latar putih, border bawah `neutral-200`) berisi IconButton `Menu`
+  ("Buka menu", `aria-expanded`, `aria-controls`) + logo teks. Tombol membuka laci `<dialog class="drawer">` (§5.3)
+  dari kiri: lebar `min(280px, 100% - 56px)`, tinggi layar penuh, `shadow-overlay`, header logo + `X` ("Tutup menu").
+  Menutup: `X`, Esc, klik backdrop, memilih item, atau layar melebar ke ≥ 1024px. Fokus kembali ke tombol menu.
 
 ### 6.24 Tabs
 
