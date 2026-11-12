@@ -18,12 +18,12 @@ export function SiteFooter() {
             <p className="text-caption text-neutral-600">Cari, pesan, dan bayar sewa kost secara online.</p>
           </div>
           <nav aria-label="Tautan footer">
-            <ul className="-mx-3 flex flex-wrap">
+            <ul className="flex flex-wrap items-center gap-x-4 gap-y-1">
               {FOOTER_LINKS.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="inline-flex min-h-11 items-center rounded-md px-3 text-body text-neutral-700 hover:text-brand-700"
+                    className="inline-flex min-h-11 items-center text-label text-neutral-700 hover:text-brand-700"
                   >
                     {link.label}
                   </Link>

@@ -854,7 +854,8 @@ di dalam header berwarna putih; IconButton memakai varian `onBrand`; badge hitun
 
 Di akhir semua halaman grup utama dan halaman legal, latar `neutral-50`, border atas `neutral-200`, isi di kontainer
 1200px. Baris atas: logo teks (tautan ke `/`) + deskripsi `caption` `neutral-600`; tautan `body` `neutral-700`
-(Cari kost, Syarat & Ketentuan, Kebijakan Privasi), target sentuh 44px. Mobile bertumpuk, ≥ 1024px sebaris
+(Cari kost, Syarat & Ketentuan, Kebijakan Privasi), target sentuh 44px. Mobile: tautan sejajar inline dalam
+satu baris yang membungkus rapi (jarak 16px, teks `label`); ≥ 1024px sebaris
 (tautan di kanan). Baris bawah dipisah border `neutral-200`: "Copyright © 2026 - All Rights Reserved", `caption`
 300, rata tengah, `neutral-600`. Footer menempel di dasar layar pada halaman pendek dan tidak tertutup bottom nav
 maupun StickyActionBar (ruang bawah mobile = tinggi bar + safe area).
