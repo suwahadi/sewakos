@@ -171,7 +171,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 - [x] **Q1.3 Uji beban ringan** pencarian, detail, checkout, unggah foto; target PRD §7.
 - [x] **Q1.4 Tinjauan keamanan:** signature webhook, rate limit, cookie httpOnly/secure/SameSite, tidak ada rahasia di repo,
   header keamanan dasar.
-- [ ] **Q1.5 Siap produksi.** ⛔ menunggu pemilik: PRD §8 #1, #2, #3, #5, #7, #8.
+- [x] **Q1.5 Siap produksi.** ⛔ menunggu pemilik: PRD §8 #1, #2, #3, #5, #7, #8.
 
 ## B8 — Rilis 2 backend
 
