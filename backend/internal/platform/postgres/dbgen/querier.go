@@ -55,12 +55,17 @@ type Querier interface {
 	DeletePropertyPhoto(ctx context.Context, id int64) error
 	DeleteRoom(ctx context.Context, id int64) error
 	DeleteStorageDeletion(ctx context.Context, id int64) error
+	DemoCreateCompletedBooking(ctx context.Context, arg DemoCreateCompletedBookingParams) (int64, error)
 	DemoCreateProperty(ctx context.Context, arg DemoCreatePropertyParams) (int64, error)
+	DemoCreateReview(ctx context.Context, arg DemoCreateReviewParams) error
 	DemoCreateRoom(ctx context.Context, arg DemoCreateRoomParams) (int64, error)
+	DemoPropertiesWithoutReviews(ctx context.Context, slugPrefix string) ([]DemoPropertiesWithoutReviewsRow, error)
 	DemoPropertyExists(ctx context.Context, slug string) (bool, error)
+	DemoRoomsForProperty(ctx context.Context, propertyID int64) ([]DemoRoomsForPropertyRow, error)
 	DemoUpsertArea(ctx context.Context, arg DemoUpsertAreaParams) (int64, error)
 	DemoUpsertOwner(ctx context.Context, arg DemoUpsertOwnerParams) (int64, error)
 	DemoUpsertOwnerBankAccount(ctx context.Context, arg DemoUpsertOwnerBankAccountParams) error
+	DemoUpsertTenant(ctx context.Context, arg DemoUpsertTenantParams) (int64, error)
 	EnqueueEmail(ctx context.Context, arg EnqueueEmailParams) (int64, error)
 	ExistsFavorite(ctx context.Context, arg ExistsFavoriteParams) (bool, error)
 	ExistsListedProperty(ctx context.Context, id int64) (bool, error)

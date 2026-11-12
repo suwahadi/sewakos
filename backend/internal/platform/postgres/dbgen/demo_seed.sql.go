@@ -11,6 +11,42 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const demoCreateCompletedBooking = `-- name: DemoCreateCompletedBooking :one
+INSERT INTO bookings (
+  tenant_id, room_id, rent_type, start_date, status, duration, end_date, period_price, price, deposit,
+  expires_at, paid_at, responded_at, ended_at, deposit_returned_at, deposit_return_note, created_at
+) VALUES (
+  $1, $2, 'monthly', $3, 'completed', $4,
+  $5, $6, $6, $6,
+  $3::date, $3::date, $3::date, $5::date,
+  $5::date + 3, 'Deposit dikembalikan penuh.', $3::date - 2
+)
+RETURNING id
+`
+
+type DemoCreateCompletedBookingParams struct {
+	TenantID    int64
+	RoomID      int64
+	StartDate   pgtype.Date
+	Duration    int16
+	EndDate     pgtype.Date
+	PeriodPrice int64
+}
+
+func (q *Queries) DemoCreateCompletedBooking(ctx context.Context, arg DemoCreateCompletedBookingParams) (int64, error) {
+	row := q.db.QueryRow(ctx, demoCreateCompletedBooking,
+		arg.TenantID,
+		arg.RoomID,
+		arg.StartDate,
+		arg.Duration,
+		arg.EndDate,
+		arg.PeriodPrice,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const demoCreateProperty = `-- name: DemoCreateProperty :one
 INSERT INTO properties (
   owner_id, area_id, name, slug, gender, description, address, latitude, longitude,
@@ -58,6 +94,39 @@ func (q *Queries) DemoCreateProperty(ctx context.Context, arg DemoCreateProperty
 	return id, err
 }
 
+const demoCreateReview = `-- name: DemoCreateReview :exec
+INSERT INTO reviews (booking_id, property_id, tenant_id, rating, comment, is_hidden, hidden_reason, created_at)
+VALUES (
+  $1, $2, $3, $4, $5,
+  $6, $7, $8
+)
+`
+
+type DemoCreateReviewParams struct {
+	BookingID    int64
+	PropertyID   int64
+	TenantID     int64
+	Rating       int16
+	Comment      pgtype.Text
+	IsHidden     bool
+	HiddenReason pgtype.Text
+	CreatedAt    pgtype.Timestamptz
+}
+
+func (q *Queries) DemoCreateReview(ctx context.Context, arg DemoCreateReviewParams) error {
+	_, err := q.db.Exec(ctx, demoCreateReview,
+		arg.BookingID,
+		arg.PropertyID,
+		arg.TenantID,
+		arg.Rating,
+		arg.Comment,
+		arg.IsHidden,
+		arg.HiddenReason,
+		arg.CreatedAt,
+	)
+	return err
+}
+
 const demoCreateRoom = `-- name: DemoCreateRoom :one
 INSERT INTO rooms (property_id, name, price_monthly, price_weekly, price_daily, available, capacity, facilities, monthly_duration_options)
 VALUES (
@@ -96,6 +165,38 @@ func (q *Queries) DemoCreateRoom(ctx context.Context, arg DemoCreateRoomParams) 
 	return id, err
 }
 
+const demoPropertiesWithoutReviews = `-- name: DemoPropertiesWithoutReviews :many
+SELECT p.id, p.slug FROM properties p
+WHERE p.slug LIKE $1::text || '-%'
+  AND NOT EXISTS (SELECT 1 FROM reviews r WHERE r.property_id = p.id)
+ORDER BY p.slug
+`
+
+type DemoPropertiesWithoutReviewsRow struct {
+	ID   int64
+	Slug string
+}
+
+func (q *Queries) DemoPropertiesWithoutReviews(ctx context.Context, slugPrefix string) ([]DemoPropertiesWithoutReviewsRow, error) {
+	rows, err := q.db.Query(ctx, demoPropertiesWithoutReviews, slugPrefix)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DemoPropertiesWithoutReviewsRow{}
+	for rows.Next() {
+		var i DemoPropertiesWithoutReviewsRow
+		if err := rows.Scan(&i.ID, &i.Slug); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const demoPropertyExists = `-- name: DemoPropertyExists :one
 SELECT EXISTS (SELECT 1 FROM properties WHERE slug = $1)
 `
@@ -105,6 +206,35 @@ func (q *Queries) DemoPropertyExists(ctx context.Context, slug string) (bool, er
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const demoRoomsForProperty = `-- name: DemoRoomsForProperty :many
+SELECT id, price_monthly FROM rooms WHERE property_id = $1 ORDER BY id
+`
+
+type DemoRoomsForPropertyRow struct {
+	ID           int64
+	PriceMonthly int64
+}
+
+func (q *Queries) DemoRoomsForProperty(ctx context.Context, propertyID int64) ([]DemoRoomsForPropertyRow, error) {
+	rows, err := q.db.Query(ctx, demoRoomsForProperty, propertyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DemoRoomsForPropertyRow{}
+	for rows.Next() {
+		var i DemoRoomsForPropertyRow
+		if err := rows.Scan(&i.ID, &i.PriceMonthly); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const demoUpsertArea = `-- name: DemoUpsertArea :one
@@ -177,4 +307,23 @@ func (q *Queries) DemoUpsertOwnerBankAccount(ctx context.Context, arg DemoUpsert
 		arg.AccountName,
 	)
 	return err
+}
+
+const demoUpsertTenant = `-- name: DemoUpsertTenant :one
+INSERT INTO users (name, role, phone, phone_verified_at)
+VALUES ($1, 'tenant', $2, now())
+ON CONFLICT (phone) DO UPDATE SET name = EXCLUDED.name
+RETURNING id
+`
+
+type DemoUpsertTenantParams struct {
+	Name  string
+	Phone string
+}
+
+func (q *Queries) DemoUpsertTenant(ctx context.Context, arg DemoUpsertTenantParams) (int64, error) {
+	row := q.db.QueryRow(ctx, demoUpsertTenant, arg.Name, arg.Phone)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }

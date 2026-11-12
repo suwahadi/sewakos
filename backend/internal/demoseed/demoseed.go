@@ -9,13 +9,16 @@ import (
 	"math"
 	"math/rand/v2"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/suwahadi/sewakos/backend/internal/media"
+	"github.com/suwahadi/sewakos/backend/internal/money"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres/dbgen"
 )
 
@@ -82,7 +85,93 @@ func Run(ctx context.Context, deps Deps, opts Options) (int, error) {
 			deps.Logger.Info("demo seed progress", "created", created)
 		}
 	}
+	reviews, err := seedReviews(ctx, deps, opts.SlugPrefix)
+	if err != nil {
+		return created, err
+	}
+	deps.Logger.Info("demo reviews seeded", "reviews", reviews)
 	return created, nil
+}
+
+func seedReviews(ctx context.Context, deps Deps, prefix string) (int, error) {
+	q := dbgen.New(deps.DB)
+	tenantIDs := make([]int64, 0, len(demoTenants))
+	for _, t := range demoTenants {
+		id, err := q.DemoUpsertTenant(ctx, dbgen.DemoUpsertTenantParams{Name: t.name, Phone: t.phone})
+		if err != nil {
+			return 0, fmt.Errorf("upsert tenant %s: %w", t.phone, err)
+		}
+		tenantIDs = append(tenantIDs, id)
+	}
+	properties, err := q.DemoPropertiesWithoutReviews(ctx, prefix)
+	if err != nil {
+		return 0, fmt.Errorf("list properties without reviews: %w", err)
+	}
+	total := 0
+	for _, p := range properties {
+		index, _ := strconv.Atoi(strings.TrimPrefix(p.Slug, prefix+"-"))
+		if index%10 == 0 {
+			continue
+		}
+		n, err := seedPropertyReviews(ctx, deps, rand.New(rand.NewPCG(uint64(index), 0x7e71)), p.ID, index, tenantIDs)
+		if err != nil {
+			return total, fmt.Errorf("reviews for %s: %w", p.Slug, err)
+		}
+		total += n
+	}
+	return total, nil
+}
+
+func weightedRating(r *rand.Rand) int16 {
+	roll := r.IntN(100)
+	for _, w := range ratingWeights {
+		if roll < w.weight {
+			return w.rating
+		}
+		roll -= w.weight
+	}
+	return 5
+}
+
+func seedPropertyReviews(ctx context.Context, deps Deps, r *rand.Rand, propertyID int64, index int, tenantIDs []int64) (int, error) {
+	tx, err := deps.DB.Begin(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	q := dbgen.New(tx)
+
+	rooms, err := q.DemoRoomsForProperty(ctx, propertyID)
+	if err != nil || len(rooms) == 0 {
+		return 0, err
+	}
+	today := money.TodayWIB()
+	count := 1 + r.IntN(6)
+	for k, tenant := range r.Perm(len(tenantIDs))[:count] {
+		room := pick(r, rooms)
+		duration := 1 + r.IntN(6)
+		end := today.AddDate(0, 0, -(7 + r.IntN(300)))
+		start := end.AddDate(0, -duration, 0)
+		bookingID, err := q.DemoCreateCompletedBooking(ctx, dbgen.DemoCreateCompletedBookingParams{
+			TenantID: tenantIDs[tenant], RoomID: room.ID, Duration: int16(duration), PeriodPrice: room.PriceMonthly,
+			StartDate: pgtype.Date{Time: start, Valid: true}, EndDate: pgtype.Date{Time: end, Valid: true},
+		})
+		if err != nil {
+			return 0, err
+		}
+		rating := weightedRating(r)
+		comment := pick(r, reviewComments[rating])
+		hidden := index%17 == 0 && k == 0
+		reason := pgtype.Text{String: "Isi ulasan tidak relevan dengan kost.", Valid: hidden}
+		if err := q.DemoCreateReview(ctx, dbgen.DemoCreateReviewParams{
+			BookingID: bookingID, PropertyID: propertyID, TenantID: tenantIDs[tenant], Rating: rating,
+			Comment: pgtype.Text{String: comment, Valid: comment != ""}, IsHidden: hidden, HiddenReason: reason,
+			CreatedAt: pgtype.Timestamptz{Time: end.Add(time.Duration(r.IntN(96)) * time.Hour), Valid: true},
+		}); err != nil {
+			return 0, err
+		}
+	}
+	return count, tx.Commit(ctx)
 }
 
 func loadPhotos(ctx context.Context, deps Deps) (map[photoKind][]media.Image, error) {

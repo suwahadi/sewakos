@@ -1,9 +1,13 @@
 package contract
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/color"
+	"image/jpeg"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -15,12 +19,27 @@ import (
 	"github.com/suwahadi/sewakos/backend/internal/media"
 )
 
+func smallJPEG(t *testing.T) []byte {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, 480, 360))
+	for y := 0; y < 360; y += 4 {
+		for x := 0; x < 480; x += 4 {
+			img.Set(x, y, color.RGBA{R: uint8(x), G: uint8(y), B: 120, A: 255})
+		}
+	}
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, img, nil); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
+}
+
 func TestDemoSeedCreatesListedPropertiesWithProcessedPhotos(t *testing.T) {
 	srv, pool := newTestServerAndPool(t)
 	store := requireStorage(t)
 	ctx := context.Background()
 
-	photo := photoJPEG(t)
+	photo := smallJPEG(t)
 	var downloads atomic.Int32
 	unsplash := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		downloads.Add(1)
@@ -94,5 +113,32 @@ func TestDemoSeedCreatesListedPropertiesWithProcessedPhotos(t *testing.T) {
 	resp, body := bookingAuthedRequest(t, srv, http.MethodGet, fmt.Sprintf("/api/listings/%d", propertyID), "", "")
 	if resp.StatusCode != http.StatusOK || !strings.Contains(string(body), largeKey) {
 		t.Errorf("listing detail: status %d, body %.300s", resp.StatusCode, body)
+	}
+
+	var withoutReviews, nonCompleted, reviewCount int
+	if err := pool.QueryRow(ctx, `
+		SELECT count(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM reviews r WHERE r.property_id = p.id)),
+			(SELECT count(*) FROM reviews r JOIN bookings b ON b.id = r.booking_id JOIN properties rp ON rp.id = r.property_id
+				WHERE rp.slug LIKE $1 AND b.status <> 'completed'),
+			(SELECT count(*) FROM reviews r JOIN properties rp ON rp.id = r.property_id WHERE rp.slug LIKE $1)
+		FROM properties p WHERE p.slug LIKE $1`, prefix+"-%").Scan(&withoutReviews, &nonCompleted, &reviewCount); err != nil {
+		t.Fatal(err)
+	}
+	if withoutReviews != 0 || nonCompleted != 0 || reviewCount < 3 {
+		t.Errorf("properties without reviews %d, reviews on non-completed bookings %d, reviews %d", withoutReviews, nonCompleted, reviewCount)
+	}
+	if _, err := demoseed.Run(ctx, deps, demoseed.Options{Count: 3, SlugPrefix: prefix}); err != nil {
+		t.Fatal(err)
+	}
+	var reviewCountAfter int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM reviews r JOIN properties p ON p.id = r.property_id WHERE p.slug LIKE $1`, prefix+"-%").Scan(&reviewCountAfter); err != nil {
+		t.Fatal(err)
+	}
+	if reviewCountAfter != reviewCount {
+		t.Errorf("reviews after rerun = %d, want %d", reviewCountAfter, reviewCount)
+	}
+	resp, body = bookingAuthedRequest(t, srv, http.MethodGet, fmt.Sprintf("/api/listings/%d/reviews", propertyID), "", "")
+	if resp.StatusCode != http.StatusOK || !strings.Contains(string(body), `"reviews":[{`) || strings.Contains(string(body), `"count":0`) {
+		t.Errorf("listing reviews: status %d, body %.300s", resp.StatusCode, body)
 	}
 }

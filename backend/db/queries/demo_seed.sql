@@ -36,3 +36,37 @@ VALUES (
   sqlc.arg(available), sqlc.arg(capacity), sqlc.arg(facilities), sqlc.arg(monthly_duration_options)
 )
 RETURNING id;
+
+-- name: DemoUpsertTenant :one
+INSERT INTO users (name, role, phone, phone_verified_at)
+VALUES (sqlc.arg(name), 'tenant', sqlc.arg(phone), now())
+ON CONFLICT (phone) DO UPDATE SET name = EXCLUDED.name
+RETURNING id;
+
+-- name: DemoPropertiesWithoutReviews :many
+SELECT p.id, p.slug FROM properties p
+WHERE p.slug LIKE sqlc.arg(slug_prefix)::text || '-%'
+  AND NOT EXISTS (SELECT 1 FROM reviews r WHERE r.property_id = p.id)
+ORDER BY p.slug;
+
+-- name: DemoRoomsForProperty :many
+SELECT id, price_monthly FROM rooms WHERE property_id = sqlc.arg(property_id) ORDER BY id;
+
+-- name: DemoCreateCompletedBooking :one
+INSERT INTO bookings (
+  tenant_id, room_id, rent_type, start_date, status, duration, end_date, period_price, price, deposit,
+  expires_at, paid_at, responded_at, ended_at, deposit_returned_at, deposit_return_note, created_at
+) VALUES (
+  sqlc.arg(tenant_id), sqlc.arg(room_id), 'monthly', sqlc.arg(start_date), 'completed', sqlc.arg(duration),
+  sqlc.arg(end_date), sqlc.arg(period_price), sqlc.arg(period_price), sqlc.arg(period_price),
+  sqlc.arg(start_date)::date, sqlc.arg(start_date)::date, sqlc.arg(start_date)::date, sqlc.arg(end_date)::date,
+  sqlc.arg(end_date)::date + 3, 'Deposit dikembalikan penuh.', sqlc.arg(start_date)::date - 2
+)
+RETURNING id;
+
+-- name: DemoCreateReview :exec
+INSERT INTO reviews (booking_id, property_id, tenant_id, rating, comment, is_hidden, hidden_reason, created_at)
+VALUES (
+  sqlc.arg(booking_id), sqlc.arg(property_id), sqlc.arg(tenant_id), sqlc.arg(rating), sqlc.narg(comment),
+  sqlc.arg(is_hidden), sqlc.narg(hidden_reason), sqlc.arg(created_at)
+);

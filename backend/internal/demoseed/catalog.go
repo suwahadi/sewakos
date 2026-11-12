@@ -161,3 +161,47 @@ var roomTiers = []roomTier{
 }
 
 var durationChoices = []string{`[1,3,6,12]`, `[1,6,12]`, `[3,6,12]`, `[1,3,6]`}
+
+type demoTenant struct {
+	name, phone string
+}
+
+var demoTenants = []demoTenant{
+	{"Budi Santoso", "081100001001"}, {"Siti Rahmawati", "081100001002"}, {"Andi Pratama", "081100001003"},
+	{"Dewi Lestari", "081100001004"}, {"Rizky Ramadhan", "081100001005"}, {"Putri Ayu", "081100001006"},
+	{"Fajar Nugroho", "081100001007"}, {"Nabila Azzahra", "081100001008"}, {"Yoga Saputra", "081100001009"},
+	{"Intan Permatasari", "081100001010"}, {"Dimas Aditya", "081100001011"}, {"Larasati", "081100001012"},
+}
+
+var reviewComments = map[int16][]string{
+	5: {
+		"Kamarnya bersih, ibu kost ramah, dan lokasinya strategis. Betah banget tinggal di sini.",
+		"WiFi kencang dan stabil, cocok buat kuliah online. Lingkungannya juga aman dan tenang.",
+		"Sesuai foto, fasilitas lengkap. Pengelola cepat tanggap kalau ada yang rusak.",
+		"Dekat kampus dan banyak tempat makan murah di sekitar. Recommended!",
+		"Kamar mandi dalam selalu bersih, air lancar. Harga sepadan dengan kualitasnya.",
+	},
+	4: {
+		"Secara umum nyaman dan bersih. Parkiran motor agak sempit kalau malam.",
+		"Lokasi enak, kamar cukup luas. Sesekali air agak kecil di pagi hari.",
+		"Penghuni lain ramah dan tidak berisik. Dapur bersama kadang kurang rapi.",
+		"Akses ke jalan raya gampang. Cuma sinyal di lantai atas agak lemah.",
+		"",
+	},
+	3: {
+		"Cukup untuk harganya, tapi beberapa perabot sudah mulai usang.",
+		"Lokasi bagus, sayang kebersihan area bersama kurang dijaga.",
+		"",
+	},
+	2: {
+		"AC sering mati dan perbaikannya lama. Semoga ke depannya lebih baik.",
+	},
+	1: {
+		"Kamar tidak sesuai foto dan cukup bising dari jalan.",
+	},
+}
+
+var ratingWeights = []struct {
+	rating int16
+	weight int
+}{{5, 45}, {4, 35}, {3, 12}, {2, 5}, {1, 3}}
