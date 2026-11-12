@@ -93,6 +93,8 @@
 
 @layer base {
   :root { --z-sticky: 20; --z-dropdown: 30; --z-toast: 50; }
+  /* :where() keeps this at zero specificity, so a page's own max-w-* still narrows its container. */
+  :where(.page-container) > :where(:not(header)) { width: 100%; max-width: 1200px; margin-inline: auto; }
   html { color-scheme: light; -webkit-tap-highlight-color: transparent; }
   body {
     @apply bg-neutral-0 font-sans text-body text-neutral-900 antialiased;

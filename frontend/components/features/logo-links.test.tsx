@@ -14,6 +14,8 @@ describe("text logo", () => {
     ["legal pages", <LegalLayout key="legal">{null}</LegalLayout>, "Sewa Kos"],
   ])("links to the home page on the %s", (_name, ui, label) => {
     render(ui);
-    expect(screen.getByRole("link", { name: label })).toHaveAttribute("href", "/");
+    for (const link of screen.getAllByRole("link", { name: label })) {
+      expect(link).toHaveAttribute("href", "/");
+    }
   });
 });

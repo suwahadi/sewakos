@@ -59,7 +59,11 @@ export function ListingCard({
             src={room.thumbnail_url}
             alt=""
             fill
-            sizes={vertical ? "192px" : "(min-width:1024px) 25vw, (min-width:640px) 50vw, 112px"}
+            sizes={
+              vertical
+                ? "(min-width:1024px) 25vw, (min-width:640px) 33vw, 50vw"
+                : "(min-width:1024px) 25vw, (min-width:640px) 50vw, 112px"
+            }
             className="object-cover"
           />
         ) : (

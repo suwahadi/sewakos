@@ -116,7 +116,7 @@ export function SewaClient({ roomId, isFlashSale, monthlyDurationOptions, initia
   const periodic = rentType !== "monthly";
 
   return (
-    <div className="flex flex-col gap-6 px-4 pb-24">
+    <div className="flex flex-col gap-6 px-4 pb-8">
       {formError && <InlineAlert variant="danger">{formError}</InlineAlert>}
 
       <div className="flex flex-col gap-1.5">

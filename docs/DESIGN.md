@@ -235,6 +235,8 @@ Backdrop overlay: `rgb(22 22 28 / 0.48)`.
 ### 3.8 Layout, breakpoint, z-index
 
 Breakpoint mengikuti default Tailwind: `sm 640`, `md 768`, `lg 1024`, `xl 1280`. Lebar kontainer maks **1200px**, rata tengah.
+Di grup halaman utama batas ini dipasang sekali di template (`.page-container`); halaman boleh mempersempit dengan
+`max-w-*` sendiri.
 Konten rata kiri; rata tengah hanya untuk empty state dan halaman auth.
 Dua kolom desktop (detail kost, form sewa, detail booking): konten 2/3 + panel 1/3 (`grid-cols-[2fr_1fr]`, gap 32px).
 
@@ -484,7 +486,7 @@ File `app/(main)/template.tsx`:
 
 ```tsx
 export default function Template({ children }: { children: React.ReactNode }) {
-  return <div className="animate-page-enter">{children}</div>;
+  return <div className="page-container animate-page-enter">{children}</div>;
 }
 ```
 
@@ -793,7 +795,20 @@ Tinggi 56px, latar putih, `z-sticky`, menempel di atas. `shadow-raised` muncul h
 - **Beranda:** logo (kiri) + IconButton `Bell` dengan badge hitungan (kanan).
 - **Halaman dalam:** IconButton `ChevronLeft` ("Kembali") + judul `title-md` (1 baris, terpotong) + aksi kanan opsional
   (mis. `Heart` di detail).
-- ≥ 1024px: logo + tautan navigasi utama + tombol akun; bottom nav disembunyikan.
+- ≥ 1024px: logo + tautan navigasi utama + tombol akun; bottom nav disembunyikan. Isi header di kontainer 1200px
+  (§3.8). Halaman dalam: logo + garis pemisah `neutral-200` + judul `body` 500 `neutral-600` (tombol kembali
+  disembunyikan). Tautan = item §6.23 tanpa Akun, teks `body-strong`; aktif `brand-700` + `aria-current="page"`; tamu
+  yang membuka Favorit/Booking diarahkan ke halaman masuk. Tombol akun: tamu → Button `outline` `sm` "Masuk";
+  sudah masuk → IconButton `UserRound` ("Akun"). `Bell` hanya di beranda.
+
+### 6.22a SiteFooter
+
+Di akhir semua halaman grup utama dan halaman legal, latar `neutral-50`, border atas `neutral-200`, isi di kontainer
+1200px. Baris atas: logo teks (tautan ke `/`) + deskripsi `caption` `neutral-600`; tautan `body` `neutral-700`
+(Cari kost, Syarat & Ketentuan, Kebijakan Privasi), target sentuh 44px. Mobile bertumpuk, ≥ 1024px sebaris
+(tautan di kanan). Baris bawah dipisah border `neutral-200`: "Copyright © 2026 - All Rights Reserved", `caption`
+300, rata tengah, `neutral-600`. Footer menempel di dasar layar pada halaman pendek dan tidak tertutup bottom nav
+maupun StickyActionBar (ruang bawah mobile = tinggi bar + safe area).
 
 ### 6.23 BottomNav (mobile)
 
@@ -911,6 +926,8 @@ Foto lebar 112px rasio 4:5, radius `radius-md`; kolom info `min-w-0 flex flex-co
   harga sejajar antar kartu.
 - Skeleton mengikuti bentuk yang sama (horizontal di mobile).
 - Harga tidak pernah terpotong; nama kost yang terpotong.
+- Varian `vertical`: bentuk ≥ 640px (foto 4:3 di atas) di semua lebar, untuk slot sempit: carousel promo dan grid
+  "Kost terbaru" di beranda.
 
 ### 6.29 PropertyGallery
 
@@ -1149,7 +1166,11 @@ Kota populer
 Kampus terdekat
 [UI Depok] [UGM]                          ← /area/campus?top=true, digeser
 Promo minggu ini
-[ListingCard][ListingCard]                ← search flash_sale=true, limit 6, digeser horizontal
+[ListingCard][ListingCard]                ← search flash_sale=true, limit 6, digeser horizontal, varian vertical
+Kost terbaru
+[ListingCard][ListingCard]                ← GET /listings/latest?limit=12, grid 2 kolom (3 ≥ 640, 4 ≥ 1024),
+[ListingCard][ListingCard]                   varian vertical, bukan carousel
+[SiteFooter]
 [BottomNav]
 ```
 
