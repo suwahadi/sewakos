@@ -1,6 +1,8 @@
 # Clients send no SNI when connecting to an IP address, so the certificate must be chosen by default_sni.
+# RSA keys chain to ISRG Root X1; ECDSA chains end at ISRG Root X2, which older webhook senders do not trust.
 {
 	default_sni {$PUBLIC_HOST}
+	key_type rsa2048
 }
 
 # Let's Encrypt issues IP-address certificates only under "shortlived"; hostnames use "classic", whose shorter
