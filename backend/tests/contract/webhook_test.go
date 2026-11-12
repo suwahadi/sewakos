@@ -100,6 +100,16 @@ func TestWebhookSettlesInitialPaymentAndBooking(t *testing.T) {
 	if paymentStatus != "settlement" {
 		t.Errorf("payment.status = %q, want settlement", paymentStatus)
 	}
+	var invoiceStatus string
+	var invoicePaidAt bool
+	if err := pool.QueryRow(context.Background(),
+		`SELECT status, paid_at IS NOT NULL FROM invoices WHERE booking_id = $1 AND type = 'initial'`, bookingID,
+	).Scan(&invoiceStatus, &invoicePaidAt); err != nil {
+		t.Fatalf("read initial invoice: %v", err)
+	}
+	if invoiceStatus != "paid" || !invoicePaidAt {
+		t.Errorf("initial invoice = (status=%q, paid_at set=%v), want paid", invoiceStatus, invoicePaidAt)
+	}
 
 	var receivedCount, adminFeeCount int
 	if err := pool.QueryRow(context.Background(),

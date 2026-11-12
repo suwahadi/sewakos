@@ -314,6 +314,9 @@ func settleInitialPayment(ctx context.Context, deps Deps, queries *dbgen.Queries
 	}); err != nil {
 		return err
 	}
+	if err := queries.MarkInvoicePaid(ctx, dbgen.MarkInvoicePaidParams{ID: row.InvoiceID, PaidAt: toPgTimestamptz(paidAt)}); err != nil {
+		return err
+	}
 
 	if err := notifyTenant(ctx, deps, queries, row, notification.CategoryPayment, "Pembayaran berhasil",
 		fmt.Sprintf("Pembayaran untuk %s di %s sudah kami terima. Menunggu persetujuan pemilik.", row.RoomName, row.PropertyName),

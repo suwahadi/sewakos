@@ -974,7 +974,7 @@ Body pembuatan transaksi:
 | Kondisi | Tindakan |
 |---|---|
 | Payment sudah final (`settlement`/gagal) | Abaikan (notifikasi duplikat atau tidak berurutan) |
-| Sukses, booking `pending`, `stock_held = true` | Payment `settlement`; booking `paid`, `paid_at = now`, `owner_deadline_at = now + 24 jam`; notifikasi tenant & owner |
+| Sukses, booking `pending`, `stock_held = true` | Payment `settlement`; invoice `initial` `paid` (`paid_at = now`); booking `paid`, `paid_at = now`, `owner_deadline_at = now + 24 jam`; notifikasi tenant & owner |
 | Sukses, kunci sudah lepas (bayar di detik terakhir) | Coba kunci ulang (`available - 1 WHERE available > 0`). Berhasil → seperti baris atas. Gagal → booking `rejected` (`rejected_by = system`), refund penuh alasan `stock_unavailable`, notifikasi tenant |
 | Sukses, booking sudah `cancelled` oleh tenant | Payment `settlement`; refund penuh alasan `tenant_cancelled`; jangan ubah status booking |
 | Gagal | Payment = status gagal; jika invoice `initial`, booking `pending` & `stock_held` → lepas kunci |
