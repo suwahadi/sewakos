@@ -23,6 +23,14 @@ export function formatDateLong(dateInput: string | Date): string {
   }).format(new Date(dateInput));
 }
 
+export function formatMonthYear(dateInput: string | Date): string {
+  return new Intl.DateTimeFormat("id-ID", {
+    month: "long",
+    year: "numeric",
+    timeZone: WIB_TIME_ZONE,
+  }).format(new Date(dateInput));
+}
+
 export function formatTimeWIB(dateInput: string | Date): string {
   const time = new Intl.DateTimeFormat("id-ID", {
     hour: "2-digit",

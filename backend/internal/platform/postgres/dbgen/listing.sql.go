@@ -33,7 +33,7 @@ const getListingProperty = `-- name: GetListingProperty :one
 SELECT
   p.id, p.name, p.slug, p.gender, p.description, p.address,
   p.latitude, p.longitude, p.is_active, p.is_flash_sale,
-  o.name AS owner_name, a.name AS area_name,
+  o.name AS owner_name, o.created_at AS owner_created_at, a.name AS area_name,
   coalesce(rv.rating_average, 0) AS rating_average,
   coalesce(rv.rating_count, 0) AS rating_count
 FROM properties p
@@ -48,20 +48,21 @@ WHERE p.id = $1
 `
 
 type GetListingPropertyRow struct {
-	ID            int64
-	Name          string
-	Slug          string
-	Gender        string
-	Description   string
-	Address       string
-	Latitude      float64
-	Longitude     float64
-	IsActive      bool
-	IsFlashSale   bool
-	OwnerName     string
-	AreaName      string
-	RatingAverage float64
-	RatingCount   int64
+	ID             int64
+	Name           string
+	Slug           string
+	Gender         string
+	Description    string
+	Address        string
+	Latitude       float64
+	Longitude      float64
+	IsActive       bool
+	IsFlashSale    bool
+	OwnerName      string
+	OwnerCreatedAt pgtype.Timestamptz
+	AreaName       string
+	RatingAverage  float64
+	RatingCount    int64
 }
 
 func (q *Queries) GetListingProperty(ctx context.Context, id int64) (GetListingPropertyRow, error) {
@@ -79,6 +80,7 @@ func (q *Queries) GetListingProperty(ctx context.Context, id int64) (GetListingP
 		&i.IsActive,
 		&i.IsFlashSale,
 		&i.OwnerName,
+		&i.OwnerCreatedAt,
 		&i.AreaName,
 		&i.RatingAverage,
 		&i.RatingCount,

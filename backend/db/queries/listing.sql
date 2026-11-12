@@ -2,7 +2,7 @@
 SELECT
   p.id, p.name, p.slug, p.gender, p.description, p.address,
   p.latitude, p.longitude, p.is_active, p.is_flash_sale,
-  o.name AS owner_name, a.name AS area_name,
+  o.name AS owner_name, o.created_at AS owner_created_at, a.name AS area_name,
   coalesce(rv.rating_average, 0) AS rating_average,
   coalesce(rv.rating_count, 0) AS rating_count
 FROM properties p

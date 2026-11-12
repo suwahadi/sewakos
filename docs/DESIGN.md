@@ -840,8 +840,9 @@ di dalam header berwarna putih; IconButton memakai varian `onBrand`; badge hitun
 `brand-700`); favorit aktif di detail berupa hati putih terisi. `shadow-raised` muncul hanya setelah halaman di-scroll
 (pantau dengan `IntersectionObserver` pada elemen penanda, bukan event scroll).
 - **Beranda:** logo (kiri) + IconButton `Bell` dengan badge hitungan (kanan).
-- **Halaman dalam:** IconButton `ChevronLeft` ("Kembali") + judul `title-md` (1 baris, terpotong) + aksi kanan opsional
-  (mis. `Heart` di detail).
+- **Halaman dalam:** IconButton `ChevronLeft` ("Kembali") + judul `title-md` (1 baris, terpotong, boleh dihilangkan)
+  + aksi kanan opsional. Di detail kost: `Heart` lalu `Share2` (IconButton `onBrand`, ukuran dan ikon 20px sama).
+  Tanpa judul, ruang tengah diisi spacer di mobile.
 - ≥ 1024px: logo + tautan navigasi utama + tombol akun; bottom nav disembunyikan. Isi header di kontainer 1200px
   (§3.8). Halaman dalam: logo + garis pemisah `neutral-200` + judul `body` 500 `neutral-600` (tombol kembali
   disembunyikan). Tautan = item §6.23 tanpa Akun, teks `body-strong` putih; hover dan aktif berlatar `brand-700`
@@ -1313,8 +1314,12 @@ Jl. Contoh No. 42, Kota Depok  ← caption + tautan "Buka di peta"
 ── Fasilitas ──     [FacilityList]
 ── Tentang kost ──  [Accordion deskripsi]
 ── Ulasan ──        [RatingSummary][ReviewCard ×3][Lihat semua ulasan]
+── Pemilik ──       [avatar inisial] Nama pemilik (`body-strong`)
+                    Pemilik Kos · Aktif sejak {bulan tahun} (`caption`)
 [StickyActionBar: Mulai dari Rp2.250.000/bulan | Ajukan sewa]
 ```
+Bagian pemilik: pembatas atas `neutral-200` tipis; avatar lingkaran `brand-100` dengan inisial dua huruf
+(`brand-800`, `label` 600) setinggi dua baris teks, tidak bisa diklik. Data dari `owner.name` dan `owner.active_since`.
 Tautan peta: `https://www.google.com/maps/search/?api=1&query={latitude},{longitude}` (tab baru,
 ikon `ExternalLink`). Tidak ada peta tertanam di v1 (menjaga bobot halaman).
 Setelah halaman tampil, kirim `POST /listings/{id}/view` sekali per sesi per properti.

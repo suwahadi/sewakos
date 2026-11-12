@@ -7,7 +7,9 @@ import { KostDetailClient } from "@/components/features/kost-detail-client";
 import { PropertyGallery, type GalleryPhoto } from "@/components/features/property-gallery";
 import { ListingGrid } from "@/components/features/listing-grid";
 import type { ListingCardRoom } from "@/components/features/listing-card";
+import { OwnerSummary } from "@/components/features/owner-summary";
 import { ReviewCard } from "@/components/features/review-card";
+import { ShareButton } from "@/components/features/share-button";
 import type { RoomOptionData } from "@/components/features/room-option";
 import { Badge } from "@/components/ui/badge";
 import { GenderBadge } from "@/components/ui/gender-badge";
@@ -28,6 +30,7 @@ interface PropertyDetailResponse {
     longitude: number;
     is_flash_sale: boolean;
     is_favorite: boolean;
+    owner: { name: string; active_since: string };
     area: { name: string };
     photos: GalleryPhoto[];
     rating: { average: number | null; count: number };
@@ -65,12 +68,14 @@ export default async function KostDetailPage({ params }: { params: Promise<{ id:
     <>
       <AppHeader
         variant="inner"
-        title={property.name}
         role={role}
         rightAction={
-          role !== "owner" && (
-            <FavoriteButton propertyId={property.id} initial={property.is_favorite} guest={role === "guest"} variant="onBrand" />
-          )
+          <>
+            {role !== "owner" && (
+              <FavoriteButton propertyId={property.id} initial={property.is_favorite} guest={role === "guest"} variant="onBrand" />
+            )}
+            <ShareButton title={property.name} />
+          </>
         }
       />
       <PropertyGallery photos={property.photos} propertyName={property.name} />
@@ -108,6 +113,7 @@ export default async function KostDetailPage({ params }: { params: Promise<{ id:
         }
         description={property.description}
         rooms={rooms}
+        owner={<OwnerSummary name={property.owner.name} activeSince={property.owner.active_since} />}
         reviews={
           <section className="flex flex-col gap-3">
             <p className="text-title-sm font-semibold text-neutral-900">Ulasan</p>

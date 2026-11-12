@@ -12,7 +12,7 @@ import { NAV_ITEMS, type NavRole } from "./nav-items";
 
 export interface AppHeaderProps {
   variant: "home" | "inner";
-  /** Required for variant="inner" — the current page's title (one line, truncated). */
+  /** variant="inner" — the current page's title (one line, truncated). Omit to show no title. */
   title?: string;
   unreadCount?: number;
   /** variant="inner" only — e.g. the favorite Heart button on a listing's detail page. */
@@ -67,11 +67,14 @@ export function AppHeader({ variant, title, unreadCount = 0, rightAction, role }
           >
             Sewa Kos
           </Link>
-          {!isHome && (
-            <p className="min-w-0 flex-1 truncate text-title-md font-semibold lg:max-w-[320px] lg:flex-none lg:border-l lg:border-brand-300 lg:pl-3 lg:text-body lg:font-medium">
-              {title}
-            </p>
-          )}
+          {!isHome &&
+            (title ? (
+              <p className="min-w-0 flex-1 truncate text-title-md font-semibold lg:max-w-[320px] lg:flex-none lg:border-l lg:border-brand-300 lg:pl-3 lg:text-body lg:font-medium">
+                {title}
+              </p>
+            ) : (
+              <span aria-hidden="true" className="flex-1 lg:hidden" />
+            ))}
 
           <nav aria-label="Navigasi utama" className="ml-auto hidden items-center gap-1 lg:flex">
             {desktopLinks.map((item) => {

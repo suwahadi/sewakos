@@ -322,7 +322,7 @@ Properti tayang = `is_active = true`, sudah **disetujui admin**, dan pemiliknya 
     "gender": "campur", "description": "Kost dekat stasiun UI Depok",
     "address": "Jl. Contoh No. 42", "latitude": -6.38, "longitude": 106.81,
     "is_active": true, "is_flash_sale": true, "is_favorite": false,
-    "owner": { "name": "Pemilik Contoh" },
+    "owner": { "name": "Pemilik Contoh", "active_since": "2025-06-14T01:00:00.000000Z" },
     "area": { "name": "Kota Depok" },
     "photos": [
       { "id": 1, "url": "https://cdn.example.com/properties/1/a1b2.webp",
@@ -342,7 +342,7 @@ Properti tayang = `is_active = true`, sudah **disetujui admin**, dan pemiliknya 
 
 `property.photos` = foto umum properti; `rooms[].photos` = foto per kamar. Urut `sort_order`, lalu `id`.
 `caption` bisa `null`. Tanpa foto → `[]`. Semua foto berformat WebP: `url` maks 1600px, `thumbnail_url` maks 400px.
-`rating.average` bernilai `null` bila belum ada ulasan. `monthly_duration_options` = pilihan durasi sewa bulanan (periode).
+`owner.active_since` = tanggal akun pemilik dibuat (format timestamp seperti di bagian lain). `rating.average` bernilai `null` bila belum ada ulasan. `monthly_duration_options` = pilihan durasi sewa bulanan (periode).
 `is_favorite`: endpoint ini publik; bila request membawa token `tenant` yang valid, bernilai `true` jika properti ada di
 favoritnya. Tanpa token, token tidak valid, atau role lain → `false` (token tidak valid **tidak** menghasilkan `401` di sini).
 

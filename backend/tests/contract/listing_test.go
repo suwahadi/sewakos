@@ -43,7 +43,11 @@ func TestListingDetailFixture(t *testing.T) {
 		Property struct {
 			ID         int64 `json:"id"`
 			IsFavorite bool  `json:"is_favorite"`
-			Photos     []struct {
+			Owner      struct {
+				Name        string `json:"name"`
+				ActiveSince string `json:"active_since"`
+			} `json:"owner"`
+			Photos []struct {
 				ID int64 `json:"id"`
 			} `json:"photos"`
 			Rating struct {
@@ -65,6 +69,9 @@ func TestListingDetailFixture(t *testing.T) {
 	}
 	if parsed.Property.IsFavorite {
 		t.Fatalf("is_favorite should be false for an anonymous request")
+	}
+	if parsed.Property.Owner.Name == "" || parsed.Property.Owner.ActiveSince == "" {
+		t.Fatalf("owner.name and owner.active_since must be set, got %+v", parsed.Property.Owner)
 	}
 	if parsed.Property.Rating.Average != nil {
 		t.Fatalf("rating.average should be null with no reviews, got %v", parsed.Property.Rating.Average)

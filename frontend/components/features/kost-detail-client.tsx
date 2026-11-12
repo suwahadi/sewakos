@@ -14,12 +14,14 @@ export function KostDetailClient({
   description,
   rooms,
   reviews,
+  owner,
   similar,
 }: {
   propertyId: number;
   description: string;
   rooms: RoomOptionData[];
   reviews?: ReactNode;
+  owner?: ReactNode;
   similar?: ReactNode;
 }) {
   const router = useRouter();
@@ -64,6 +66,8 @@ export function KostDetailClient({
       )}
 
       {reviews}
+
+      {owner}
 
       {similar}
 

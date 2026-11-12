@@ -119,7 +119,7 @@ func DetailHandler(deps Deps, user *authctx.User) http.HandlerFunc {
 				"gender": property.Gender, "description": property.Description,
 				"address": property.Address, "latitude": property.Latitude, "longitude": property.Longitude,
 				"is_active": property.IsActive, "is_flash_sale": property.IsFlashSale, "is_favorite": isFavorite,
-				"owner": map[string]any{"name": property.OwnerName},
+				"owner": map[string]any{"name": property.OwnerName, "active_since": money.FormatTimestamp(property.OwnerCreatedAt.Time)},
 				"area":  map[string]any{"name": property.AreaName},
 				"photos": func() []map[string]any {
 					if propertyPhotos == nil {
