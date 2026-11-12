@@ -934,6 +934,14 @@ Foto lebar 112px rasio 4:5, radius `radius-md`; kolom info `min-w-0 flex flex-co
 - Varian `vertical`: bentuk ≥ 640px (foto 4:3 di atas) di semua lebar, untuk slot sempit: carousel promo dan grid
   "Kost terbaru" di beranda.
 
+### 6.28a AreaBannerGrid (kota populer)
+
+Grid card foto kota: 2 kolom (< 640), 3 kolom (≥ 640), jarak 12px (16px ≥ 1024). Card = satu tautan ke
+`/cari?area_id=&area_name=`, rasio 4:3 (16:9 ≥ 1024), radius `radius-md`. Foto `object-cover` + lapisan `neutral-900`
+60% (diukur: teks putih ≥ 4,5:1 di piksel paling terang area label pada semua foto), nama area di tengah `title-md`
+(`title-lg` ≥ 640) 700 putih. Hover: foto membesar 5% (`motion-safe`). Foto dipetakan per `slug` area di frontend
+(Unsplash License); area tanpa foto tampil sebagai card `brand-600` dengan nama putih.
+
 ### 6.29 PropertyGallery
 
 Sumber: `property.photos[]` + `rooms[].photos[]` dari `GET /listings/{id}` (atau `GET /listings/{id}/gallery`).
@@ -1167,7 +1175,7 @@ Wireframe mobile 360px. Desktop memperlebar grid sesuai §3.8; struktur sama.
 Cari kost yang pas            ← display, 1 kalimat, tanpa slogan bertumpuk
 [ 🔍 Cari kota, kampus, atau nama kost ]
 Kota populer
-[Depok] [Jakarta Selatan] [Bandung]       ← chip dari /area/city?top=true, digeser
+[foto Depok][foto Jakarta Selatan]        ← AreaBannerGrid dari /area/city?top=true, 2 kolom (3 ≥ 640)
 Kampus terdekat
 [UI Depok] [UGM]                          ← /area/campus?top=true, digeser
 Promo minggu ini

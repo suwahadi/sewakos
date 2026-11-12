@@ -1,5 +1,6 @@
 import { AppHeader } from "@/components/features/app-header";
-import { AreaChipRow, type AreaChipOption } from "@/components/features/area-chip-row";
+import { AreaBannerGrid, type AreaBannerOption } from "@/components/features/area-banner-grid";
+import { AreaChipRow } from "@/components/features/area-chip-row";
 import { HomeSearchEntry } from "@/components/features/home-search-entry";
 import { ListingCard } from "@/components/features/listing-card";
 import { apiFetch } from "@/lib/api/client";
@@ -7,8 +8,8 @@ import { getNavRole } from "@/lib/auth/nav-role";
 import { buildSearchBody, DEFAULT_SEARCH_FILTERS, type SearchResponseBody } from "@/lib/listings";
 import { getUnreadCount } from "@/lib/notifications";
 
-async function getTopAreas(type: "city" | "campus"): Promise<AreaChipOption[]> {
-  const result = await apiFetch<{ areas: AreaChipOption[] }>(`/area/${type}`, { auth: false, searchParams: { top: "true" } });
+async function getTopAreas(type: "city" | "campus"): Promise<AreaBannerOption[]> {
+  const result = await apiFetch<{ areas: AreaBannerOption[] }>(`/area/${type}`, { auth: false, searchParams: { top: "true" } });
   return result.ok ? result.data.areas : [];
 }
 
@@ -49,9 +50,9 @@ export default async function HomePage() {
         </div>
 
         {cities.length > 0 && (
-          <section className="-mx-4 flex flex-col gap-2">
-            <h2 className="px-4 text-title-sm font-semibold text-neutral-900">Kota populer</h2>
-            <AreaChipRow areas={cities} />
+          <section className="flex flex-col gap-2">
+            <h2 className="text-title-sm font-semibold text-neutral-900">Kota populer</h2>
+            <AreaBannerGrid areas={cities} />
           </section>
         )}
 

@@ -26,7 +26,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: {
-    remotePatterns: storagePattern(),
+    remotePatterns: [...storagePattern(), { protocol: "https", hostname: "images.unsplash.com", pathname: "/photo-*" }],
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
