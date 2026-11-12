@@ -113,6 +113,7 @@ docker compose exec -T postgres psql -q -U kos -d kos -v ON_ERROR_STOP=1 \
 log "Starting the application"
 docker compose up -d --remove-orphans
 docker image prune -f >/dev/null
+docker builder prune -f --keep-storage 5GB >/dev/null
 
 log "Done: https://${PUBLIC_HOST}"
 cat <<EOF

@@ -27,8 +27,15 @@ x-backend-env: &backend-env
   SMTP_PASSWORD: ${SMTP_PASSWORD:-}
   EMAIL_FROM: ${EMAIL_FROM:-Sewa Kos <no-reply@${PUBLIC_HOST}>}
 
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   postgres:
+    logging: *default-logging
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
@@ -44,6 +51,7 @@ services:
       retries: 20
 
   redis:
+    logging: *default-logging
     image: redis:7-alpine
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
@@ -56,6 +64,7 @@ services:
       retries: 20
 
   minio:
+    logging: *default-logging
     image: bitnamilegacy/minio:latest
     restart: unless-stopped
     entrypoint: ["minio"]
@@ -72,6 +81,7 @@ services:
       retries: 20
 
   minio-init:
+    logging: *default-logging
     image: bitnamilegacy/minio-client:latest
     profiles: ["tools"]
     environment:
@@ -92,6 +102,7 @@ services:
       '
 
   migrate:
+    logging: *default-logging
     image: sewakos-backend:latest
     profiles: ["tools"]
     depends_on:
@@ -104,6 +115,7 @@ services:
     command: ["goose", "up"]
 
   api:
+    logging: *default-logging
     build: ../backend
     image: sewakos-backend:latest
     restart: unless-stopped
@@ -116,6 +128,7 @@ services:
         condition: service_healthy
 
   worker:
+    logging: *default-logging
     image: sewakos-backend:latest
     restart: unless-stopped
     command: ["worker"]
@@ -127,6 +140,7 @@ services:
         condition: service_healthy
 
   web:
+    logging: *default-logging
     build:
       context: ../frontend
       args:
@@ -143,6 +157,7 @@ services:
       - api
 
   caddy:
+    logging: *default-logging
     image: caddy:2.11.9-alpine
     restart: unless-stopped
     ports:
