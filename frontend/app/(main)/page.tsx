@@ -4,15 +4,8 @@ import { HomeSearchEntry } from "@/components/features/home-search-entry";
 import { ListingCard } from "@/components/features/listing-card";
 import { apiFetch } from "@/lib/api/client";
 import { getNavRole } from "@/lib/auth/nav-role";
-import { getSessionToken } from "@/lib/auth/session";
 import { buildSearchBody, DEFAULT_SEARCH_FILTERS, type SearchResponseBody } from "@/lib/listings";
-
-async function getUnreadCount(): Promise<number> {
-  const token = await getSessionToken();
-  if (!token) return 0;
-  const result = await apiFetch<{ unread: number }>("/notifications/counter");
-  return result.ok ? result.data.unread : 0;
-}
+import { getUnreadCount } from "@/lib/notifications";
 
 async function getTopAreas(type: "city" | "campus"): Promise<AreaChipOption[]> {
   const result = await apiFetch<{ areas: AreaChipOption[] }>(`/area/${type}`, { auth: false, searchParams: { top: "true" } });

@@ -53,7 +53,7 @@ export default async function KostDetailPage({ params }: { params: Promise<{ id:
         role={role}
         rightAction={
           role !== "owner" && (
-            <FavoriteButton propertyId={property.id} initial={property.is_favorite} guest={role === "guest"} variant="plain" />
+            <FavoriteButton propertyId={property.id} initial={property.is_favorite} guest={role === "guest"} variant="onBrand" />
           )
         }
       />

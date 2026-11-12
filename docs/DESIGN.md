@@ -596,7 +596,8 @@ Semua komponen dibuat di `components/ui/` (dasar) atau `components/features/` (t
 
 Tombol bulat tanpa teks. Ukuran sentuh selalu 44×44. Ukuran visual: `md` 44px (ikon 24px), `sm` 36px (ikon 20px),
 `xs` 32px (ikon 18px, untuk tombol di atas foto yang sempit; area sentuh tetap 44px lewat padding transparan).
-Varian: `plain` (transparan, ikon `neutral-700`), `overlay` (latar putih 92% + `shadow-raised`, dipakai di atas foto).
+Varian: `plain` (transparan, ikon `neutral-700`), `overlay` (latar putih 92% + `shadow-raised`, dipakai di atas foto),
+`onBrand` (transparan, ikon putih, hover `brand-700`; dipakai di AppHeader).
 Wajib `aria-label`. Badge hitungan (§6.12) boleh ditempel di pojok kanan atas.
 
 ### 6.3 TextField
@@ -790,16 +791,20 @@ tombol aksi (`danger` bila merusak) dengan label kata kerja spesifik. Kedua tomb
 
 ### 6.22 AppHeader
 
-Tinggi 56px, latar putih, `z-sticky`, menempel di atas. `shadow-raised` muncul hanya setelah halaman di-scroll
+Tinggi 56px, latar `brand-600` dengan teks dan ikon putih (kontras 4,8:1), `z-sticky`, menempel di atas. Ring fokus
+di dalam header berwarna putih; IconButton memakai varian `onBrand`; badge hitungan dibalik (latar putih, angka
+`brand-700`); favorit aktif di detail berupa hati putih terisi. `shadow-raised` muncul hanya setelah halaman di-scroll
 (pantau dengan `IntersectionObserver` pada elemen penanda, bukan event scroll).
 - **Beranda:** logo (kiri) + IconButton `Bell` dengan badge hitungan (kanan).
 - **Halaman dalam:** IconButton `ChevronLeft` ("Kembali") + judul `title-md` (1 baris, terpotong) + aksi kanan opsional
   (mis. `Heart` di detail).
 - ≥ 1024px: logo + tautan navigasi utama + tombol akun; bottom nav disembunyikan. Isi header di kontainer 1200px
   (§3.8). Halaman dalam: logo + garis pemisah `neutral-200` + judul `body` 500 `neutral-600` (tombol kembali
-  disembunyikan). Tautan = item §6.23 tanpa Akun, teks `body-strong`; aktif `brand-700` + `aria-current="page"`; tamu
-  yang membuka Favorit/Booking diarahkan ke halaman masuk. Tombol akun: tamu → Button `outline` `sm` "Masuk";
-  sudah masuk → IconButton `UserRound` ("Akun"). `Bell` hanya di beranda.
+  disembunyikan). Tautan = item §6.23 tanpa Akun, teks `body-strong` putih; hover dan aktif berlatar `brand-700`
+(aktif + `aria-current="page"`); tamu
+  yang membuka Favorit/Booking diarahkan ke halaman masuk. Tombol akun: tamu → Button `secondary` `sm` "Masuk";
+  sudah masuk → IconButton `UserRound` ("Akun"). `Bell` hanya di beranda dan halaman legal.
+- **Halaman legal** (Syarat & Ketentuan, Kebijakan Privasi): varian beranda, isi di kontainer 1200px seperti halaman lain.
 
 ### 6.22a SiteFooter
 

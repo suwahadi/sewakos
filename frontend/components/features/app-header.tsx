@@ -47,7 +47,7 @@ export function AppHeader({ variant, title, unreadCount = 0, rightAction, role }
       <div ref={sentinelRef} aria-hidden="true" className="h-px" />
       <header
         className={cn(
-          "sticky top-0 z-[var(--z-sticky)] h-14 bg-neutral-0 transition-shadow duration-[var(--duration-fast)] ease-standard",
+          "sticky top-0 z-[var(--z-sticky)] h-14 bg-brand-600 text-neutral-0 transition-shadow duration-[var(--duration-fast)] ease-standard [&_:focus-visible]:outline-neutral-0",
           scrolled && "shadow-raised",
         )}
       >
@@ -56,18 +56,19 @@ export function AppHeader({ variant, title, unreadCount = 0, rightAction, role }
             <IconButton
               icon={<ChevronLeft aria-hidden="true" />}
               aria-label="Kembali"
+              variant="onBrand"
               onClick={() => router.back()}
               className="shrink-0 lg:hidden"
             />
           )}
           <Link
             href="/"
-            className={cn("shrink-0 text-title-md font-bold text-brand-700", !isHome && "hidden lg:inline")}
+            className={cn("shrink-0 text-title-md font-bold text-neutral-0", !isHome && "hidden lg:inline")}
           >
             Sewa Kos
           </Link>
           {!isHome && (
-            <p className="min-w-0 flex-1 truncate text-title-md font-semibold text-neutral-900 lg:max-w-[320px] lg:flex-none lg:border-l lg:border-neutral-200 lg:pl-3 lg:text-body lg:font-medium lg:text-neutral-600">
+            <p className="min-w-0 flex-1 truncate text-title-md font-semibold lg:max-w-[320px] lg:flex-none lg:border-l lg:border-brand-300 lg:pl-3 lg:text-body lg:font-medium">
               {title}
             </p>
           )}
@@ -90,8 +91,8 @@ export function AppHeader({ variant, title, unreadCount = 0, rightAction, role }
                   onClick={handleClick}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "rounded-md px-3 py-2 text-body-strong transition-colors duration-[var(--duration-fast)] ease-standard hover:bg-neutral-100",
-                    active ? "text-brand-700" : "text-neutral-700",
+                    "rounded-md px-3 py-2 text-body-strong text-neutral-0 transition-colors duration-[var(--duration-fast)] ease-standard hover:bg-brand-700",
+                    active && "bg-brand-700",
                   )}
                 >
                   {item.label}
@@ -107,23 +108,27 @@ export function AppHeader({ variant, title, unreadCount = 0, rightAction, role }
                 <IconButton
                   icon={<Bell aria-hidden="true" />}
                   aria-label="Notifikasi"
+                  variant="onBrand"
                   onClick={() => router.push("/notifikasi")}
                 />
-                {unreadCount > 0 && <CountBadge count={unreadCount} className="absolute -right-1 -top-1" />}
+                {unreadCount > 0 && (
+                  <CountBadge count={unreadCount} className="absolute -right-1 -top-1 bg-neutral-0 text-brand-700" />
+                )}
               </span>
             )}
             <span className="hidden lg:inline-flex">
               {role === "guest" ? (
-                <Button variant="outline" size="sm" onClick={() => router.push("/masuk")}>
+                <Button variant="secondary" size="sm" onClick={() => router.push("/masuk")}>
                   Masuk
                 </Button>
               ) : (
                 <IconButton
                   icon={<UserRound aria-hidden="true" />}
                   aria-label="Akun"
+                  variant="onBrand"
                   aria-current={pathname === ACCOUNT_HREF ? "page" : undefined}
                   onClick={() => router.push(ACCOUNT_HREF)}
-                  className={pathname === ACCOUNT_HREF ? "text-brand-700" : undefined}
+                  className={pathname === ACCOUNT_HREF ? "bg-brand-700" : undefined}
                 />
               )}
             </span>

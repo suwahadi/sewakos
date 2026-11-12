@@ -52,7 +52,7 @@ export function FavoriteButton({ propertyId, initial, guest, variant = "overlay"
           size={20}
           strokeWidth={1.75}
           fill={active ? "currentColor" : "none"}
-          className={cn(active && "text-brand-600", active && pops > 0 && "motion-safe:animate-heart-pop")}
+          className={cn(active && variant !== "onBrand" && "text-brand-600", active && pops > 0 && "motion-safe:animate-heart-pop")}
         />
       }
     />

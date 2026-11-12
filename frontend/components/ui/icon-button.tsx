@@ -2,7 +2,7 @@ import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 export type IconButtonSize = "md" | "sm" | "xs";
-export type IconButtonVariant = "plain" | "overlay";
+export type IconButtonVariant = "plain" | "overlay" | "onBrand";
 
 const VISUAL_SIZE: Record<IconButtonSize, string> = {
   md: "size-11",
@@ -20,6 +20,7 @@ const TOUCH_PADDING: Record<IconButtonSize, string> = {
 const VARIANT_CLASSES: Record<IconButtonVariant, string> = {
   plain: "bg-transparent text-neutral-700 hover:bg-neutral-100",
   overlay: "bg-neutral-0/92 text-neutral-700 shadow-raised hover:bg-neutral-0",
+  onBrand: "bg-transparent text-neutral-0 hover:bg-brand-700",
 };
 
 export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
