@@ -98,13 +98,13 @@ export function AdminReviewList({ initial }: { initial: AdminReview[] }) {
               header: "Aksi",
               render: (review) =>
                 review.is_hidden ? (
-                  <Button size="sm" variant="outline" loading={busyId === review.id} onClick={() => moderate(review, "unhide")}>
+                  <Button size="sm" loading={busyId === review.id} onClick={() => moderate(review, "unhide")}>
                     Tampilkan
                   </Button>
                 ) : (
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="danger"
                     onClick={() => {
                       setReason("");
                       setReasonError(undefined);

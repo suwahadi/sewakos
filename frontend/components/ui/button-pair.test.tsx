@@ -7,8 +7,8 @@ describe("ButtonPair", () => {
   it("renders exactly two buttons in a 50:50 grid", () => {
     render(
       <ButtonPair>
-        <Button variant="outline">Batal</Button>
-        <Button variant="primary">Lanjutkan</Button>
+        <Button variant="neutral">Batal</Button>
+        <Button variant="success">Lanjutkan</Button>
       </ButtonPair>,
     );
 
@@ -25,8 +25,8 @@ describe("ButtonPair", () => {
   it("puts the secondary action on the left and the primary on the right", () => {
     render(
       <ButtonPair>
-        <Button variant="outline">Batal</Button>
-        <Button variant="primary">Lanjutkan</Button>
+        <Button variant="neutral">Batal</Button>
+        <Button variant="success">Lanjutkan</Button>
       </ButtonPair>,
     );
     const buttons = screen.getAllByRole("button");

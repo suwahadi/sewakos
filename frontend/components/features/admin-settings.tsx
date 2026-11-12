@@ -87,7 +87,7 @@ export function AdminSettings({ adminFee }: { adminFee: number }) {
         </Select>
         <TextField label="Judul" maxLength={255} value={title} onChange={(event) => setTitle(event.target.value)} error={broadcastErrors.title} />
         <Textarea label="Isi pesan" maxLength={1000} value={body} onChange={(event) => setBody(event.target.value)} error={broadcastErrors.body} />
-        <Button variant="secondary" onClick={askBroadcast}>
+        <Button onClick={askBroadcast}>
           Kirim notifikasi
         </Button>
       </section>

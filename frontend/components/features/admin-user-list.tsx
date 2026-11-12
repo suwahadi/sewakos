@@ -57,7 +57,7 @@ export function AdminUserList({ initial }: { initial: AdminUser[] }) {
           ))}
         </Select>
         <TextField label="Cari nama atau nomor HP" value={search} onChange={(event) => setSearch(event.target.value)} error={searchError} />
-        <Button type="submit" variant="outline" className="sm:mt-[26px]">
+        <Button type="submit" className="sm:mt-[26px]">
           Cari
         </Button>
       </form>
@@ -84,7 +84,7 @@ export function AdminUserList({ initial }: { initial: AdminUser[] }) {
                 user.role === "admin" ? (
                   "–"
                 ) : (
-                  <Button size="sm" variant="outline" onClick={() => setTarget(user)}>
+                  <Button size="sm" variant={user.suspended_at ? "success" : "danger"} onClick={() => setTarget(user)}>
                     {user.suspended_at ? "Aktifkan" : "Nonaktifkan"}
                   </Button>
                 ),

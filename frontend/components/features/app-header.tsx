@@ -118,7 +118,7 @@ export function AppHeader({ variant, title, unreadCount = 0, rightAction, role }
             )}
             <span className="hidden lg:inline-flex">
               {role === "guest" ? (
-                <Button variant="secondary" size="sm" onClick={() => router.push("/masuk")}>
+                <Button size="sm" onClick={() => router.push("/masuk")}>
                   Masuk
                 </Button>
               ) : (

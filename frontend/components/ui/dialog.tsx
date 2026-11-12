@@ -29,8 +29,12 @@ export function Dialog({ open, onClose, title, children }: DialogProps) {
       ref={dialogRef}
       className="dialog-center rounded-lg bg-neutral-0 p-6 shadow-overlay"
       aria-labelledby={titleId}
-      onClose={onClose}
-      onCancel={onClose}
+      onClose={(event) => {
+        if (event.target === dialogRef.current) onClose();
+      }}
+      onCancel={(event) => {
+        if (event.target === dialogRef.current) onClose();
+      }}
       onClick={(event) => {
         if (event.target === dialogRef.current) onClose();
       }}
@@ -70,10 +74,10 @@ export function ConfirmDialog({
       {description}
       <div className="mt-6">
         <ButtonPair>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="neutral" onClick={onClose}>
             Batal
           </Button>
-          <Button variant={destructive ? "danger" : "primary"} loading={loading} onClick={onConfirm}>
+          <Button variant={destructive ? "danger" : "success"} loading={loading} onClick={onConfirm}>
             {confirmLabel}
           </Button>
         </ButtonPair>

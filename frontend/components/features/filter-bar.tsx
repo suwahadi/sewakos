@@ -25,7 +25,7 @@ export function FilterBar({ activeFilterCount, onOpenFilter, onOpenSort, activeC
         <ButtonPair>
           <span className="relative inline-flex w-full">
             <Button
-              variant="outline"
+              variant="neutral"
               size="sm"
               fullWidth
               icon={<SlidersHorizontal aria-hidden="true" />}
@@ -37,7 +37,7 @@ export function FilterBar({ activeFilterCount, onOpenFilter, onOpenSort, activeC
               <CountBadge count={activeFilterCount} className="absolute -right-1 -top-1" />
             )}
           </span>
-          <Button variant="outline" size="sm" fullWidth icon={<ArrowUpDown aria-hidden="true" />} onClick={onOpenSort}>
+          <Button variant="neutral" size="sm" fullWidth icon={<ArrowUpDown aria-hidden="true" />} onClick={onOpenSort}>
             Urutkan
           </Button>
         </ButtonPair>

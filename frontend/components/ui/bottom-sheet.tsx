@@ -30,8 +30,12 @@ export function BottomSheet({ open, onClose, title, children, footer }: BottomSh
       ref={dialogRef}
       className="sheet w-full rounded-t-sheet bg-neutral-0 shadow-sheet"
       aria-labelledby={titleId}
-      onClose={onClose}
-      onCancel={onClose}
+      onClose={(event) => {
+        if (event.target === dialogRef.current) onClose();
+      }}
+      onCancel={(event) => {
+        if (event.target === dialogRef.current) onClose();
+      }}
       onClick={(event) => {
         if (event.target === dialogRef.current) onClose();
       }}

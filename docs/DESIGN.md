@@ -589,13 +589,24 @@ Semua komponen dibuat di `components/ui/` (dasar) atau `components/features/` (t
 
 ### 6.1 Button
 
+Semua tombol memakai border 1px dan radius `radius-md` yang sama. Warna mengikuti jenis aksi, bukan dekorasi.
+
 | Varian | Latar | Teks | Border | Hover | Pressed |
 |---|---|---|---|---|---|
-| `primary` | `brand-600` | `neutral-0` | — | `brand-700` | `brand-800` |
-| `secondary` | `brand-50` | `brand-800` | — | `brand-100` | `brand-200` |
-| `outline` | `neutral-0` | `neutral-900` | `neutral-400` | latar `neutral-50` | latar `neutral-100` |
-| `ghost` | transparan | `brand-700` | — | latar `brand-50` | latar `brand-100` |
-| `danger` | `danger` | `neutral-0` | — | gelapkan 8% (`brightness-92`) | `brightness-85` |
+| `success` (default) | `success` | `neutral-0` | `success` | gelapkan 8% (`brightness-92`) | `brightness-85` |
+| `danger` | `danger` | `neutral-0` | `danger` | gelapkan 8% | `brightness-85` |
+| `neutral` | `neutral-0` | `neutral-900` | `neutral-400` | latar `neutral-50` | latar `neutral-100` |
+
+**Pemetaan aksi:**
+- Hijau `success`: simpan, konfirmasi, masuk, daftar, lanjut, kirim, bayar, ajukan sewa, perpanjang, setujui, tandai selesai,
+  aktifkan kembali, tampilkan (ulasan/kamar), tambah (kamar, area, foto), tampilkan hasil, cari, ajukan ulang.
+- Merah `danger`: batalkan (booking), tolak (booking/properti), hapus (kamar, area, foto), keluar, nonaktifkan (pengguna/properti).
+- Abu-abu `neutral`: ubah/edit, batal (menutup dialog/sheet), atur ulang, urutkan, muat lebih banyak, ulangi, coba lagi,
+  kirim ulang kode, pilih fasilitas.
+
+**Ikon tombol** (hanya halaman properti owner, `/owner/properti` dan `/owner/properti/{id}`):
+- Ubah → `Pencil` (neutral), Hapus → `Trash2` (danger), Tambah → `Plus` (success). Di luar halaman itu tombol tanpa ikon,
+  kecuali ikon yang sudah ditetapkan di §0.1-B (`Download`, `ImagePlus`, `RefreshCw`, `SlidersHorizontal`, `ArrowUpDown`).
 
 | Ukuran | Tinggi | Padding X | Teks | Ikon |
 |---|---|---|---|---|
@@ -607,10 +618,23 @@ Semua komponen dibuat di `components/ui/` (dasar) atau `components/features/` (t
 - **Loading:** label tetap terlihat (lebar tidak berubah), spinner 16px menggantikan ikon kiri,
   `aria-busy="true"`, tombol `disabled`.
 - **Disabled:** latar `neutral-100`, teks `neutral-400`, kursor `not-allowed`. Jangan pakai opacity.
-- Maksimal **satu** tombol `primary` per layar/area aksi.
+- Maksimal **satu** tombol `success` utama per layar/area aksi; aksi lain tetap hijau bila memang positif, tanpa dua tombol hijau bersebelahan untuk aksi yang sama.
 - Label tombol = kata kerja + objek ("Ajukan sewa", "Bayar sekarang"). Tidak ada tanda panah di teks.
 - Pasangan tombol sebaris wajib 50:50 dan ikon hanya sesuai daftar §0.1-B.
 - Komponen `ButtonPair` (wrapper `grid grid-cols-2 gap-3`) dipakai untuk setiap pasangan tombol; jangan menyusun manual.
+
+### 6.1a FacilitySelect (kamar, owner)
+
+Pilihan fasilitas kamar multi-pilih dari daftar baku (`facilityCatalog`, mengikuti fasilitas yang sudah dipakai seed/demo:
+WiFi, AC, Kipas Angin, Kasur, Kasur Queen, Lemari, Meja Belajar, Meja Kerja, Kamar Mandi Dalam, Kamar Mandi Luar,
+Water Heater, TV, Akses 24 Jam, Dapur bersama, Ruang tamu, Layanan laundry, Area jemur di rooftop, Parkir motor,
+Parkir mobil terbatas, CCTV 24 jam, Mushola). Tidak ada input teks bebas.
+- Tampilan tertutup: label "Fasilitas" + daftar **chip** yang dipilih (`Chip` dengan tombol `X` ber-`aria-label`
+  "Hapus {nama}", ikon `X` 16px) + tombol `neutral` "Pilih fasilitas".
+- Tombol "Pilih fasilitas" membuka BottomSheet (§6.20) berisi daftar `Checkbox` (§6.7) per fasilitas; kotak yang sudah
+  tercentang tetap menampilkan fasilitas lama yang tidak ada di daftar baku (agar data lama tidak hilang).
+- Footer sheet: `success` "Selesai". Maksimal 30 fasilitas, masing-masing maksimal 50 karakter (sesuai kontrak).
+- Teks bantuan "Pisahkan dengan koma" dihapus. Nilai dikirim sebagai array `facilities`.
 
 ### 6.2 IconButton
 
@@ -650,7 +674,7 @@ Varian:
 - Otomatis kirim saat 4 digit terisi.
 - Kanal pengiriman dipilih sebelumnya lewat OtpChannelPicker (§6.48).
 - Di bawahnya: teks hitung mundur kirim ulang dari `verification_code.can_resend_at`
-  ("Kirim ulang dalam 0:42"), lalu tombol `ghost` "Kirim ulang kode" saat habis.
+  ("Kirim ulang dalam 0:42"), lalu tombol `neutral` "Kirim ulang kode" saat habis.
 
 ### 6.5 Textarea
 
@@ -771,7 +795,7 @@ Contoh: "Isi rekening untuk menerima pengembalian dana." (refund `awaiting_accou
 ### 6.18 EmptyState
 
 Rata tengah, padding vertikal 32px (mobile) / 48px (≥ 768px). Ikon 40px `neutral-400` dalam lingkaran 72px `neutral-50`
-→ judul `title-md` → deskripsi `body` `neutral-600` (maks 2 baris) → satu tombol `secondary` opsional.
+→ judul `title-md` → deskripsi `body` `neutral-600` (maks 2 baris) → satu tombol `neutral` opsional.
 
 | Layar | Judul | Aksi |
 |---|---|---|
@@ -798,7 +822,7 @@ Dipakai: filter, pilih durasi, rincian harga di mobile.
 ### 6.21 Dialog & ConfirmDialog
 
 `<dialog>` tengah, lebar `min(100% - 32px, 440px)`, radius `radius-lg`, padding 24px, `shadow-overlay`.
-**ConfirmDialog** untuk aksi tak bisa dibatalkan: judul pertanyaan, isi konsekuensi, tombol `outline` "Batal" +
+**ConfirmDialog** untuk aksi tak bisa dibatalkan: judul pertanyaan, isi konsekuensi, tombol `neutral` "Batal" +
 tombol aksi (`danger` bila merusak) dengan label kata kerja spesifik. Kedua tombol memakai `ButtonPair` (50:50),
 "Batal" di kiri, aksi di kanan, keduanya tanpa ikon.
 
@@ -822,7 +846,7 @@ di dalam header berwarna putih; IconButton memakai varian `onBrand`; badge hitun
   (§3.8). Halaman dalam: logo + garis pemisah `neutral-200` + judul `body` 500 `neutral-600` (tombol kembali
   disembunyikan). Tautan = item §6.23 tanpa Akun, teks `body-strong` putih; hover dan aktif berlatar `brand-700`
 (aktif + `aria-current="page"`); tamu
-  yang membuka Favorit/Booking diarahkan ke halaman masuk. Tombol akun: tamu → Button `secondary` `sm` "Masuk";
+  yang membuka Favorit/Booking diarahkan ke halaman masuk. Tombol akun: tamu → Button `success` `sm` "Masuk";
   sudah masuk → IconButton `UserRound` ("Akun"). `Bell` hanya di beranda dan halaman legal.
 - **Halaman legal** (Syarat & Ketentuan, Kebijakan Privasi): varian beranda, isi di kontainer 1200px seperti halaman lain.
 
@@ -880,7 +904,7 @@ Dipakai untuk filter status (booking tenant, booking owner, tagihan, refund/payo
 
 ### 6.25 LoadMore
 
-Daftar memakai tombol `outline` lebar penuh "Muat lebih banyak" di bawah daftar, bukan infinite scroll otomatis
+Daftar memakai tombol `neutral` lebar penuh "Muat lebih banyak" di bawah daftar, bukan infinite scroll otomatis
 (hemat kuota, footer tetap bisa dicapai).
 - Search: tampil bila `has-more = true`; request berikutnya memakai `offset = next-offset`.
 - Daftar berhalaman (`page`): tampil bila jumlah item yang diterima = `limit`.
@@ -918,11 +942,11 @@ BottomSheet berisi filter yang dipetakan 1:1 ke `filters` di `POST /listings/sea
 Urutkan dipisah ke sheet sendiri (**SortSheet**): daftar radio satu kolom, langsung diterapkan saat dipilih, sheet menutup.
 Baris "Urutkan" di tabel atas hanya ada di SortSheet, bukan di FilterSheet.
 
-Footer FilterSheet: `ButtonPair` — `outline` "Atur ulang" (kiri) + `primary` "Tampilkan" (kanan), tanpa ikon.
+Footer FilterSheet: `ButtonPair` — `neutral` "Atur ulang" (kiri) + `success` "Tampilkan" (kanan), tanpa ikon.
 Jumlah hasil tidak ditampilkan di tombol (API tidak punya endpoint hitung tanpa memuat hasil).
 
 **FilterBar** di halaman hasil (pemicu sheet):
-- `ButtonPair` berisi `outline` `sm` "Filter" (ikon `SlidersHorizontal`) dan "Urutkan" (ikon `ArrowUpDown`) —
+- `ButtonPair` berisi `neutral` `sm` "Filter" (ikon `SlidersHorizontal`) dan "Urutkan" (ikon `ArrowUpDown`) —
   keduanya berikon, sama lebar. Filter aktif ditandai badge hitungan di tombol "Filter".
 - Di bawahnya, **hanya bila ada filter aktif**: satu baris chip aktif (bisa digeser) dengan ikon `X`; menekan chip
   menghapus filter itu.
@@ -1040,7 +1064,7 @@ hanya bila ada diskon. Sewa bulanan dengan durasi > 1: caption "Bulan berikutnya
 ### 6.33 StickyActionBar
 
 Menempel di bawah (mobile) di halaman detail & form booking. Latar putih, border atas `neutral-200`, `shadow-raised`,
-padding 12px 16px + safe area. Kiri: caption "Mulai dari" + harga `price` (+ satuan); kanan: tombol `primary` `lg`.
+padding 12px 16px + safe area. Kiri: caption "Mulai dari" + harga `price` (+ satuan); kanan: tombol `success` `lg`.
 Konten halaman diberi `padding-bottom` setinggi bar agar tidak tertutup. ≥ 1024px: berubah menjadi panel menempel
 (`position: sticky; top: 80px`) di kolom kanan.
 
@@ -1122,7 +1146,7 @@ Muncul di detail booking (`pending`) dan detail invoice (`unpaid`).
   "23 jam 10 menit", < 1 jam "14:32" (`tabular`). Teks: "Selesaikan pembayaran dalam {waktu}". Saat habis:
   muat ulang data. Diperbarui tiap detik hanya bila < 1 jam, selain itu tiap menit. `aria-live` **tidak** dipasang
   pada angka yang terus berubah; umumkan sekali saat sisa 5 menit lewat toast warning.
-- **Tombol "Bayar sekarang"** (`primary` `lg`): `POST /booking/{id}/checkout` (atau `/invoices/{id}/checkout`) →
+- **Tombol "Bayar sekarang"** (`success` `lg`): `POST /booking/{id}/checkout` (atau `/invoices/{id}/checkout`) →
   buka Snap dengan `window.snap.pay(snap_token, { onSuccess, onPending, onError, onClose })`.
   Callback Snap **hanya** memicu muat ulang status dari API; status tidak pernah disimpulkan dari callback.
 - **Snap.js** dimuat dengan `next/script` (`strategy="afterInteractive"`) hanya di halaman ini:
@@ -1174,7 +1198,7 @@ bukan error). `deposit_returned` diberi badge netral "Catatan".
   angka rata kanan `tabular`. Tabel lebar di-scroll dalam wadahnya (`overflow-x-auto`), halaman tidak ikut tergeser.
 - < 1024px: setiap baris tampil sebagai item list bertumpuk (label kecil + nilai), bukan tabel menyamping.
 - Header kolom yang bisa diurutkan memakai `<button>` + `aria-sort`.
-- Ekspor CSV: tombol `outline` dengan ikon `Download` → `GET /owner/finance/ledger.csv` lewat route handler.
+- Ekspor CSV: tombol `neutral` dengan ikon `Download` → `GET /owner/finance/ledger.csv` lewat route handler.
 
 ### 6.47 PhotoUploader (owner)
 
@@ -1312,10 +1336,10 @@ Sukses → arahkan ke detail booking (status `pending`) dengan toast success dar
 Rincian sewa: kamar, tanggal, durasi, harga
 Tagihan: daftar InvoiceCard booking ini
 [Perpanjang sewa][Tulis ulasan]   ← ButtonPair 50:50 bila keduanya ada; satu saja → lebar penuh
-[Batalkan booking] ← bila pending/paid (ghost, warna danger)
+[Batalkan booking] ← bila pending/paid (`danger`)
 ```
 
-**Masuk & daftar** — rata tengah, maks 400px: logo → judul → form → tombol `primary` lebar penuh → tautan alternatif
+**Masuk & daftar** — rata tengah, maks 400px: logo → judul → form → tombol `success` lebar penuh → tautan alternatif
 ("Masuk dengan kode OTP", "Lupa password?", "Belum punya akun? Daftar").
 
 **Owner — beranda** — StatCard ×4 → "Perlu direspons" (booking `paid` diurutkan dari `owner_deadline_at` terdekat,

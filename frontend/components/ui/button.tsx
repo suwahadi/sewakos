@@ -2,15 +2,13 @@ import { cloneElement, forwardRef, isValidElement, type ButtonHTMLAttributes, ty
 import { cn } from "@/lib/cn";
 import { Spinner } from "./spinner";
 
-export type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger";
+export type ButtonVariant = "success" | "danger" | "neutral";
 export type ButtonSize = "sm" | "md" | "lg";
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: "bg-brand-600 text-neutral-0 hover:bg-brand-700 active:bg-brand-800",
-  secondary: "bg-brand-50 text-brand-800 hover:bg-brand-100 active:bg-brand-200",
-  outline: "bg-neutral-0 text-neutral-900 border border-neutral-400 hover:bg-neutral-50 active:bg-neutral-100",
-  ghost: "bg-transparent text-brand-700 hover:bg-brand-50 active:bg-brand-100",
-  danger: "bg-danger text-neutral-0 hover:brightness-92 active:brightness-85",
+  success: "border-success bg-success text-neutral-0 hover:brightness-92 active:brightness-85",
+  danger: "border-danger bg-danger text-neutral-0 hover:brightness-92 active:brightness-85",
+  neutral: "border-neutral-400 bg-neutral-0 text-neutral-900 hover:bg-neutral-50 active:bg-neutral-100",
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
@@ -30,7 +28,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = "primary", size = "md", loading = false, icon, fullWidth, disabled, className, children, ...props },
+  { variant = "success", size = "md", loading = false, icon, fullWidth, disabled, className, children, ...props },
   ref,
 ) {
   return (
@@ -40,8 +38,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-md transition-[background-color,filter] duration-[var(--duration-fast)] ease-standard active:scale-[0.98]",
-        "disabled:bg-neutral-100 disabled:text-neutral-400",
+        "inline-flex items-center justify-center gap-2 rounded-md border transition-[background-color,filter] duration-[var(--duration-fast)] ease-standard active:scale-[0.98]",
+        "disabled:border-neutral-200 disabled:bg-neutral-100 disabled:text-neutral-400",
         VARIANT_CLASSES[variant],
         SIZE_CLASSES[size],
         fullWidth && "w-full",

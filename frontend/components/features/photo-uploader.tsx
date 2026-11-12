@@ -291,7 +291,7 @@ function UploadTile({ task, onRetry, onRemove }: { task: UploadTask; onRetry: ()
           <>
             <IconButton size="xs" aria-label="Batalkan foto ini" icon={<X aria-hidden="true" size={16} />} onClick={onRemove} className="absolute right-0 top-0" />
             <p className="line-clamp-2 text-caption text-danger">{task.error}</p>
-            <Button size="sm" variant="outline" onClick={onRetry}>
+            <Button size="sm" variant="neutral" onClick={onRetry}>
               Ulangi
             </Button>
           </>
@@ -382,10 +382,10 @@ function PhotoSheetBody({
         <Image src={photo.url} alt={photo.caption ?? ""} fill sizes="(min-width: 640px) 560px, 100vw" className="object-cover" />
       </div>
       <TextField label="Keterangan" placeholder="Tampak depan" maxLength={255} value={caption} onChange={(event) => setCaption(event.target.value)} />
-      <Button variant="secondary" fullWidth loading={saving} onClick={saveCaption}>
+      <Button fullWidth loading={saving} onClick={saveCaption}>
         Simpan keterangan
       </Button>
-      <Button variant="ghost" fullWidth className="text-danger hover:bg-danger-bg active:bg-danger-bg" onClick={() => setConfirmDelete(true)}>
+      <Button variant="danger" fullWidth onClick={() => setConfirmDelete(true)}>
         Hapus foto
       </Button>
       <ConfirmDialog

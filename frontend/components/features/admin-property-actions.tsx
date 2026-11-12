@@ -54,7 +54,7 @@ export function AdminPropertyActions({ propertyId, status }: { propertyId: numbe
     <div className="max-w-md">
       {status === "pending" && (
         <ButtonPair>
-          <Button variant="outline" onClick={() => openDialog("reject")}>
+          <Button variant="danger" onClick={() => openDialog("reject")}>
             Tolak properti
           </Button>
           <Button loading={busy === "approve"} onClick={() => run("approve")}>
@@ -68,7 +68,7 @@ export function AdminPropertyActions({ propertyId, status }: { propertyId: numbe
         </Button>
       )}
       {status === "approved" && (
-        <Button variant="outline" fullWidth onClick={() => openDialog("suspend")}>
+        <Button variant="danger" fullWidth onClick={() => openDialog("suspend")}>
           Nonaktifkan properti
         </Button>
       )}

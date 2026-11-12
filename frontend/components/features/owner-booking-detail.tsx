@@ -120,14 +120,14 @@ export function OwnerBookingDetail({ booking }: { booking: OwnerBooking }) {
       </section>
 
       {DEPOSIT_RETURNABLE_STATUSES.includes(booking.status) && !booking.deposit_returned_at && (
-        <Button variant="outline" fullWidth onClick={() => setDepositOpen(true)}>
+        <Button fullWidth onClick={() => setDepositOpen(true)}>
           Catat deposit dikembalikan
         </Button>
       )}
 
       {booking.status === "paid" && (
         <ButtonPair>
-          <Button variant="outline" disabled={busy !== null} onClick={() => setRejectOpen(true)}>
+          <Button variant="danger" disabled={busy !== null} onClick={() => setRejectOpen(true)}>
             Tolak booking
           </Button>
           <Button loading={busy === "approve"} disabled={busy === "reject"} onClick={() => respond("approve")}>
@@ -165,6 +165,7 @@ export function OwnerBookingDetail({ booking }: { booking: OwnerBooking }) {
             </div>
           }
           confirmLabel="Catat deposit dikembalikan"
+          destructive={false}
           loading={recordingDeposit}
           onConfirm={recordDepositReturned}
         />

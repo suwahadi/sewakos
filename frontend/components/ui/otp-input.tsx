@@ -80,7 +80,7 @@ export function OtpResendCountdown({ canResendAt, onResend }: { canResendAt: num
   const remaining = Math.max(0, canResendAt - now);
   if (remaining <= 0) {
     return (
-      <Button variant="ghost" onClick={onResend}>
+      <Button variant="neutral" onClick={onResend}>
         Kirim ulang kode
       </Button>
     );

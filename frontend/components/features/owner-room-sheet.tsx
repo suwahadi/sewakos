@@ -5,6 +5,7 @@ import { useState } from "react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
+import { FacilitySelect } from "@/components/features/facility-select";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { TextField } from "@/components/ui/text-field";
 import { callBff } from "@/lib/api/browser";
@@ -25,7 +26,7 @@ interface Values {
   price_daily: string;
   available: string;
   capacity: string;
-  facilities: string;
+  facilities: string[];
   durations: number[];
 }
 
@@ -37,7 +38,7 @@ function initialValues(room?: OwnerRoom): Values {
     price_daily: room?.price_daily ? String(room.price_daily) : "",
     available: room ? String(room.available) : "1",
     capacity: room ? String(room.capacity) : "1",
-    facilities: room?.facilities.join(", ") ?? "",
+    facilities: room?.facilities ?? [],
     durations: room?.monthly_duration_options ?? [1],
   };
 }
@@ -50,17 +51,9 @@ function validate(values: Values): Partial<Record<Field, string>> {
   if (!(Number(values.price_monthly) >= 1)) errors.price_monthly = "Harga per bulan wajib diisi.";
   if (values.available === "" || available > 255) errors.available = "Jumlah kamar kosong harus 0–255.";
   if (values.capacity === "" || capacity < 1 || capacity > 20) errors.capacity = "Kapasitas harus 1–20 orang.";
-  const facilities = splitFacilities(values.facilities);
-  if (facilities.length > 30) errors.facilities = "Maksimal 30 fasilitas.";
-  else if (facilities.some((facility) => facility.length > 50)) errors.facilities = "Setiap fasilitas maksimal 50 karakter.";
+  if (values.facilities.length > 30) errors.facilities = "Maksimal 30 fasilitas.";
+  else if (values.facilities.some((facility) => facility.length > 50)) errors.facilities = "Setiap fasilitas maksimal 50 karakter.";
   return errors;
-}
-
-function splitFacilities(value: string): string[] {
-  return value
-    .split(",")
-    .map((facility) => facility.trim())
-    .filter(Boolean);
 }
 
 function optionalPrice(value: string): number | null {
@@ -116,7 +109,7 @@ function RoomForm({ propertyId, room, onSaved }: { propertyId: number; room?: Ow
       price_daily: optionalPrice(values.price_daily),
       available: Number(values.available),
       capacity: Number(values.capacity),
-      facilities: splitFacilities(values.facilities),
+      facilities: values.facilities,
       monthly_duration_options: values.durations.length > 0 ? values.durations : [1],
     };
     const result = room
@@ -181,14 +174,7 @@ function RoomForm({ propertyId, room, onSaved }: { propertyId: number; room?: Ow
           error={errors.capacity}
         />
       </div>
-      <TextField
-        label="Fasilitas"
-        placeholder="WiFi, AC, Kasur"
-        helper="Pisahkan dengan koma"
-        value={values.facilities}
-        onChange={(event) => update("facilities", event.target.value)}
-        error={errors.facilities}
-      />
+      <FacilitySelect value={values.facilities} onChange={(next) => update("facilities", next)} error={errors.facilities} />
       <div role="group" aria-labelledby="room-durations-label" className="flex flex-col gap-1.5">
         <p id="room-durations-label" className="text-label font-medium text-neutral-700">
           Durasi sewa bulanan

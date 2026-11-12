@@ -157,20 +157,20 @@ export function BookingDetailClient({
 
       {booking.can_extend && booking.can_review ? (
         <ButtonPair>
-          <Button variant="outline" onClick={() => setExtendOpen(true)}>
+          <Button onClick={() => setExtendOpen(true)}>
             Perpanjang sewa
           </Button>
-          <Button variant="outline" onClick={() => setReviewOpen(true)}>
+          <Button onClick={() => setReviewOpen(true)}>
             Tulis ulasan
           </Button>
         </ButtonPair>
       ) : booking.can_extend ? (
-        <Button variant="outline" fullWidth onClick={() => setExtendOpen(true)}>
+        <Button fullWidth onClick={() => setExtendOpen(true)}>
           Perpanjang sewa
         </Button>
       ) : (
         booking.can_review && (
-          <Button variant="outline" fullWidth onClick={() => setReviewOpen(true)}>
+          <Button fullWidth onClick={() => setReviewOpen(true)}>
             Tulis ulasan
           </Button>
         )
@@ -178,9 +178,8 @@ export function BookingDetailClient({
 
       {CANCELLABLE_STATUSES.includes(booking.status) && (
         <Button
-          variant="ghost"
+          variant="danger"
           fullWidth
-          className="text-danger hover:bg-danger-bg active:bg-danger-bg"
           onClick={() => setCancelOpen(true)}
         >
           Batalkan booking

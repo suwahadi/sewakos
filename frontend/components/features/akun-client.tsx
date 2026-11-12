@@ -216,7 +216,7 @@ function LogoutSection() {
 
   return (
     <section>
-      <Button variant="outline" fullWidth onClick={() => setOpen(true)}>
+      <Button variant="danger" fullWidth onClick={() => setOpen(true)}>
         Keluar
       </Button>
       <ConfirmDialog

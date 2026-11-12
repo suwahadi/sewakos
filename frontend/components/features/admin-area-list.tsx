@@ -89,10 +89,10 @@ export function AdminAreaList({ initial }: { initial: AdminArea[] }) {
             render: (area) => (
               <div className="w-48 max-w-full">
                 <ButtonPair>
-                  <Button size="sm" variant="outline" onClick={() => setDeleting(area)}>
+                  <Button size="sm" variant="danger" onClick={() => setDeleting(area)}>
                     Hapus
                   </Button>
-                  <Button size="sm" variant="secondary" onClick={() => setEditing({ area })}>
+                  <Button size="sm" variant="neutral" onClick={() => setEditing({ area })}>
                     Ubah
                   </Button>
                 </ButtonPair>
@@ -187,7 +187,7 @@ function AreaDialog({ area, onClose, onSaved }: { area?: AdminArea; onClose: () 
         <TextField label="Place ID (opsional)" maxLength={255} value={form.place_id} onChange={(event) => update("place_id", event.target.value)} error={errors.place_id} />
         <Checkbox label="Tampilkan sebagai area populer" checked={form.is_top} onChange={(event) => update("is_top", event.target.checked)} />
         <ButtonPair>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="neutral" onClick={onClose}>
             Batal
           </Button>
           <Button loading={saving} onClick={save}>

@@ -65,7 +65,7 @@ function TransferDialog({ title, endpoint, onClose, onDone }: { title: string; e
         <TextField label="Nomor referensi transfer" maxLength={100} value={reference} onChange={(event) => setReference(event.target.value)} error={error} />
         <Textarea label="Catatan (opsional)" maxLength={500} value={note} onChange={(event) => setNote(event.target.value)} />
         <ButtonPair>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="neutral" onClick={onClose}>
             Batal
           </Button>
           <Button loading={saving} onClick={submit}>

@@ -53,11 +53,10 @@ export function FilterSheet({ open, onClose, filters, onApply }: FilterSheetProp
       title="Filter"
       footer={
         <ButtonPair>
-          <Button variant="outline" onClick={() => setDraft(DEFAULT_SEARCH_FILTERS)}>
+          <Button variant="neutral" onClick={() => setDraft(DEFAULT_SEARCH_FILTERS)}>
             Atur ulang
           </Button>
           <Button
-            variant="primary"
             onClick={() => {
               onApply(draft);
               onClose();

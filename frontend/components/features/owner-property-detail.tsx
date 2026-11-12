@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { OwnerPropertyForm, type AreaOption } from "@/components/features/owner-property-form";
 import { OwnerRoomSheet } from "@/components/features/owner-room-sheet";
@@ -67,7 +68,6 @@ export function OwnerPropertyDetail({ property, rooms, areas, photos }: OwnerPro
             <p className="break-words">{property.moderation_note ?? "Perbaiki data properti lalu ajukan ulang."}</p>
             <Button
               size="sm"
-              variant="secondary"
               className="mt-2"
               loading={busy === "submit"}
               onClick={() => send("submit", `/api/owner/properties/${property.id}/submit`, "POST")}
@@ -108,7 +108,6 @@ export function OwnerPropertyDetail({ property, rooms, areas, photos }: OwnerPro
               onChange={(event) => setDiscount(digitsOnly(event.target.value))}
             />
             <Button
-              variant="outline"
               fullWidth
               disabled={suspended}
               loading={busy === "discount"}
@@ -123,7 +122,7 @@ export function OwnerPropertyDetail({ property, rooms, areas, photos }: OwnerPro
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-title-md font-semibold text-neutral-900">Kamar</h2>
-          <Button size="sm" variant="secondary" disabled={suspended} onClick={() => setRoomSheet({})}>
+          <Button size="sm" icon={<Plus aria-hidden="true" />} disabled={suspended} onClick={() => setRoomSheet({})}>
             Tambah kamar
           </Button>
         </div>
@@ -143,10 +142,10 @@ export function OwnerPropertyDetail({ property, rooms, areas, photos }: OwnerPro
                 </p>
               </div>
               <ButtonPair>
-                <Button variant="outline" onClick={() => setRoomToDelete(room)}>
+                <Button variant="danger" icon={<Trash2 aria-hidden="true" />} onClick={() => setRoomToDelete(room)}>
                   Hapus
                 </Button>
-                <Button variant="secondary" onClick={() => setRoomSheet({ room })}>
+                <Button variant="neutral" icon={<Pencil aria-hidden="true" />} onClick={() => setRoomSheet({ room })}>
                   Ubah
                 </Button>
               </ButtonPair>

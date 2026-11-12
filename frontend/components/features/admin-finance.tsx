@@ -129,7 +129,7 @@ function ResolveDialog({ issue, onClose, onDone }: { issue: AdminReconciliationI
         <p>Tandai selisih ini sudah ditangani. Perubahan data tetap lewat alur normal, ini hanya mencatat.</p>
         <Textarea label="Catatan" maxLength={500} value={note} onChange={(event) => setNote(event.target.value)} error={error} />
         <ButtonPair>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="neutral" onClick={onClose}>
             Batal
           </Button>
           <Button loading={saving} onClick={submit}>

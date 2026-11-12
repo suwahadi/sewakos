@@ -44,7 +44,7 @@ export function AdminPropertyList({ initial }: { initial: AdminProperty[] }) {
         <div className="min-w-0 flex-1">
           <TextField label="Cari nama kost" value={search} onChange={(event) => setSearch(event.target.value)} />
         </div>
-        <Button type="submit" variant="outline">
+        <Button type="submit">
           Cari
         </Button>
       </form>

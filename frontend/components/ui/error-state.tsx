@@ -20,7 +20,7 @@ export function ErrorState({ title, description, action, className }: ErrorState
       {description && <p className="line-clamp-2 max-w-prose text-body text-neutral-600">{description}</p>}
       {action && (
         <Button
-          variant="secondary"
+          variant="neutral"
           onClick={action.onClick}
           icon={action.icon ? <RefreshCw aria-hidden="true" /> : undefined}
         >
