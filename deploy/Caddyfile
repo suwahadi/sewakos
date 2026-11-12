@@ -26,6 +26,12 @@ https://{$PUBLIC_HOST} {
 	}
 }
 
+# WWW_HOST is empty for IP deployments; "localhost" keeps the block valid without requesting a public certificate.
+https://{$WWW_HOST:localhost} {
+	import public_tls
+	redir https://{$PUBLIC_HOST}{uri} permanent
+}
+
 # Presigned S3 URLs are signed for this exact host:port, so MinIO is served on its own port, not under a path.
 https://{$PUBLIC_HOST}:9000 {
 	import public_tls

@@ -146,6 +146,7 @@ services:
     environment:
       PUBLIC_HOST: ${PUBLIC_HOST}
       ACME_PROFILE: ${ACME_PROFILE:-classic}
+      WWW_HOST: ${WWW_HOST:-localhost}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
