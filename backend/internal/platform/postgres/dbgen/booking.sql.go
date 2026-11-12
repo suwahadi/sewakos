@@ -35,6 +35,19 @@ func (q *Queries) ExistsUnpaidExtensionInvoice(ctx context.Context, bookingID in
 	return exists, err
 }
 
+const expireStalePendingPaymentsForInvoice = `-- name: ExpireStalePendingPaymentsForInvoice :execrows
+UPDATE payments SET status = 'expire', updated_at = now()
+WHERE invoice_id = $1 AND status = 'pending' AND expires_at <= now()
+`
+
+func (q *Queries) ExpireStalePendingPaymentsForInvoice(ctx context.Context, invoiceID int64) (int64, error) {
+	result, err := q.db.Exec(ctx, expireStalePendingPaymentsForInvoice, invoiceID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getActivePaymentForInvoice = `-- name: GetActivePaymentForInvoice :one
 SELECT id, order_id, gross_amount, snap_token, redirect_url, expires_at
 FROM payments

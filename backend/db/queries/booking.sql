@@ -96,6 +96,10 @@ JOIN properties p ON p.id = r.property_id
 JOIN users o ON o.id = p.owner_id
 WHERE r.id = sqlc.arg(room_id);
 
+-- name: ExpireStalePendingPaymentsForInvoice :execrows
+UPDATE payments SET status = 'expire', updated_at = now()
+WHERE invoice_id = sqlc.arg(invoice_id) AND status = 'pending' AND expires_at <= now();
+
 -- name: GetActivePaymentForInvoice :one
 SELECT id, order_id, gross_amount, snap_token, redirect_url, expires_at
 FROM payments

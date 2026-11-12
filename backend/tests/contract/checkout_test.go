@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/suwahadi/sewakos/backend/internal/midtrans"
 )
 
@@ -259,5 +261,75 @@ func TestBookingCheckoutRetriedAfterFirstCheckoutReleasedLock(t *testing.T) {
 	resp, body = checkoutBooking(t, srv, tokenB, bookingB)
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("checkout B retry: status = %d, body = %s, want 200 once the unit is free again", resp.StatusCode, body)
+	}
+}
+
+func expireOpenPayments(t *testing.T, pool *pgxpool.Pool, invoiceID int64) {
+	t.Helper()
+	if _, err := pool.Exec(context.Background(),
+		`UPDATE payments SET expires_at = now() - interval '5 minutes' WHERE invoice_id = $1 AND status = 'pending'`, invoiceID); err != nil {
+		t.Fatalf("expire payments: %v", err)
+	}
+}
+
+func countPaymentsWithStatus(t *testing.T, pool *pgxpool.Pool, invoiceID int64, status string) int {
+	t.Helper()
+	var count int
+	if err := pool.QueryRow(context.Background(),
+		`SELECT count(*) FROM payments WHERE invoice_id = $1 AND status = $2`, invoiceID, status).Scan(&count); err != nil {
+		t.Fatalf("count payments: %v", err)
+	}
+	return count
+}
+
+func checkoutOrderID(t *testing.T, body []byte) string {
+	t.Helper()
+	var parsed struct {
+		Payment struct {
+			OrderID string `json:"order_id"`
+		} `json:"payment"`
+	}
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		t.Fatalf("parse checkout body: %v", err)
+	}
+	return parsed.Payment.OrderID
+}
+
+// Checkout after the previous payment window expired must issue a fresh payment and keep exactly one unit locked.
+func TestBookingCheckoutAfterPaymentExpired(t *testing.T) {
+	t.Setenv("OTP_DEBUG_ECHO", "true")
+	srv, pool := newTestServerAndPool(t)
+	roomID := seedBookingFixture(t, pool, 2250000, 2, false)
+	_, token := bookingRegisterAndVerify(t, srv)
+	bookingID := submitBookingFixture(t, srv, token, roomID)
+	invoiceID := getInitialInvoiceID(t, pool, bookingID)
+
+	resp, body := checkoutBooking(t, srv, token, bookingID)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("first checkout: status = %d, body = %s", resp.StatusCode, body)
+	}
+	firstOrderID := checkoutOrderID(t, body)
+
+	expireOpenPayments(t, pool, invoiceID)
+	resp, body = checkoutBooking(t, srv, token, bookingID)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("checkout after expiry: status = %d, body = %s", resp.StatusCode, body)
+	}
+	if checkoutOrderID(t, body) == firstOrderID {
+		t.Errorf("expected a new order_id after expiry")
+	}
+	if got := countPaymentsWithStatus(t, pool, invoiceID, "pending"); got != 1 {
+		t.Errorf("pending payments = %d, want 1", got)
+	}
+	if got := countPaymentsWithStatus(t, pool, invoiceID, "expire"); got != 1 {
+		t.Errorf("expired payments = %d, want 1", got)
+	}
+
+	var available int
+	if err := pool.QueryRow(context.Background(), `SELECT available FROM rooms WHERE id = $1`, roomID).Scan(&available); err != nil {
+		t.Fatalf("read room available: %v", err)
+	}
+	if available != 1 {
+		t.Errorf("room available = %d, want 1 (expired lock released, new lock taken)", available)
 	}
 }

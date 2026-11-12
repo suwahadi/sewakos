@@ -89,6 +89,11 @@ func checkoutRenewalOrExtension(deps Deps, user authctx.User, w http.ResponseWri
 		return
 	}
 
+	if _, err := queries.ExpireStalePendingPaymentsForInvoice(ctx, row.ID); err != nil {
+		response.InternalErrorHandler(w, r)
+		return
+	}
+
 	active, err := queries.GetActivePaymentForInvoice(ctx, row.ID)
 	if err == nil {
 		if err := tx.Commit(ctx); err != nil {

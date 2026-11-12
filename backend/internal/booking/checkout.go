@@ -110,6 +110,23 @@ func checkoutInitialBooking(deps Deps, user authctx.User, w http.ResponseWriter,
 		return
 	}
 
+	expiredCount, err := queries.ExpireStalePendingPaymentsForInvoice(ctx, invoice.ID)
+	if err != nil {
+		response.InternalErrorHandler(w, r)
+		return
+	}
+	if expiredCount > 0 && b.StockHeld {
+		if err := queries.ReleaseRoomLock(ctx, b.RoomID); err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		if err := queries.SetBookingStockHeld(ctx, dbgen.SetBookingStockHeldParams{ID: bookingID, StockHeld: false}); err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		b.StockHeld = false
+	}
+
 	active, err := queries.GetActivePaymentForInvoice(ctx, invoice.ID)
 	if err == nil {
 		if err := tx.Commit(ctx); err != nil {

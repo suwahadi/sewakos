@@ -310,3 +310,36 @@ func TestInvoiceCheckoutBookingNotApprovedIs400(t *testing.T) {
 		t.Fatalf("status = %d, body = %s, want 400 (booking is still pending, not approved)", resp.StatusCode, body)
 	}
 }
+
+func TestInvoiceCheckoutRenewalAfterPaymentExpired(t *testing.T) {
+	t.Setenv("OTP_DEBUG_ECHO", "true")
+	mock := &midtrans.MockClient{
+		CreateTransactionFunc: func(_ context.Context, _ midtrans.TransactionRequest) (midtrans.TransactionResponse, error) {
+			return midtrans.TransactionResponse{Token: "snap-token", RedirectURL: "https://example.test/redirect"}, nil
+		},
+	}
+	srv, pool := newTestServerAndPoolWithMidtrans(t, mock)
+	roomID := seedBookingFixture(t, pool, 2250000, 2, false)
+	_, token := bookingRegisterAndVerify(t, srv)
+	bookingID := submitBookingFixture(t, srv, token, roomID)
+	approveBooking(t, pool, bookingID)
+	renewalID := insertRenewalInvoice(t, pool, bookingID, 2250000, 0)
+
+	resp, body := invoiceCheckout(t, srv, token, renewalID)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("first checkout: status = %d, body = %s", resp.StatusCode, body)
+	}
+	firstOrderID := checkoutOrderID(t, body)
+
+	expireOpenPayments(t, pool, renewalID)
+	resp, body = invoiceCheckout(t, srv, token, renewalID)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("checkout after expiry: status = %d, body = %s", resp.StatusCode, body)
+	}
+	if checkoutOrderID(t, body) == firstOrderID {
+		t.Errorf("expected a new order_id after expiry")
+	}
+	if got := countPaymentsWithStatus(t, pool, renewalID, "pending"); got != 1 {
+		t.Errorf("pending payments = %d, want 1", got)
+	}
+}

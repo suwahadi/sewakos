@@ -73,6 +73,7 @@ type Querier interface {
 	ExistsUnpaidExtensionInvoice(ctx context.Context, bookingID int64) (bool, error)
 	ExistsUserByEmail(ctx context.Context, email pgtype.Text) (bool, error)
 	ExistsUserByPhone(ctx context.Context, phone string) (bool, error)
+	ExpireStalePendingPaymentsForInvoice(ctx context.Context, invoiceID int64) (int64, error)
 	ExtendBookingDuration(ctx context.Context, arg ExtendBookingDurationParams) error
 	FinalizePayment(ctx context.Context, arg FinalizePaymentParams) error
 	GetAccessTokenForVerification(ctx context.Context, id int64) (GetAccessTokenForVerificationRow, error)
