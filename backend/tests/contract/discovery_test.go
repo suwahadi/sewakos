@@ -8,6 +8,7 @@ import (
 	"hash/fnv"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -402,5 +403,56 @@ func TestLatestListingsFixture(t *testing.T) {
 	}
 	if rooms := latestRooms("?limit=abc"); len(rooms) == 0 || len(rooms) > 12 {
 		t.Fatalf("invalid limit should fall back to 12, got %d", len(rooms))
+	}
+}
+
+// API.md §3.3: filters.keyword matches property, room, or area names case-insensitively; under 3 characters is 422.
+func TestSearchKeyword(t *testing.T) {
+	srv, pool := newTestServerAndPool(t)
+	ownerID := seedOwner(t, pool)
+	stamp := fmt.Sprintf("%d", time.Now().UnixNano())
+	propToken := "KwProp" + stamp
+	roomToken := "KwRoom" + stamp
+	areaToken := "KwArea" + stamp
+	areaID := seedArea(t, pool, "Kota "+areaToken, "city", false, -6.2, 106.8)
+
+	byName := seedProperty(t, pool, propertyFixture{
+		ownerID: ownerID, areaID: areaID, name: "Kost " + propToken, gender: "campur", lat: -6.2, lng: 106.8,
+	})
+	seedRoom(t, pool, byName, "Kamar Biasa", 1000000, 1)
+	byRoom := seedProperty(t, pool, propertyFixture{
+		ownerID: ownerID, areaID: areaID, name: "Kost Lain " + stamp, gender: "campur", lat: -6.2, lng: 106.8,
+	})
+	seedRoom(t, pool, byRoom, "Kamar "+roomToken, 1000000, 1)
+	byArea := seedProperty(t, pool, propertyFixture{
+		ownerID: ownerID, areaID: areaID, name: "Kost Tanpa Kata " + stamp, gender: "campur", lat: -6.2, lng: 106.8,
+	})
+	seedRoom(t, pool, byArea, "Kamar Biasa", 1000000, 1)
+
+	propertiesFor := func(keyword string) (map[float64]bool, float64) {
+		result := searchRoomsResult(t, srv, fmt.Sprintf(`{"filters": {"keyword": %q}, "limit": 20, "offset": 0}`, keyword))
+		found := map[float64]bool{}
+		for _, item := range result["rooms"].([]any) {
+			found[item.(map[string]any)["property_id"].(float64)] = true
+		}
+		return found, result["total"].(float64)
+	}
+
+	if found, total := propertiesFor(strings.ToLower(propToken)); !found[float64(byName)] || total != 1 {
+		t.Fatalf("property-name keyword: found=%v total=%v", found, total)
+	}
+	if found, total := propertiesFor(roomToken); !found[float64(byRoom)] || total != 1 {
+		t.Fatalf("room-name keyword: found=%v total=%v", found, total)
+	}
+	if found, total := propertiesFor(areaToken); !found[float64(byName)] || !found[float64(byArea)] || total != 3 {
+		t.Fatalf("area-name keyword: found=%v total=%v", found, total)
+	}
+	if _, total := propertiesFor("KwTidakAdaSama" + stamp); total != 0 {
+		t.Fatalf("unmatched keyword total = %v, want 0", total)
+	}
+
+	resp, body := discoveryPostJSON(t, srv, "/api/listings/search", `{"filters": {"keyword": "ab"}}`)
+	if resp.StatusCode != http.StatusUnprocessableEntity {
+		t.Fatalf("short keyword status = %d, body = %s", resp.StatusCode, body)
 	}
 }

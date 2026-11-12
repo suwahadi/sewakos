@@ -1,6 +1,6 @@
 "use client";
 
-import { BedDouble, Building2, MapPin } from "lucide-react";
+import { BedDouble, Building2, MapPin, Search } from "lucide-react";
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { GenderBadge } from "@/components/ui/gender-badge";
 
@@ -31,13 +31,15 @@ type FlatItem =
   | { kind: "area"; key: string; data: SuggestionArea }
   | { kind: "landing"; key: string; data: SuggestionLanding }
   | { kind: "roomType"; key: string; data: SuggestionRoomType }
-  | { kind: "popular"; key: string; data: PopularArea };
+  | { kind: "popular"; key: string; data: PopularArea }
+  | { kind: "keyword"; key: string; data: { keyword: string } };
 
 const GROUP_LABEL: Record<FlatItem["kind"], string> = {
   area: "Area",
   landing: "Kost",
   roomType: "Tipe kamar",
   popular: "Area populer",
+  keyword: "Pencarian",
 };
 
 export interface SuggestionListProps {
@@ -51,6 +53,7 @@ export interface SuggestionListProps {
   onSelectLanding: (landing: SuggestionLanding) => void;
   onSelectRoomType: (roomType: SuggestionRoomType) => void;
   onSelectPopularArea: (area: PopularArea) => void;
+  onSubmitKeyword: (keyword: string) => void;
 }
 
 /** DESIGN.md §6.26 — ARIA combobox over SearchBar's input, with a 300ms typing debounce. */
@@ -64,6 +67,7 @@ export function SuggestionList({
   onSelectLanding,
   onSelectRoomType,
   onSelectPopularArea,
+  onSubmitKeyword,
 }: SuggestionListProps) {
   const [draft, setDraft] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -90,6 +94,7 @@ export function SuggestionList({
   const showSuggestions = draft.trim().length >= 3;
   const items: FlatItem[] = showSuggestions
     ? [
+        { kind: "keyword", key: "keyword", data: { keyword: draft.trim() } },
         ...areas.map((data): FlatItem => ({ kind: "area", key: `area-${data.geocode_id}`, data })),
         ...landings.map((data): FlatItem => ({ kind: "landing", key: `landing-${data.id}`, data })),
         ...roomTypes.map((data): FlatItem => ({ kind: "roomType", key: `room-type-${data.id}`, data })),
@@ -100,6 +105,7 @@ export function SuggestionList({
     if (item.kind === "area") onSelectArea(item.data);
     else if (item.kind === "landing") onSelectLanding(item.data);
     else if (item.kind === "roomType") onSelectRoomType(item.data);
+    else if (item.kind === "keyword") onSubmitKeyword(item.data.keyword);
     else onSelectPopularArea(item.data);
   }
 
@@ -117,6 +123,9 @@ export function SuggestionList({
         event.preventDefault();
         selectItem(item);
       }
+    } else if (event.key === "Enter" && showSuggestions) {
+      event.preventDefault();
+      onSubmitKeyword(draft.trim());
     }
   }
 
@@ -185,12 +194,14 @@ function SuggestionGroupRow({
 }
 
 function ItemIcon({ kind }: { kind: FlatItem["kind"] }) {
+  if (kind === "keyword") return <Search aria-hidden="true" size={18} strokeWidth={1.75} />;
   if (kind === "landing") return <Building2 aria-hidden="true" size={18} strokeWidth={1.75} />;
   if (kind === "roomType") return <BedDouble aria-hidden="true" size={18} strokeWidth={1.75} />;
   return <MapPin aria-hidden="true" size={18} strokeWidth={1.75} />;
 }
 
 function ItemLabel({ item }: { item: FlatItem }) {
+  if (item.kind === "keyword") return <>Cari &ldquo;{item.data.keyword}&rdquo;</>;
   if (item.kind === "area") return <>{item.data.title}</>;
   if (item.kind === "roomType") return <>{item.data.title}</>;
   if (item.kind === "popular") return <>{item.data.name}</>;

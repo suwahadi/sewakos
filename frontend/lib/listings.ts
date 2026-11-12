@@ -20,6 +20,7 @@ export interface SearchRequestBody {
     flash_sale?: boolean;
     is_available?: boolean;
     area_id?: number;
+    keyword?: string;
   };
   sorting?: { field: string; direction: string };
   limit?: number;
@@ -28,15 +29,17 @@ export interface SearchRequestBody {
 
 export function buildSearchBody(options: {
   areaId?: number;
+  keyword?: string;
   filters: SearchFilters;
   sort: SortOption | null;
   limit: number;
   offset: number;
 }): SearchRequestBody {
-  const { areaId, filters, sort, limit, offset } = options;
+  const { areaId, keyword, filters, sort, limit, offset } = options;
   return {
     filters: {
       area_id: areaId,
+      keyword,
       rent_type: filters.rentType,
       gender: filters.gender.length > 0 ? filters.gender : undefined,
       price_range: filters.priceMin !== undefined || filters.priceMax !== undefined ? [filters.priceMin ?? 0, filters.priceMax ?? 999999999] : undefined,

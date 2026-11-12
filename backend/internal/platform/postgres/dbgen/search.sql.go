@@ -16,34 +16,42 @@ SELECT count(*)::bigint AS total, count(DISTINCT p.id)::bigint AS property_total
 FROM rooms r
 JOIN properties p ON p.id = r.property_id
 JOIN users o ON o.id = p.owner_id
+JOIN areas a ON a.id = p.area_id
 WHERE p.is_active = true AND p.moderation_status = 'approved' AND o.suspended_at IS NULL
   AND (CASE $1::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) IS NOT NULL
-  AND ($2::bool IS NULL OR NOT $2 OR p.gender = ANY($3::text[]))
-  AND ($4::bigint IS NULL OR (CASE $1::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) >= $4)
-  AND ($5::bigint IS NULL OR (CASE $1::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) <= $5)
-  AND ($6::bool IS NULL OR p.is_flash_sale = $6)
-  AND ($7::bool IS NULL OR r.available >= 1)
   AND (
-    $8::bigint IS NULL
-    OR ($9::text = 'city' AND p.area_id = $8)
+    $2::text IS NULL
+    OR p.name ILIKE '%' || $2::text || '%'
+    OR r.name ILIKE '%' || $2::text || '%'
+    OR a.name ILIKE '%' || $2::text || '%'
+  )
+  AND ($3::bool IS NULL OR NOT $3 OR p.gender = ANY($4::text[]))
+  AND ($5::bigint IS NULL OR (CASE $1::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) >= $5)
+  AND ($6::bigint IS NULL OR (CASE $1::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) <= $6)
+  AND ($7::bool IS NULL OR p.is_flash_sale = $7)
+  AND ($8::bool IS NULL OR r.available >= 1)
+  AND (
+    $9::bigint IS NULL
+    OR ($10::text = 'city' AND p.area_id = $9)
     OR (
-      $9::text IN ('campus', 'mrt')
-      AND p.latitude BETWEEN $10::float8 AND $11::float8
-      AND p.longitude BETWEEN $12::float8 AND $13::float8
+      $10::text IN ('campus', 'mrt')
+      AND p.latitude BETWEEN $11::float8 AND $12::float8
+      AND p.longitude BETWEEN $13::float8 AND $14::float8
       AND (
         6371 * acos(
           greatest(-1, least(1,
-            cos(radians($14::float8)) * cos(radians(p.latitude)) * cos(radians(p.longitude) - radians($15::float8))
-            + sin(radians($14::float8)) * sin(radians(p.latitude))
+            cos(radians($15::float8)) * cos(radians(p.latitude)) * cos(radians(p.longitude) - radians($16::float8))
+            + sin(radians($15::float8)) * sin(radians(p.latitude))
           ))
         )
-      ) <= $16::float8
+      ) <= $17::float8
     )
   )
 `
 
 type CountSearchRoomsParams struct {
 	RentType        int16
+	Keyword         pgtype.Text
 	HasGenderFilter pgtype.Bool
 	Genders         []string
 	PriceMin        pgtype.Int8
@@ -69,6 +77,7 @@ type CountSearchRoomsRow struct {
 func (q *Queries) CountSearchRooms(ctx context.Context, arg CountSearchRoomsParams) (CountSearchRoomsRow, error) {
 	row := q.db.QueryRow(ctx, countSearchRooms,
 		arg.RentType,
+		arg.Keyword,
 		arg.HasGenderFilter,
 		arg.Genders,
 		arg.PriceMin,
@@ -183,28 +192,35 @@ WITH page AS (
   FROM rooms r
   JOIN properties p ON p.id = r.property_id
   JOIN users o ON o.id = p.owner_id
+  JOIN areas pa ON pa.id = p.area_id
   WHERE p.is_active = true AND p.moderation_status = 'approved' AND o.suspended_at IS NULL
     AND (CASE $3::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) IS NOT NULL
-    AND ($4::bool IS NULL OR NOT $4 OR p.gender = ANY($5::text[]))
-    AND ($6::bigint IS NULL OR (CASE $3::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) >= $6)
-    AND ($7::bigint IS NULL OR (CASE $3::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) <= $7)
-    AND ($8::bool IS NULL OR p.is_flash_sale = $8)
-    AND ($9::bool IS NULL OR r.available >= 1)
     AND (
-      $10::bigint IS NULL
-      OR ($11::text = 'city' AND p.area_id = $10)
+      $4::text IS NULL
+      OR p.name ILIKE '%' || $4::text || '%'
+      OR r.name ILIKE '%' || $4::text || '%'
+      OR pa.name ILIKE '%' || $4::text || '%'
+    )
+    AND ($5::bool IS NULL OR NOT $5 OR p.gender = ANY($6::text[]))
+    AND ($7::bigint IS NULL OR (CASE $3::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) >= $7)
+    AND ($8::bigint IS NULL OR (CASE $3::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) <= $8)
+    AND ($9::bool IS NULL OR p.is_flash_sale = $9)
+    AND ($10::bool IS NULL OR r.available >= 1)
+    AND (
+      $11::bigint IS NULL
+      OR ($12::text = 'city' AND p.area_id = $11)
       OR (
-        $11::text IN ('campus', 'mrt')
-        AND p.latitude BETWEEN $12::float8 AND $13::float8
-        AND p.longitude BETWEEN $14::float8 AND $15::float8
+        $12::text IN ('campus', 'mrt')
+        AND p.latitude BETWEEN $13::float8 AND $14::float8
+        AND p.longitude BETWEEN $15::float8 AND $16::float8
         AND (
           6371 * acos(
             greatest(-1, least(1,
-              cos(radians($16::float8)) * cos(radians(p.latitude)) * cos(radians(p.longitude) - radians($17::float8))
-              + sin(radians($16::float8)) * sin(radians(p.latitude))
+              cos(radians($17::float8)) * cos(radians(p.latitude)) * cos(radians(p.longitude) - radians($18::float8))
+              + sin(radians($17::float8)) * sin(radians(p.latitude))
             ))
           )
-        ) <= $18::float8
+        ) <= $19::float8
       )
     )
   ORDER BY
@@ -213,7 +229,7 @@ WITH page AS (
     CASE WHEN $1::text = 'availability' AND $2::text = '-' THEN r.available END DESC,
     CASE WHEN $1::text = 'availability' AND $2::text = '+' THEN r.available END ASC,
     r.id ASC
-  LIMIT $20::int OFFSET $19::int
+  LIMIT $21::int OFFSET $20::int
 )
 SELECT
   page.id, r.property_id, r.name AS room_name, p.name AS property_name, a.name AS area_name,
@@ -249,6 +265,7 @@ type SearchRoomsParams struct {
 	SortField       string
 	SortDir         string
 	RentType        int16
+	Keyword         pgtype.Text
 	HasGenderFilter pgtype.Bool
 	Genders         []string
 	PriceMin        pgtype.Int8
@@ -288,6 +305,7 @@ func (q *Queries) SearchRooms(ctx context.Context, arg SearchRoomsParams) ([]Sea
 		arg.SortField,
 		arg.SortDir,
 		arg.RentType,
+		arg.Keyword,
 		arg.HasGenderFilter,
 		arg.Genders,
 		arg.PriceMin,

@@ -36,8 +36,15 @@ WITH page AS (
   FROM rooms r
   JOIN properties p ON p.id = r.property_id
   JOIN users o ON o.id = p.owner_id
+  JOIN areas pa ON pa.id = p.area_id
   WHERE p.is_active = true AND p.moderation_status = 'approved' AND o.suspended_at IS NULL
     AND (CASE sqlc.arg(rent_type)::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) IS NOT NULL
+    AND (
+      sqlc.narg(keyword)::text IS NULL
+      OR p.name ILIKE '%' || sqlc.narg(keyword)::text || '%'
+      OR r.name ILIKE '%' || sqlc.narg(keyword)::text || '%'
+      OR pa.name ILIKE '%' || sqlc.narg(keyword)::text || '%'
+    )
     AND (sqlc.narg(has_gender_filter)::bool IS NULL OR NOT sqlc.narg(has_gender_filter) OR p.gender = ANY(sqlc.arg(genders)::text[]))
     AND (sqlc.narg(price_min)::bigint IS NULL OR (CASE sqlc.arg(rent_type)::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) >= sqlc.narg(price_min))
     AND (sqlc.narg(price_max)::bigint IS NULL OR (CASE sqlc.arg(rent_type)::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) <= sqlc.narg(price_max))
@@ -102,8 +109,15 @@ SELECT count(*)::bigint AS total, count(DISTINCT p.id)::bigint AS property_total
 FROM rooms r
 JOIN properties p ON p.id = r.property_id
 JOIN users o ON o.id = p.owner_id
+JOIN areas a ON a.id = p.area_id
 WHERE p.is_active = true AND p.moderation_status = 'approved' AND o.suspended_at IS NULL
   AND (CASE sqlc.arg(rent_type)::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) IS NOT NULL
+  AND (
+    sqlc.narg(keyword)::text IS NULL
+    OR p.name ILIKE '%' || sqlc.narg(keyword)::text || '%'
+    OR r.name ILIKE '%' || sqlc.narg(keyword)::text || '%'
+    OR a.name ILIKE '%' || sqlc.narg(keyword)::text || '%'
+  )
   AND (sqlc.narg(has_gender_filter)::bool IS NULL OR NOT sqlc.narg(has_gender_filter) OR p.gender = ANY(sqlc.arg(genders)::text[]))
   AND (sqlc.narg(price_min)::bigint IS NULL OR (CASE sqlc.arg(rent_type)::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) >= sqlc.narg(price_min))
   AND (sqlc.narg(price_max)::bigint IS NULL OR (CASE sqlc.arg(rent_type)::smallint WHEN 1 THEN r.price_daily WHEN 2 THEN r.price_weekly ELSE r.price_monthly END) <= sqlc.narg(price_max))

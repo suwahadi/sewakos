@@ -924,6 +924,9 @@ SuggestionList (`GET /suggestion?keyword=`):
   Kelompok kosong tidak ditampilkan.
 - Item tinggi 52px. Pola ARIA combobox: input `role="combobox"`, `aria-expanded`, `aria-controls`,
   `aria-activedescendant`; daftar `role="listbox"`; panah atas/bawah + Enter.
+- Baris pertama (kelompok **Pencarian**, ikon `Search`): "Cari “{teks}”" muncul bila ≥ 3 karakter. Memilihnya atau
+  menekan Enter tanpa item aktif → `/cari?q={teks}`, yang mencari listing dengan `filters.keyword` (API.md §3.3) walaupun
+  tidak ada yang cocok di saran.
 - Pilih area → `/cari?area_id={geocode_id}`. Pilih kost → `/kost/{id}`. Pilih tipe kamar → `/kost/{property_id}?room={id}`.
 - Kurang dari 3 karakter: tampilkan "Area populer" dari `GET /area/city?top=true` sebagai chip.
 

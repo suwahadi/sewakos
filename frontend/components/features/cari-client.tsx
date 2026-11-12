@@ -31,17 +31,25 @@ interface AreaSelection {
   name: string;
 }
 
+interface SearchScope {
+  area: AreaSelection | null;
+  keyword: string | null;
+}
+
 export function CariClient({
   initialArea,
+  initialKeyword,
   initialResult,
   popularAreas,
 }: {
   initialArea: AreaSelection | null;
+  initialKeyword: string | null;
   initialResult: SearchResponseBody | null;
   popularAreas: PopularArea[];
 }) {
   const router = useRouter();
   const [area, setArea] = useState(initialArea);
+  const [keyword, setKeyword] = useState(initialKeyword);
   const [filters, setFilters] = useState<SearchFilters>(DEFAULT_SEARCH_FILTERS);
   const [sort, setSort] = useState<SortOption>({ field: "availability", direction: "-" });
   const [result, setResult] = useState(initialResult);
@@ -79,11 +87,18 @@ export function CariClient({
     }
   }
 
-  async function runSearch(nextArea: AreaSelection, nextFilters: SearchFilters, nextSort: SortOption) {
+  async function runSearch(scope: SearchScope, nextFilters: SearchFilters, nextSort: SortOption) {
     setLoadingResults(true);
     const response = await callBff<SearchResponseBody>("/api/listings/search", {
       method: "POST",
-      body: buildSearchBody({ areaId: nextArea.id, filters: nextFilters, sort: nextSort, limit: PAGE_LIMIT, offset: 0 }),
+      body: buildSearchBody({
+        areaId: scope.area?.id,
+        keyword: scope.keyword ?? undefined,
+        filters: nextFilters,
+        sort: nextSort,
+        limit: PAGE_LIMIT,
+        offset: 0,
+      }),
     });
     setLoadingResults(false);
     if (!response.ok) {
@@ -93,29 +108,53 @@ export function CariClient({
     setResult(response.data);
   }
 
+  const hasScope = area !== null || keyword !== null;
+
   function selectArea(nextArea: AreaSelection) {
     setArea(nextArea);
+    setKeyword(null);
     router.replace(`/cari?area_id=${nextArea.id}&area_name=${encodeURIComponent(nextArea.name)}`);
-    runSearch(nextArea, filters, sort);
+    runSearch({ area: nextArea, keyword: null }, filters, sort);
+  }
+
+  function submitKeyword(nextKeyword: string) {
+    if (nextKeyword.length < 3) return;
+    setArea(null);
+    setKeyword(nextKeyword);
+    router.replace(`/cari?q=${encodeURIComponent(nextKeyword)}`);
+    runSearch({ area: null, keyword: nextKeyword }, filters, sort);
+  }
+
+  function clearKeyword() {
+    setKeyword(null);
+    setResult(null);
+    router.replace("/cari");
   }
 
   async function applyFilters(nextFilters: SearchFilters) {
     setFilters(nextFilters);
-    if (area) await runSearch(area, nextFilters, sort);
+    if (hasScope) await runSearch({ area, keyword }, nextFilters, sort);
   }
 
   async function applySort(nextSort: SortOption) {
     setSort(nextSort);
-    if (area) await runSearch(area, filters, nextSort);
+    if (hasScope) await runSearch({ area, keyword }, filters, nextSort);
   }
 
   async function loadMore() {
     const nextOffset = result?.["next-offset"];
-    if (!area || nextOffset === null || nextOffset === undefined) return;
+    if (!hasScope || nextOffset === null || nextOffset === undefined) return;
     setLoadingMore(true);
     const response = await callBff<SearchResponseBody>("/api/listings/search", {
       method: "POST",
-      body: buildSearchBody({ areaId: area.id, filters, sort, limit: PAGE_LIMIT, offset: nextOffset }),
+      body: buildSearchBody({
+        areaId: area?.id,
+        keyword: keyword ?? undefined,
+        filters,
+        sort,
+        limit: PAGE_LIMIT,
+        offset: nextOffset,
+      }),
     });
     setLoadingMore(false);
     if (!response.ok) {
@@ -129,7 +168,7 @@ export function CariClient({
     applyFilters({ ...filters, gender: filters.gender.filter((value) => value !== gender) });
   }
 
-  if (!area) {
+  if (!hasScope) {
     return (
       <div className="flex flex-col gap-4 px-4 py-4">
         <SuggestionList
@@ -142,6 +181,7 @@ export function CariClient({
           onSelectLanding={(landing) => router.push(`/kost/${landing.id}`)}
           onSelectRoomType={(roomType) => router.push(`/kost/${roomType.property_id}?room=${roomType.id}`)}
           onSelectPopularArea={(popular) => selectArea({ id: popular.id, name: popular.name })}
+          onSubmitKeyword={submitKeyword}
         />
       </div>
     );
@@ -149,6 +189,7 @@ export function CariClient({
 
   const genderLabels: Record<number, string> = { 0: "Campur", 1: "Putra", 2: "Putri" };
   const activeChips: ActiveFilterChip[] = [
+    ...(keyword ? [{ key: "keyword", label: `“${keyword}”`, onRemove: clearKeyword }] : []),
     ...filters.gender.map((gender) => ({
       key: `gender-${gender}`,
       label: genderLabels[gender] ?? String(gender),

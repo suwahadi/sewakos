@@ -5,6 +5,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -50,6 +51,7 @@ func SearchHandler(deps Deps) http.HandlerFunc {
 				FlashSale    any   `json:"flash_sale"`
 				IsAvailable  any   `json:"is_available"`
 				AreaID       any   `json:"area_id"`
+				Keyword      any   `json:"keyword"`
 			} `json:"filters"`
 			Sorting struct {
 				Field     any `json:"field"`
@@ -167,6 +169,14 @@ func SearchHandler(deps Deps) http.HandlerFunc {
 			}
 		}
 
+		var keyword pgtype.Text
+		if body.Filters.Keyword != nil {
+			keywordText, _ := body.Filters.Keyword.(string)
+			keywordText = strings.TrimSpace(keywordText)
+			v.Field("filters.keyword", keywordText).String().MinStringLen(3)
+			keyword = pgtype.Text{String: keywordText, Valid: true}
+		}
+
 		if !v.Valid() {
 			response.Fail(w, http.StatusUnprocessableEntity, response.MsgValidationFailed, v.Errors())
 			return
@@ -183,7 +193,7 @@ func SearchHandler(deps Deps) http.HandlerFunc {
 		counts, err := deps.Store.CountSearchRooms(ctx, dbgen.CountSearchRoomsParams{
 			RentType: rentType, HasGenderFilter: hasGenderFilter, Genders: genders,
 			PriceMin: priceMin, PriceMax: priceMax, FlashSale: flashSale, IsAvailable: isAvailable,
-			AreaID: areaID, AreaType: areaType,
+			Keyword: keyword, AreaID: areaID, AreaType: areaType,
 			AreaLatMin: areaLatMin, AreaLatMax: areaLatMax, AreaLngMin: areaLngMin, AreaLngMax: areaLngMax,
 			AreaLat: areaLat, AreaLng: areaLng, AreaRadiusKm: areaRadiusKM,
 		})
@@ -195,7 +205,7 @@ func SearchHandler(deps Deps) http.HandlerFunc {
 		rows, err := deps.Store.SearchRooms(ctx, dbgen.SearchRoomsParams{
 			RentType: rentType, HasGenderFilter: hasGenderFilter, Genders: genders,
 			PriceMin: priceMin, PriceMax: priceMax, FlashSale: flashSale, IsAvailable: isAvailable,
-			AreaID: areaID, AreaType: areaType,
+			Keyword: keyword, AreaID: areaID, AreaType: areaType,
 			AreaLatMin: areaLatMin, AreaLatMax: areaLatMax, AreaLngMin: areaLngMin, AreaLngMax: areaLngMax,
 			AreaLat: areaLat, AreaLng: areaLng, AreaRadiusKm: areaRadiusKM,
 			SortField: sortField, SortDir: sortDir, ResultOffset: offset, ResultLimit: limit,

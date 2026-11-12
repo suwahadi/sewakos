@@ -246,7 +246,8 @@ Keyword minimal 3 karakter (`422` jika kurang).
     "property_type": "kost",          // kost | apartemen (opsional)
     "flash_sale": false,              // hanya properti flash sale (opsional)
     "is_available": false,            // hanya kamar tersedia (opsional)
-    "area_id": 1                      // area dari suggestion/area populer (opsional)
+    "area_id": 1,                     // area dari suggestion/area populer (opsional)
+    "keyword": "depok"                // cari di nama properti, nama kamar, atau nama area; min 3 karakter (opsional)
   },
   "sorting": { "field": "price", "direction": "-" },  // field: price|availability, direction: -|+
   "limit": 20,    // 1..50, default 20
@@ -276,7 +277,9 @@ Keyword minimal 3 karakter (`422` jika kurang).
 ```
 
 `filters.area_id`: area bertipe `city` → properti di kota itu; `campus`/`mrt` → properti dalam radius 3 km
-dari titik area. Area tidak ada → `422`. `rating_average` (1 desimal) bernilai `null` bila belum ada ulasan.
+dari titik area. Area tidak ada → `422`. `filters.keyword`: pencarian tidak sensitif huruf besar-kecil yang cocok
+dengan bagian dari nama properti, nama kamar, atau nama area; lebih pendek dari 3 karakter → `422`.
+`keyword` dan `area_id` boleh dipakai bersamaan (keduanya harus terpenuhi). `rating_average` (1 desimal) bernilai `null` bila belum ada ulasan.
 `thumbnail_url` = thumbnail foto properti pertama (urut `sort_order`, `id`, hanya foto tanpa `room_id`), atau `null`.
 
 ### 3.4 `GET /listings/latest?limit=` — kost terbaru
