@@ -2,6 +2,7 @@ import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/features/app-header";
+import { FavoriteButton } from "@/components/features/favorite-button";
 import { KostDetailClient } from "@/components/features/kost-detail-client";
 import { PropertyGallery, type GalleryPhoto } from "@/components/features/property-gallery";
 import { ReviewCard } from "@/components/features/review-card";
@@ -23,6 +24,7 @@ interface PropertyDetailResponse {
     latitude: number;
     longitude: number;
     is_flash_sale: boolean;
+    is_favorite: boolean;
     area: { name: string };
     photos: GalleryPhoto[];
     rating: { average: number | null; count: number };
@@ -45,7 +47,16 @@ export default async function KostDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <>
-      <AppHeader variant="inner" title={property.name} role={role} />
+      <AppHeader
+        variant="inner"
+        title={property.name}
+        role={role}
+        rightAction={
+          role !== "owner" && (
+            <FavoriteButton propertyId={property.id} initial={property.is_favorite} guest={role === "guest"} variant="plain" />
+          )
+        }
+      />
       <PropertyGallery photos={property.photos} propertyName={property.name} />
       <div className="flex flex-col gap-4 px-4 py-4">
         <div className="flex flex-col gap-2">

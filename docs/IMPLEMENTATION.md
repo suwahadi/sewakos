@@ -201,7 +201,7 @@ R0 → B1 → F0 → B2 → F1 → B3 → F2 → B4 → F3 → B5 → F4 → B6 
 ## F7 — Rilis 3 UI
 
 - [x] **F7.1 Ulasan.** RatingStars input, ReviewCard, `/kost/{id}/ulasan`, `/owner/ulasan`, moderasi admin.
-- [ ] **F7.2 Favorit.** FavoriteButton di detail, `/favorit`.
+- [x] **F7.2 Favorit.** FavoriteButton di detail, `/favorit`.
 
 ## Q3 — Gerbang Rilis 3
 

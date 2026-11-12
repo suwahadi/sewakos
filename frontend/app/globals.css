@@ -65,6 +65,7 @@
   --animate-toast-in: toast-in 200ms var(--ease-standard) both;
   --animate-toast-out: toast-out 150ms var(--ease-exit) both;
   --animate-shimmer: shimmer 1.4s linear infinite;
+  --animate-heart-pop: heart-pop 200ms var(--ease-standard);
 
   @keyframes page-enter {
     from { opacity: 0; transform: translateY(8px); }
@@ -77,6 +78,9 @@
   @keyframes toast-out {
     from { opacity: 1; transform: none; }
     to   { opacity: 0; transform: translateY(4px) scale(0.98); }
+  }
+  @keyframes heart-pop {
+    50% { transform: scale(1.15); }
   }
   @keyframes shimmer {
     from { background-position: 200% 0; }
