@@ -66,10 +66,13 @@ random() { od -An -tx1 -N "$(($1 / 2))" /dev/urandom | tr -d ' \n'; }
 
 if [ ! -f .env ]; then
   public_host="${PUBLIC_HOST:-$(ip -4 route get 1.1.1.1 | awk '{for (i = 1; i < NF; i++) if ($i == "src") print $(i + 1)}')}"
+  acme_profile=classic
+  [[ "$public_host" =~ ^[0-9.]+$ ]] && acme_profile=shortlived
   log "Generating deploy/.env for $public_host"
   umask 077
   cat > .env <<EOF
 PUBLIC_HOST=$public_host
+ACME_PROFILE=$acme_profile
 POSTGRES_PASSWORD=$(random 40)
 APP_DB_PASSWORD=$(random 40)
 STORAGE_ACCESS_KEY=sewakos

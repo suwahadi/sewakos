@@ -3,11 +3,12 @@
 	default_sni {$PUBLIC_HOST}
 }
 
-# Let's Encrypt only issues IP-address certificates under the short-lived (~6 day) profile; Caddy renews them.
+# Let's Encrypt issues IP-address certificates only under "shortlived"; hostnames use "classic", whose shorter
+# chain to ISRG Root X1 is accepted by older HTTP clients such as payment gateway webhooks.
 (public_tls) {
 	tls {
 		issuer acme {
-			profile shortlived
+			profile {$ACME_PROFILE}
 		}
 	}
 }
