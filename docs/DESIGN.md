@@ -638,10 +638,12 @@ Parkir mobil terbatas, CCTV 24 jam, Mushola). Tidak ada input teks bebas.
 
 ### 6.2 IconButton
 
-Tombol bulat tanpa teks. Ukuran sentuh selalu 44×44. Ukuran visual: `md` 44px (ikon 24px), `sm` 36px (ikon 20px),
-`xs` 32px (ikon 18px, untuk tombol di atas foto yang sempit; area sentuh tetap 44px lewat padding transparan).
-Varian: `plain` (transparan, ikon `neutral-700`), `overlay` (latar putih 92% + `shadow-raised`, dipakai di atas foto),
-`onBrand` (transparan, ikon putih, hover `brand-700`; dipakai di AppHeader).
+Tombol tanpa teks dengan border 1px dan radius `radius-md`, seragam dengan tombol teks (§6.1). Ukuran sentuh selalu
+44×44. Ukuran visual: `md` 44px (ikon 24px), `sm` 36px (ikon 20px), `xs` 32px (ikon 18px, untuk tombol di atas foto
+yang sempit; area sentuh tetap 44px lewat padding transparan).
+Varian: `plain` (latar putih, border `neutral-400`, ikon `neutral-700`, hover `neutral-50`), `overlay` (latar putih 92% +
+`shadow-raised`, border `neutral-400`, dipakai di atas foto), `onBrand` (transparan, border putih 70%, ikon putih,
+hover `brand-700`; dipakai di AppHeader).
 Wajib `aria-label`. Badge hitungan (§6.12) boleh ditempel di pojok kanan atas.
 
 ### 6.3 TextField
