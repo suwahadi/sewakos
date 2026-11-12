@@ -282,7 +282,7 @@ func createProperty(ctx context.Context, deps Deps, r *rand.Rand, slug string, o
 		Slug:        slug,
 		Gender:      gender,
 		Description: description(r, gender, neighborhood, p),
-		Address:     fmt.Sprintf("%s No. %d, %s, %s, %s", pick(r, p.spot.streets), 1+r.IntN(150), neighborhood, p.spot.district, p.city.area.name),
+		Address:     fmt.Sprintf("%s No. %d, %s, %s", pick(r, p.spot.streets), 1+r.IntN(150), neighborhood, p.spot.district),
 		Latitude:    p.spot.lat + (r.Float64()*2-1)*0.012,
 		Longitude:   p.spot.lng + (r.Float64()*2-1)*0.012,
 		IsFlashSale: flashSale, FlashSaleDiscount: discount,
