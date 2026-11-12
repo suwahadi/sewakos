@@ -202,6 +202,10 @@ function DaftarForm() {
         label={
           <>
             Saya menyetujui{" "}
+            <a href="/syarat-ketentuan" className="text-brand-700 underline" target="_blank" rel="noreferrer">
+              Syarat & Ketentuan
+            </a>{" "}
+            serta{" "}
             <a href="/kebijakan-privasi" className="text-brand-700 underline" target="_blank" rel="noreferrer">
               Kebijakan Privasi
             </a>

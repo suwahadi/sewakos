@@ -25,7 +25,9 @@ export function AdminNav() {
   return (
     <aside className="border-b border-neutral-200 bg-neutral-0 lg:sticky lg:top-0 lg:h-dvh lg:border-b-0 lg:border-r">
       <div className="flex h-14 items-center justify-between gap-3 px-4">
-        <span className="text-title-md font-bold text-brand-700">Admin Sewa Kos</span>
+        <Link href="/" className="text-title-md font-bold text-brand-700">
+          Admin Sewa Kos
+        </Link>
         <Link href="/akun" className="text-label font-semibold text-brand-700 lg:hidden">
           Akun
         </Link>
