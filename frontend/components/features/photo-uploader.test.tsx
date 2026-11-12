@@ -98,14 +98,13 @@ describe("PhotoUploader", () => {
     expect(screen.getByRole("button", { name: "Ulangi" })).toBeInTheDocument();
   });
 
-  it("moves a photo right by renumbering sort_order", async () => {
+  it("moves a photo right with Alt+ArrowRight and renumbers sort_order", async () => {
     const user = userEvent.setup();
     callBffMock.mockResolvedValue(ok({}, "Foto diperbarui."));
     render(<PhotoUploader propertyId={12} initialPhotos={[photo(1, 0), photo(2, 0)]} />);
 
-    await user.click(screen.getByRole("button", { name: "Kelola foto 1" }));
-    expect(screen.getByRole("button", { name: "Geser ke kiri" })).toBeDisabled();
-    await user.click(screen.getByRole("button", { name: "Geser ke kanan" }));
+    screen.getByRole("button", { name: "Kelola foto 1" }).focus();
+    await user.keyboard("{Alt>}{ArrowRight}{/Alt}");
 
     await waitFor(() => expect(callBffMock).toHaveBeenCalledTimes(2));
     expect(callBffMock).toHaveBeenNthCalledWith(1, "/api/owner/photos/2", { method: "PATCH", body: { sort_order: 1 } });

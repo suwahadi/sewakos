@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { RoomOption, type RoomOptionData } from "@/components/features/room-option";
 import { FacilityList } from "@/components/features/facility-list";
-import { AccordionItem } from "@/components/ui/accordion";
+import { ExpandableText } from "@/components/ui/expandable-text";
 import { StickyActionBar } from "@/components/ui/sticky-action-bar";
 import { callBff } from "@/lib/api/browser";
 
@@ -53,11 +53,9 @@ export function KostDetailClient({
       )}
 
       {description && (
-        <section>
-          <p className="mb-1 text-title-sm font-semibold text-neutral-900">Tentang kost</p>
-          <AccordionItem title="Selengkapnya">
-            <p className="whitespace-pre-line">{description}</p>
-          </AccordionItem>
+        <section className="flex flex-col gap-2">
+          <p className="text-title-sm font-semibold text-neutral-900">Tentang kost</p>
+          <ExpandableText text={description} />
         </section>
       )}
 

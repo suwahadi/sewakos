@@ -456,12 +456,28 @@ Aturan:
 
 | Teks mengandung | Ikon |
 |---|---|
+| `cctv` | `Camera` |
 | `wifi` | `Wifi` |
 | `ac` (kata utuh) | `AirVent` |
+| `kipas` | `Fan` |
 | `mandi` | `Bath` |
 | `kasur`, `bed` | `BedDouble` |
+| `lemari` | `Shirt` |
+| `meja` | `Table2` |
+| `tv`, `televisi` (kata utuh) | `Tv` |
+| `water heater`, `air panas` | `Flame` |
+| `kulkas` | `Refrigerator` |
+| `dapur` | `CookingPot` |
+| `laundry`, `cuci` | `WashingMachine` |
+| `jemur` | `Sun` |
+| `ruang tamu` | `Sofa` |
+| `parkir motor` | `Bike` |
+| `parkir mobil` | `Car` |
+| `mushola`, `masjid` | `Moon` |
 | `24 jam` | `Clock` |
 | lainnya | `Check` |
+
+Urutan pencocokan mengikuti urutan baris di atas (`CCTV 24 jam` menjadi `Camera`, bukan `Clock`).
 
 Logo aplikasi adalah aset SVG milik kamu sendiri (`/public/logo.svg`), bukan dibuat dari ikon.
 
@@ -841,8 +857,8 @@ hover `neutral-50`. Akun dipisah border atas `neutral-200` di akhir daftar.
 
 | Item | Ikon | Item | Ikon |
 |---|---|---|---|
-| Moderasi properti | `Building2` | Keuangan | `Wallet` |
-| Moderasi ulasan | `Star` | Rekonsiliasi | `Scale` |
+| Properti | `Building2` | Keuangan | `Wallet` |
+| Ulasan | `Star` | Rekonsiliasi | `Scale` |
 | Booking | `ListChecks` | Riwayat | `History` |
 | Tagihan | `ReceiptText` | Pengguna | `Users` |
 | Refund | `Undo2` | Area | `MapPin` |
@@ -1018,8 +1034,23 @@ Konten halaman diberi `padding-bottom` setinggi bar agar tidak tertutup. ≥ 102
 
 ### 6.34 Accordion
 
-Pola §5.2. Dipakai untuk deskripsi panjang ("Selengkapnya"), fasilitas lengkap, kebijakan, FAQ, dan rincian
-invoice di daftar. Boleh beberapa terbuka bersamaan. Jangan menaruh aksi utama di dalam accordion yang tertutup.
+Pola §5.2. Dipakai untuk fasilitas lengkap, kebijakan, FAQ, dan rincian invoice di daftar. Boleh beberapa terbuka bersamaan.
+Jangan menaruh aksi utama di dalam accordion yang tertutup. Deskripsi kost memakai §6.34a.
+
+### 6.34a ExpandableText
+
+Deskripsi kost (`description`) tampil langsung sebagai paragraf, dibatasi 3 baris (`line-clamp-3`), `body`
+`neutral-700`. Tombol "Selengkapnya" (`ChevronDown`, membalik ke "Tutup" dengan `ChevronDown` terbalik) hanya muncul bila
+teks benar-benar terpotong (tinggi konten melebihi batas), diukur setelah render dan saat ukuran layar berubah. Toggle
+terjadi di tempat, tanpa memuat ulang halaman. Tombol memakai `aria-expanded`.
+
+### 6.36a ReviewsPopup (detail kost)
+
+Tombol "Lihat semua ulasan ({n})" (teks `label` 600 `brand-700`, ikon `ChevronRight`) adalah tautan ke
+`/kost/{id}/ulasan`. Saat diklik dari detail kost, navigasi klien membuka popup `BottomSheet` (§6.20) di atas detail,
+dengan RatingSummary dan daftar ulasan (ReviewList, LoadMore), sehingga URL berubah ke `/kost/{id}/ulasan`. Membuka URL
+itu langsung atau memuat ulang halaman menampilkan halaman ulasan penuh. Menutup popup kembali ke detail. Popup berbentuk
+lembar bawah di mobile dan di tengah (maks 560px) di layar lebih lebar, mengikuti BottomSheet.
 
 ### 6.35 RatingStars & RatingSummary
 
@@ -1147,7 +1178,9 @@ Alur per file (boleh beberapa sekaligus, maks 3 paralel):
 Petak saat proses: pratinjau lokal (`URL.createObjectURL`, dibebaskan setelah selesai) + overlay progres
 (lingkaran tipis `brand-600`, persen `caption`). Tahap 3 tampil "Memproses…". Gagal: overlay `danger-bg`, tombol
 "Ulangi" & `X`. Selesai: ganti ke `thumbnail_url`. Tiap petak: tombol `Trash2` (ConfirmDialog) dan field caption.
-Urutan diubah lewat tombol "Geser ke kiri/kanan" (aksesibel) yang memanggil `PATCH /owner/photos/{id}` (`sort_order`).
+Urutan diubah dengan **seret-dan-lepas** langsung di grid (`PATCH /owner/photos/{id}` dengan `sort_order` setelah
+dilepas). Di layar sentuh, seret dimulai setelah tekan-tahan ±200 ms agar gulir halaman tetap berfungsi. Keyboard:
+fokus petak lalu `Alt` + panah kiri/kanan. Popup "Kelola foto" tidak lagi memuat tombol geser.
 
 ### 6.48 OtpChannelPicker
 
@@ -1187,7 +1220,7 @@ Path ini juga dipakai backend untuk field `link` notifikasi (SPEC-GO.md §17). M
 | `/owner` | Beranda owner | Owner |
 | `/owner/properti`, `/owner/properti/{id}` | Properti, kamar, foto | Owner |
 | `/owner/booking`, `/owner/booking/{id}` | Booking masuk | Owner |
-| `/owner/keuangan` | Ringkasan, ledger, payout, rekening | Owner |
+| `/owner/keuangan` | Ringkasan (StatCard), lalu tab Buku besar · Payout · Rekening (form rekening hanya di tab Rekening) | Owner |
 | `/owner/ulasan` | Ulasan properti | Owner |
 | `/admin/...` | Panel admin (struktur mengikuti bagian di API-ADMIN.md) | Admin |
 

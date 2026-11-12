@@ -1,17 +1,53 @@
-import { AirVent, BedDouble, Bath, Check, Wifi, type LucideIcon } from "lucide-react";
+import {
+  AirVent,
+  Bath,
+  BedDouble,
+  Bike,
+  Camera,
+  Car,
+  Check,
+  Clock,
+  CookingPot,
+  Fan,
+  Flame,
+  Moon,
+  Refrigerator,
+  Shirt,
+  Sofa,
+  Sun,
+  Table2,
+  Tv,
+  WashingMachine,
+  Wifi,
+  type LucideIcon,
+} from "lucide-react";
 import { AccordionItem } from "@/components/ui/accordion";
 
-const ICON_RULES: { match: (text: string) => boolean; icon: LucideIcon }[] = [
-  { match: (text) => text.includes("wifi"), icon: Wifi },
-  { match: (text) => /\bac\b/.test(text), icon: AirVent },
-  { match: (text) => text.includes("mandi"), icon: Bath },
-  { match: (text) => text.includes("kasur") || text.includes("bed"), icon: BedDouble },
-  { match: (text) => text.includes("24 jam"), icon: Check },
+const ICON_RULES: { match: RegExp; icon: LucideIcon }[] = [
+  { match: /cctv/, icon: Camera },
+  { match: /wifi/, icon: Wifi },
+  { match: /\bac\b/, icon: AirVent },
+  { match: /kipas/, icon: Fan },
+  { match: /mandi/, icon: Bath },
+  { match: /kasur|bed/, icon: BedDouble },
+  { match: /lemari/, icon: Shirt },
+  { match: /meja/, icon: Table2 },
+  { match: /\btv\b|televisi/, icon: Tv },
+  { match: /water heater|air panas/, icon: Flame },
+  { match: /kulkas/, icon: Refrigerator },
+  { match: /dapur/, icon: CookingPot },
+  { match: /laundry|cuci/, icon: WashingMachine },
+  { match: /jemur/, icon: Sun },
+  { match: /ruang tamu/, icon: Sofa },
+  { match: /parkir motor/, icon: Bike },
+  { match: /parkir mobil/, icon: Car },
+  { match: /mushola|masjid/, icon: Moon },
+  { match: /24 jam/, icon: Clock },
 ];
 
 export function facilityIcon(facility: string): LucideIcon {
   const normalized = facility.toLowerCase();
-  return ICON_RULES.find((rule) => rule.match(normalized))?.icon ?? Check;
+  return ICON_RULES.find((rule) => rule.match.test(normalized))?.icon ?? Check;
 }
 
 const VISIBLE_COUNT = 6;

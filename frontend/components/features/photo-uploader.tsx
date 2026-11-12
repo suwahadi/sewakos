@@ -3,14 +3,14 @@
 import { ImagePlus, X } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
-import { ButtonPair } from "@/components/ui/button-pair";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
 import { TextField } from "@/components/ui/text-field";
 import { callBff } from "@/lib/api/browser";
+import { cn } from "@/lib/cn";
 import { showApiError } from "@/lib/api/show-error";
 import type { OwnerPhoto } from "@/lib/owner";
 import { toast } from "@/lib/toast";
@@ -20,6 +20,19 @@ const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_BYTES = 10 * 1024 * 1024;
 const MAX_PHOTOS = 30;
 const PARALLEL_UPLOADS = 3;
+const DRAG_THRESHOLD_PX = 6;
+const TOUCH_HOLD_MS = 200;
+const CLICK_SUPPRESS_MS = 300;
+
+interface PhotoGesture {
+  id: number;
+  pointerId: number;
+  pointerType: string;
+  x: number;
+  y: number;
+  active: boolean;
+  timer?: ReturnType<typeof setTimeout>;
+}
 
 interface UploadTask {
   key: string;
@@ -40,8 +53,14 @@ export function PhotoUploader({ propertyId, initialPhotos }: { propertyId: numbe
   const [photos, setPhotos] = useState(() => [...initialPhotos].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id));
   const [tasks, setTasks] = useState<UploadTask[]>([]);
   const [selected, setSelected] = useState<OwnerPhoto | null>(null);
+  const [draft, setDraft] = useState<OwnerPhoto[] | null>(null);
+  const [dragId, setDragId] = useState<number | null>(null);
+  const draftRef = useRef<OwnerPhoto[] | null>(null);
+  const gesture = useRef<PhotoGesture | null>(null);
+  const suppressClick = useRef(false);
   const taskCounter = useRef(0);
   const previews = useRef(new Set<string>());
+  const view = draft ?? photos;
 
   useEffect(() => {
     const urls = previews.current;
@@ -103,6 +122,85 @@ export function PhotoUploader({ propertyId, initialPhotos }: { propertyId: numbe
     void runWithConcurrency(accepted, PARALLEL_UPLOADS, upload);
   }
 
+  function previewMove(targetId: number) {
+    const dragging = gesture.current?.id;
+    const base = draftRef.current ?? photos;
+    const from = base.findIndex((photo) => photo.id === dragging);
+    const to = base.findIndex((photo) => photo.id === targetId);
+    if (from < 0 || to < 0 || from === to) return;
+    const next = [...base];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved!);
+    draftRef.current = next;
+    setDraft(next);
+  }
+
+  function activateDrag(element: HTMLElement) {
+    const current = gesture.current;
+    if (!current || current.active) return;
+    current.active = true;
+    clearTimeout(current.timer);
+    try {
+      element.setPointerCapture(current.pointerId);
+    } catch {
+      gesture.current = null;
+      return;
+    }
+    setDragId(current.id);
+    draftRef.current = photos;
+    setDraft(photos);
+  }
+
+  function endDrag(commit: boolean) {
+    const next = draftRef.current;
+    draftRef.current = null;
+    gesture.current = null;
+    setDraft(null);
+    setDragId(null);
+    if (commit && next) void persistOrder(next);
+  }
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLButtonElement>, photo: OwnerPhoto) {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    const current: PhotoGesture = { id: photo.id, pointerId: event.pointerId, pointerType: event.pointerType, x: event.clientX, y: event.clientY, active: false };
+    gesture.current = current;
+    if (event.pointerType !== "mouse") {
+      const element = event.currentTarget;
+      current.timer = setTimeout(() => activateDrag(element), TOUCH_HOLD_MS);
+    }
+  }
+
+  function handlePointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
+    const current = gesture.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    if (!current.active) {
+      if (Math.hypot(event.clientX - current.x, event.clientY - current.y) < DRAG_THRESHOLD_PX) return;
+      if (current.pointerType !== "mouse") {
+        clearTimeout(current.timer);
+        gesture.current = null;
+        return;
+      }
+      activateDrag(event.currentTarget);
+    }
+    const hovered = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-photo-id]");
+    if (hovered?.dataset.photoId) previewMove(Number(hovered.dataset.photoId));
+  }
+
+  function handlePointerEnd(event: ReactPointerEvent<HTMLButtonElement>, cancelled: boolean) {
+    const current = gesture.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    clearTimeout(current.timer);
+    if (!current.active) {
+      gesture.current = null;
+      return;
+    }
+    suppressClick.current = true;
+    setTimeout(() => {
+      suppressClick.current = false;
+    }, CLICK_SUPPRESS_MS);
+    endDrag(!cancelled);
+  }
+
   async function persistOrder(next: OwnerPhoto[]) {
     const previous = photos;
     setPhotos(next);
@@ -127,8 +225,6 @@ export function PhotoUploader({ propertyId, initialPhotos }: { propertyId: numbe
     void persistOrder(next);
   }
 
-  const selectedIndex = selected ? photos.findIndex((photo) => photo.id === selected.id) : -1;
-
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-3">
@@ -147,15 +243,39 @@ export function PhotoUploader({ propertyId, initialPhotos }: { propertyId: numbe
           <ImagePlus aria-hidden="true" size={24} strokeWidth={1.75} />
           Tambah foto
         </button>
-        {photos.map((photo, index) => (
+        {view.map((photo, index) => (
           <button
             key={photo.id}
             type="button"
-            onClick={() => setSelected(photo)}
+            data-photo-id={photo.id}
+            onClick={() => {
+              if (suppressClick.current) return;
+              setSelected(photo);
+            }}
+            onPointerDown={(event) => handlePointerDown(event, photo)}
+            onPointerMove={handlePointerMove}
+            onPointerUp={(event) => handlePointerEnd(event, false)}
+            onPointerCancel={(event) => handlePointerEnd(event, true)}
+            onKeyDown={(event) => {
+              if (!event.altKey || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
+              event.preventDefault();
+              move(photo, event.key === "ArrowLeft" ? -1 : 1);
+            }}
             aria-label={`Kelola foto ${index + 1}${photo.caption ? `: ${photo.caption}` : ""}`}
-            className="relative aspect-square overflow-hidden rounded-md bg-neutral-100"
+            aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
+            className={cn(
+              "relative aspect-square select-none overflow-hidden rounded-md bg-neutral-100 transition-transform duration-[var(--duration-fast)] ease-standard",
+              dragId === photo.id && "scale-95 opacity-80 ring-2 ring-brand-600",
+            )}
           >
-            <Image src={photo.thumbnail_url} alt="" fill sizes="(min-width: 1024px) 20vw, 33vw" className="object-cover" />
+            <Image
+              src={photo.thumbnail_url}
+              alt=""
+              fill
+              draggable={false}
+              sizes="(min-width: 1024px) 20vw, 33vw"
+              className="pointer-events-none object-cover"
+            />
           </button>
         ))}
         {tasks.map((task) => (
@@ -176,10 +296,7 @@ export function PhotoUploader({ propertyId, initialPhotos }: { propertyId: numbe
       />
       <PhotoSheet
         photo={selected}
-        canMoveLeft={selectedIndex > 0}
-        canMoveRight={selectedIndex >= 0 && selectedIndex < photos.length - 1}
         onClose={() => setSelected(null)}
-        onMove={(offset) => selected && move(selected, offset)}
         onUpdated={(updated) => {
           setPhotos((current) => current.map((photo) => (photo.id === updated.id ? updated : photo)));
           setSelected(updated);
@@ -234,18 +351,12 @@ function ProgressRing({ percent }: { percent: number }) {
 
 function PhotoSheet({
   photo,
-  canMoveLeft,
-  canMoveRight,
   onClose,
-  onMove,
   onUpdated,
   onDeleted,
 }: {
   photo: OwnerPhoto | null;
-  canMoveLeft: boolean;
-  canMoveRight: boolean;
   onClose: () => void;
-  onMove: (offset: -1 | 1) => void;
   onUpdated: (photo: OwnerPhoto) => void;
   onDeleted: (id: number) => void;
 }) {
@@ -255,9 +366,6 @@ function PhotoSheet({
         <PhotoSheetBody
           key={photo.id}
           photo={photo}
-          canMoveLeft={canMoveLeft}
-          canMoveRight={canMoveRight}
-          onMove={onMove}
           onUpdated={onUpdated}
           onDeleted={onDeleted}
         />
@@ -268,16 +376,10 @@ function PhotoSheet({
 
 function PhotoSheetBody({
   photo,
-  canMoveLeft,
-  canMoveRight,
-  onMove,
   onUpdated,
   onDeleted,
 }: {
   photo: OwnerPhoto;
-  canMoveLeft: boolean;
-  canMoveRight: boolean;
-  onMove: (offset: -1 | 1) => void;
   onUpdated: (photo: OwnerPhoto) => void;
   onDeleted: (id: number) => void;
 }) {
@@ -315,14 +417,6 @@ function PhotoSheetBody({
       <Button variant="secondary" fullWidth loading={saving} onClick={saveCaption}>
         Simpan keterangan
       </Button>
-      <ButtonPair>
-        <Button variant="outline" disabled={!canMoveLeft} onClick={() => onMove(-1)}>
-          Geser ke kiri
-        </Button>
-        <Button variant="outline" disabled={!canMoveRight} onClick={() => onMove(1)}>
-          Geser ke kanan
-        </Button>
-      </ButtonPair>
       <Button variant="ghost" fullWidth className="text-danger hover:bg-danger-bg active:bg-danger-bg" onClick={() => setConfirmDelete(true)}>
         Hapus foto
       </Button>

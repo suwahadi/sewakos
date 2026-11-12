@@ -13,8 +13,8 @@ describe("AdminNav", () => {
     const links = within(sidebar).getAllByRole("link", { hidden: true }).filter((link) => link.closest("nav"));
 
     expect(links.map((link) => link.textContent)).toEqual([
-      "Moderasi properti",
-      "Moderasi ulasan",
+      "Properti",
+      "Ulasan",
       "Booking",
       "Tagihan",
       "Refund",

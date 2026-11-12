@@ -108,12 +108,14 @@ describe("OwnerFinance", () => {
       />,
     );
 
+    await user.click(screen.getByRole("tab", { name: "Rekening" }));
     expect(screen.getByLabelText("Nomor rekening")).toHaveValue("1234567890");
     await user.click(screen.getByRole("button", { name: "Simpan rekening" }));
     expect(callBffMock).toHaveBeenCalledWith("/api/owner/bank-account", {
       method: "PUT",
       body: { bank_name: "BCA", account_number: "1234567890", account_name: "Pemilik" },
     });
+    await user.click(screen.getByRole("tab", { name: "Payout" }));
     expect(screen.getAllByText("Rp4.250.000").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Menunggu transfer").length).toBeGreaterThan(0);
   });
@@ -153,8 +155,11 @@ describe("OwnerFinance", () => {
     expect(screen.getByRole("link", { name: "CSV" })).toHaveAttribute("href", "/api/owner/finance/ledger.csv");
   });
 
-  it("asks for an account when none is on file", () => {
+  it("asks for an account when none is on file", async () => {
+    const user = userEvent.setup();
     render(<OwnerFinance bankAccount={null} initialPayouts={[]} financeSummary={null} initialLedger={[]} />);
+    expect(screen.queryByLabelText("Nomor rekening")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Rekening" }));
     expect(screen.getByText("Isi rekening agar dana booking yang disetujui bisa ditransfer admin.")).toBeInTheDocument();
   });
 });

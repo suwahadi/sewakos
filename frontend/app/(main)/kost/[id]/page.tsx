@@ -1,4 +1,4 @@
-import { ExternalLink } from "lucide-react";
+import { ChevronRight, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/features/app-header";
@@ -96,8 +96,12 @@ export default async function KostDetailPage({ params }: { params: Promise<{ id:
               </div>
             )}
             {property.rating.count > reviews.length && (
-              <Link href={`/kost/${property.id}/ulasan`} className="text-label font-semibold text-brand-700">
+              <Link
+                href={`/kost/${property.id}/ulasan`}
+                className="inline-flex min-h-11 items-center gap-1 text-label font-semibold text-brand-700"
+              >
                 Lihat semua ulasan ({property.rating.count})
+                <ChevronRight aria-hidden="true" size={16} strokeWidth={1.75} />
               </Link>
             )}
           </section>

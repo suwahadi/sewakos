@@ -32,8 +32,8 @@ interface AdminNavItem {
 }
 
 const ITEMS: AdminNavItem[] = [
-  { href: "/admin/properti", label: "Moderasi properti", icon: Building2 },
-  { href: "/admin/ulasan", label: "Moderasi ulasan", icon: Star },
+  { href: "/admin/properti", label: "Properti", icon: Building2 },
+  { href: "/admin/ulasan", label: "Ulasan", icon: Star },
   { href: "/admin/booking", label: "Booking", icon: ListChecks },
   { href: "/admin/tagihan", label: "Tagihan", icon: ReceiptText },
   { href: "/admin/refund", label: "Refund", icon: Undo2 },
