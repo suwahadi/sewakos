@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/suwahadi/sewakos/backend/internal/midtrans"
@@ -440,12 +441,39 @@ func TestWebhookUnknownSignatureIs403(t *testing.T) {
 	}
 }
 
-func TestWebhookUnknownOrderIDIs404(t *testing.T) {
+func TestWebhookUnknownOrderIDIsAcknowledged(t *testing.T) {
 	t.Setenv("MIDTRANS_SERVER_KEY", webhookTestServerKey)
 	srv, _ := newTestServerAndPool(t)
 
-	resp, body := postWebhookNotification(t, srv, "KOS-999999-999999", "200", "1.00")
-	if resp.StatusCode != http.StatusNotFound {
-		t.Fatalf("status = %d, body = %s, want 404", resp.StatusCode, body)
+	resp, body := postWebhookNotification(t, srv, "payment_notif_test_M000000000_x", "200", "105000.00")
+	if resp.StatusCode != http.StatusOK || !strings.Contains(string(body), `"message":"OK"`) {
+		t.Fatalf("status = %d, body = %s, want 200 OK for a dashboard test notification", resp.StatusCode, body)
+	}
+}
+
+func TestWebhookVerifiesWithSignatureSecretKeyWhenSet(t *testing.T) {
+	t.Setenv("MIDTRANS_SERVER_KEY", "server-key-used-for-api-calls")
+	t.Setenv("MIDTRANS_SIGNATURE_KEY", webhookTestServerKey)
+	srv, _ := newTestServerAndPool(t)
+
+	resp, body := postWebhookNotification(t, srv, "payment_notif_test_M000000000_y", "200", "105000.00")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("signed with signature key: status = %d, body = %s, want 200", resp.StatusCode, body)
+	}
+
+	sum := sha512.Sum512([]byte("payment_notif_test_M000000000_y" + "200" + "105000.00" + "server-key-used-for-api-calls"))
+	payload := fmt.Sprintf(`{"order_id":"payment_notif_test_M000000000_y","status_code":"200","gross_amount":"105000.00","signature_key":%q}`, hex.EncodeToString(sum[:]))
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/payments/midtrans/notification", bytes.NewBufferString(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	signedWithServerKey, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedWithServerKey.Body.Close()
+	if signedWithServerKey.StatusCode != http.StatusForbidden {
+		t.Errorf("signed with server key while a signature key is set: status = %d, want 403", signedWithServerKey.StatusCode)
 	}
 }

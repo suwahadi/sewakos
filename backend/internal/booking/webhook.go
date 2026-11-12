@@ -45,14 +45,15 @@ func WebhookHandler(deps Deps) http.HandlerFunc {
 			response.Fail(w, http.StatusBadRequest, response.MsgValidationFailed, nil)
 			return
 		}
-		if !midtrans.VerifyNotificationSignature(deps.MidtransServerKey, body.OrderID, body.StatusCode, body.GrossAmount, body.SignatureKey) {
+		if !midtrans.VerifyNotificationSignature(deps.MidtransSignatureKey, body.OrderID, body.StatusCode, body.GrossAmount, body.SignatureKey) {
 			response.Fail(w, http.StatusForbidden, response.MsgAccessDenied, nil)
 			return
 		}
 
 		if _, err := getPaymentByOrderID(ctx, deps, body.OrderID); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				response.NotFoundHandler(w, r)
+				slog.Info("midtrans notification for unknown order acknowledged", "order_id", body.OrderID)
+				response.Success(w, http.StatusOK, "OK", nil)
 				return
 			}
 			response.InternalErrorHandler(w, r)

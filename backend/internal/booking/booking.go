@@ -36,7 +36,7 @@ type Deps struct {
 	DB                   TxBeginner
 	AdminFee             AdminFee
 	Midtrans             midtrans.Client
-	MidtransServerKey    string
+	MidtransSignatureKey string
 	PaymentExpiryMinutes int
 	MidtransFinishURL    string
 	AppPublicURL         string

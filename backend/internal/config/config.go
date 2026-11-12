@@ -26,6 +26,7 @@ type Config struct {
 	OTPDebugEcho          bool
 
 	MidtransServerKey    string
+	MidtransSignatureKey string
 	MidtransClientKey    string
 	MidtransIsProduction bool
 	MidtransFinishURL    string
@@ -163,6 +164,7 @@ func Load() (Config, error) {
 	if cfg.TrustedProxies, err = getPrefixes("TRUSTED_PROXIES"); err != nil {
 		return Config{}, err
 	}
+	cfg.MidtransSignatureKey = getString("MIDTRANS_SIGNATURE_KEY", cfg.MidtransServerKey)
 
 	// OTP_DEBUG_ECHO must never leak real codes in production (API.md §2.2, SPEC-GO.md §3).
 	if cfg.AppEnv == "production" && cfg.OTPDebugEcho {

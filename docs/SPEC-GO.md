@@ -180,9 +180,10 @@ di produksi memakai image dari `Dockerfile` lewat `deploy/install.sh`.
 | `OTP_RESEND_AFTER_SECONDS` | `60` | |
 | `OTP_MAX_PER_MINUTE` | `2` | |
 | `OTP_DEBUG_ECHO` | `false` | `true` hanya di dev. **Server menolak start jika `true` dan `APP_ENV=production`** |
-| `MIDTRANS_SERVER_KEY` | — | Wajib, rahasia |
+| `MIDTRANS_SERVER_KEY` | — | Wajib, rahasia. Dipakai untuk memanggil API Midtrans (Snap, GET status, expire) |
+| `MIDTRANS_SIGNATURE_KEY` | = `MIDTRANS_SERVER_KEY` | Rahasia. "Signature Secret Key" dari dashboard Midtrans, dipakai **hanya** untuk memverifikasi `signature_key` webhook (§13.3). Kosong = pakai server key |
 | `MIDTRANS_CLIENT_KEY` | — | Untuk frontend (Snap.js) |
-| `MIDTRANS_IS_PRODUCTION` | `false` | Pilih base URL sandbox/production |
+| `MIDTRANS_IS_PRODUCTION` | `false` | Pilih base URL sandbox/production. Satu-satunya penentu environment; jangan menyimpulkan environment dari prefix kunci (`SB-`, `Mid-`) |
 | `MIDTRANS_FINISH_URL` | kosong | `callbacks.finish` Snap (halaman frontend setelah bayar) |
 | `MIDTRANS_BASE_URL` | kosong | Mengganti base URL Snap & API Midtrans (Midtrans tiruan untuk E2E). **Server menolak start jika diisi dan `APP_ENV=production`** |
 | `PAYMENT_EXPIRY_MINUTES` | `15` | Kunci stok = masa berlaku transaksi |
@@ -953,10 +954,12 @@ Body pembuatan transaksi:
 
 ### 13.3 Webhook (`POST /api/payments/midtrans/notification`)
 
-1. Parse body. Hitung `SHA512(order_id + status_code + gross_amount + MIDTRANS_SERVER_KEY)` (hex huruf kecil,
+1. Parse body. Hitung `SHA512(order_id + status_code + gross_amount + MIDTRANS_SIGNATURE_KEY)` (hex huruf kecil,
    `gross_amount` persis string yang diterima, mis. `"4250000.00"`). Bandingkan dengan `signature_key`
    secara constant-time. Salah → 403 `Akses ditolak.`
-2. `order_id` tidak dikenal → 404 `Data tidak ditemukan.`
+2. `order_id` tidak dikenal (signature sudah valid) → catat di log lalu balas 200 `"OK"` tanpa memproses apa pun.
+   Notifikasi uji dari dashboard Midtrans memakai `order_id` contoh dan menganggap non-2xx sebagai URL gagal;
+   balasan 200 juga menghentikan pengulangan kiriman untuk order yang memang tidak ada.
 3. Ambil status otoritatif lewat **GET status** (jangan percaya body saja). Simpan body ke `last_notification`.
 4. Cocokkan `gross_amount` dengan `payments.gross_amount`; beda → log error, tandai `failure`, jangan proses.
 5. Proses dengan fungsi bersama `ApplyPaymentStatus(order_id, status)` (dipakai juga oleh worker):

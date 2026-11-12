@@ -22,7 +22,7 @@ func discardLogger() *slog.Logger {
 
 func workerDeps(pool *pgxpool.Pool, midtransClient midtrans.Client, sender *fakeEmailSender) worker.Deps {
 	return worker.Deps{
-		Booking: booking.Deps{DB: pool, Midtrans: midtransClient, MidtransServerKey: webhookTestServerKey},
+		Booking: booking.Deps{DB: pool, Midtrans: midtransClient},
 		Email:   sender,
 	}
 }

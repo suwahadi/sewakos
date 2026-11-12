@@ -6,8 +6,8 @@ import (
 	"encoding/hex"
 )
 
-func VerifyNotificationSignature(serverKey, orderID, statusCode, grossAmount, signatureKey string) bool {
-	sum := sha512.Sum512([]byte(orderID + statusCode + grossAmount + serverKey))
+func VerifyNotificationSignature(secretKey, orderID, statusCode, grossAmount, signatureKey string) bool {
+	sum := sha512.Sum512([]byte(orderID + statusCode + grossAmount + secretKey))
 	expected := hex.EncodeToString(sum[:])
 	// Midtrans-supplied signatures must be compared without leaking timing
 	// information about how many leading bytes matched.

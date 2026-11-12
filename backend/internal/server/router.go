@@ -99,7 +99,7 @@ func NewRouter(deps Deps) chi.Router {
 	bookingDeps := booking.Deps{
 		Store: queries, DB: deps.DB, AdminFee: adminFeeCache,
 		Midtrans:             midtransClient,
-		MidtransServerKey:    deps.Config.MidtransServerKey,
+		MidtransSignatureKey: deps.Config.MidtransSignatureKey,
 		PaymentExpiryMinutes: deps.Config.PaymentExpiryMinutes,
 		MidtransFinishURL:    deps.Config.MidtransFinishURL,
 		AppPublicURL:         deps.Config.AppPublicURL,

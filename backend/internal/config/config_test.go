@@ -24,3 +24,20 @@ func TestLoadKeepsMidtransBaseURLOutsideProduction(t *testing.T) {
 		t.Errorf("MidtransBaseURL = %q", cfg.MidtransBaseURL)
 	}
 }
+
+func TestLoadFallsBackToServerKeyForSignatures(t *testing.T) {
+	t.Setenv("MIDTRANS_SERVER_KEY", "server-key")
+	t.Setenv("MIDTRANS_SIGNATURE_KEY", "")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.MidtransSignatureKey != "server-key" {
+		t.Errorf("MidtransSignatureKey = %q, want the server key when unset", cfg.MidtransSignatureKey)
+	}
+
+	t.Setenv("MIDTRANS_SIGNATURE_KEY", "signature-secret")
+	if cfg, err = Load(); err != nil || cfg.MidtransSignatureKey != "signature-secret" || cfg.MidtransServerKey != "server-key" {
+		t.Errorf("Load with signature key = %+v, %v", cfg.MidtransSignatureKey, err)
+	}
+}

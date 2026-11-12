@@ -61,10 +61,9 @@ func main() {
 
 	deps := worker.Deps{
 		Booking: booking.Deps{
-			DB:                pool,
-			Midtrans:          midtrans.NewHTTPClient(cfg.MidtransServerKey, cfg.MidtransIsProduction, cfg.MidtransBaseURL),
-			MidtransServerKey: cfg.MidtransServerKey,
-			AppPublicURL:      cfg.AppPublicURL,
+			DB:           pool,
+			Midtrans:     midtrans.NewHTTPClient(cfg.MidtransServerKey, cfg.MidtransIsProduction, cfg.MidtransBaseURL),
+			AppPublicURL: cfg.AppPublicURL,
 		},
 		Email:   email.LogSender{Logger: logger},
 		Storage: objectStore,
