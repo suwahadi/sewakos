@@ -327,7 +327,7 @@ Hanya `opacity` dan `transform` yang dianimasikan, kecuali accordion (`grid-temp
 
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-  --animate-page-enter: page-enter 200ms var(--ease-standard) both;
+  --animate-page-enter: page-enter 200ms var(--ease-standard) backwards;
   --animate-toast-in: toast-in 200ms var(--ease-standard) both;
   --animate-toast-out: toast-out 150ms var(--ease-exit) both;
   --animate-shimmer: shimmer 1.4s linear infinite;

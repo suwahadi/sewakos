@@ -40,7 +40,9 @@
   --text-title-md: 1rem;      --text-title-md--line-height: 1.5rem;
   --text-title-sm: 0.875rem;  --text-title-sm--line-height: 1.25rem;
   --text-body: 0.875rem;      --text-body--line-height: 1.375rem;
+  --text-body-strong: 0.875rem; --text-body-strong--line-height: 1.375rem; --text-body-strong--font-weight: 500;
   --text-caption: 0.75rem;    --text-caption--line-height: 1.125rem;
+  --text-caption-strong: 0.75rem; --text-caption-strong--line-height: 1rem; --text-caption-strong--font-weight: 600;
   --text-label: 0.8125rem;    --text-label--line-height: 1.125rem;
   --text-price: 1.125rem;     --text-price--line-height: 1.5rem;
   --text-price-lg: 1.5rem;    --text-price-lg--line-height: 2rem;
@@ -61,7 +63,8 @@
   --duration-slow: 280ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-  --animate-page-enter: page-enter 200ms var(--ease-standard) both;
+  /* backwards, not both: a transform left on the page wrapper would turn it into the containing block of every fixed bar. */
+  --animate-page-enter: page-enter 200ms var(--ease-standard) backwards;
   --animate-toast-in: toast-in 200ms var(--ease-standard) both;
   --animate-toast-out: toast-out 150ms var(--ease-exit) both;
   --animate-shimmer: shimmer 1.4s linear infinite;
@@ -111,6 +114,7 @@
       --text-title-lg: 1.5rem;    --text-title-lg--line-height: 2rem;
       --text-title-md: 1.125rem;  --text-title-md--line-height: 1.625rem;
       --text-body: 0.9375rem;     --text-body--line-height: 1.5rem;
+      --text-body-strong: 0.9375rem; --text-body-strong--line-height: 1.5rem;
       --text-price: 1.25rem;      --text-price--line-height: 1.75rem;
       --text-price-lg: 1.75rem;   --text-price-lg--line-height: 2.25rem;
     }
