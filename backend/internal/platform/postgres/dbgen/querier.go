@@ -11,6 +11,7 @@ import (
 )
 
 type Querier interface {
+	AddFavorite(ctx context.Context, arg AddFavoriteParams) error
 	AdminDeleteArea(ctx context.Context, id int64) error
 	AdminInsertArea(ctx context.Context, arg AdminInsertAreaParams) (int64, error)
 	AdminListAreas(ctx context.Context, arg AdminListAreasParams) ([]AdminListAreasRow, error)
@@ -63,6 +64,7 @@ type Querier interface {
 	EnqueueEmail(ctx context.Context, arg EnqueueEmailParams) (int64, error)
 	ExistsFavorite(ctx context.Context, arg ExistsFavoriteParams) (bool, error)
 	ExistsListedProperty(ctx context.Context, id int64) (bool, error)
+	ExistsProperty(ctx context.Context, id int64) (bool, error)
 	ExistsUnpaidExtensionInvoice(ctx context.Context, bookingID int64) (bool, error)
 	ExistsUserByEmail(ctx context.Context, email pgtype.Text) (bool, error)
 	ExistsUserByPhone(ctx context.Context, phone string) (bool, error)
@@ -123,6 +125,7 @@ type Querier interface {
 	ListAdminLedgerEntries(ctx context.Context, arg ListAdminLedgerEntriesParams) ([]ListAdminLedgerEntriesRow, error)
 	ListAreasByType(ctx context.Context, arg ListAreasByTypeParams) ([]ListAreasByTypeRow, error)
 	ListBookingsForUser(ctx context.Context, arg ListBookingsForUserParams) ([]ListBookingsForUserRow, error)
+	ListFavorites(ctx context.Context, arg ListFavoritesParams) ([]ListFavoritesRow, error)
 	ListGalleryRooms(ctx context.Context, propertyID int64) ([]ListGalleryRoomsRow, error)
 	ListInvoicesForOwner(ctx context.Context, arg ListInvoicesForOwnerParams) ([]ListInvoicesForOwnerRow, error)
 	ListInvoicesForTenant(ctx context.Context, arg ListInvoicesForTenantParams) ([]ListInvoicesForTenantRow, error)
@@ -172,6 +175,7 @@ type Querier interface {
 	RejectBookingForStockUnavailable(ctx context.Context, arg RejectBookingForStockUnavailableParams) error
 	RejectPaidBooking(ctx context.Context, arg RejectPaidBookingParams) error
 	ReleaseRoomLock(ctx context.Context, id int64) error
+	RemoveFavorite(ctx context.Context, arg RemoveFavoriteParams) error
 	ResolveReconciliationIssue(ctx context.Context, arg ResolveReconciliationIssueParams) error
 	ResubmitProperty(ctx context.Context, id int64) error
 	RoomBelongsToProperty(ctx context.Context, arg RoomBelongsToPropertyParams) (bool, error)

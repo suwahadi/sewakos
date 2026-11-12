@@ -18,6 +18,7 @@ import (
 	"github.com/suwahadi/sewakos/backend/internal/authctx"
 	"github.com/suwahadi/sewakos/backend/internal/booking"
 	"github.com/suwahadi/sewakos/backend/internal/config"
+	"github.com/suwahadi/sewakos/backend/internal/favorite"
 	"github.com/suwahadi/sewakos/backend/internal/listing"
 	"github.com/suwahadi/sewakos/backend/internal/midtrans"
 	"github.com/suwahadi/sewakos/backend/internal/notification"
@@ -113,6 +114,8 @@ func NewRouter(deps Deps) chi.Router {
 	ratingCache := review.NewRatingCache(deps.Redis)
 	reviewDeps := review.Deps{Store: queries, DB: deps.DB, Ratings: ratingCache, AppPublicURL: deps.Config.AppPublicURL}
 
+	favoriteDeps := favorite.Deps{Store: queries, StorageBaseURL: deps.Config.StoragePublicBaseURL}
+
 	adminDeps := admin.Deps{
 		Store: queries, DB: deps.DB, AdminFee: adminFeeCache, Ratings: ratingCache,
 		StorageBaseURL: deps.Config.StoragePublicBaseURL, AppPublicURL: deps.Config.AppPublicURL,
@@ -172,6 +175,9 @@ func NewRouter(deps Deps) chi.Router {
 				tenant.Put("/booking/{booking}/refund-account", withAuthedUser(bookingDeps, booking.RefundAccountHandler))
 				tenant.Post("/booking/{booking}/extend", withAuthedUser(bookingDeps, booking.ExtendHandler))
 				tenant.Post("/booking/{booking}/review", withAuthedUser(reviewDeps, review.CreateHandler))
+				tenant.Get("/favorites", withAuthedUser(favoriteDeps, favorite.ListHandler))
+				tenant.Put("/favorites/{property}", withAuthedUser(favoriteDeps, favorite.AddHandler))
+				tenant.Delete("/favorites/{property}", withAuthedUser(favoriteDeps, favorite.RemoveHandler))
 				tenant.Post("/invoices/{invoice}/checkout", withAuthedUser(bookingDeps, booking.InvoiceCheckoutHandler))
 			})
 
