@@ -58,3 +58,11 @@ describe("ConfirmDialog", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
+
+describe("ConfirmDialog cancel label", () => {
+  it("uses a custom cancel label", () => {
+    render(<ConfirmDialog open onClose={() => {}} title="Batalkan?" description="x" confirmLabel="Batalkan" cancelLabel="Tidak" onConfirm={() => {}} />);
+    expect(screen.getByRole("button", { name: "Tidak" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Batal" })).not.toBeInTheDocument();
+  });
+});

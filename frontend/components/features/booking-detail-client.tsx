@@ -191,7 +191,8 @@ export function BookingDetailClient({
         onClose={() => setCancelOpen(false)}
         title="Batalkan booking?"
         description={cancelConsequence(booking)}
-        confirmLabel="Batalkan booking"
+        confirmLabel="Batalkan"
+        cancelLabel="Tidak"
         onConfirm={cancel}
         loading={cancelling}
       />

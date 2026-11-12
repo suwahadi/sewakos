@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { RoomOption, type RoomOptionData } from "@/components/features/room-option";
 import { FacilityList } from "@/components/features/facility-list";
+import { ConfirmDialog } from "@/components/ui/dialog";
 import { ExpandableText } from "@/components/ui/expandable-text";
 import { StickyActionBar } from "@/components/ui/sticky-action-bar";
 import { callBff } from "@/lib/api/browser";
@@ -24,6 +25,7 @@ export function KostDetailClient({
   const router = useRouter();
   const firstAvailable = rooms.find((room) => room.available > 0) ?? rooms[0];
   const [selectedRoomId, setSelectedRoomId] = useState(firstAvailable?.id);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     const key = `viewed-property-${propertyId}`;
@@ -71,10 +73,21 @@ export function KostDetailClient({
           price={selectedRoom.price_label}
           priceUnit="/bulan"
           actionLabel="Ajukan sewa"
-          onAction={() => router.push(`/kost/${propertyId}/sewa?room=${selectedRoom.id}`)}
+          onAction={() => setConfirmOpen(true)}
           disabled={selectedRoom.available === 0}
         />
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        title="Yakin melanjutkan ajukan sewa properti ini?"
+        description={null}
+        cancelLabel="Batal"
+        confirmLabel="Lanjutkan"
+        destructive={false}
+        onConfirm={() => router.push(`/kost/${propertyId}/sewa?room=${selectedRoom?.id}`)}
+      />
     </div>
   );
 }

@@ -822,7 +822,7 @@ Dipakai: filter, pilih durasi, rincian harga di mobile.
 ### 6.21 Dialog & ConfirmDialog
 
 `<dialog>` tengah, lebar `min(100% - 32px, 440px)`, radius `radius-lg`, padding 24px, `shadow-overlay`.
-**ConfirmDialog** untuk aksi tak bisa dibatalkan: judul pertanyaan, isi konsekuensi, tombol `neutral` "Batal" +
+**ConfirmDialog** untuk aksi tak bisa dibatalkan: judul pertanyaan, isi konsekuensi, tombol `neutral` "Batal" (atau label lain lewat `cancelLabel`, mis. "Tidak" untuk batalkan booking) +
 tombol aksi (`danger` bila merusak) dengan label kata kerja spesifik. Kedua tombol memakai `ButtonPair` (50:50),
 "Batal" di kiri, aksi di kanan, keduanya tanpa ikon.
 

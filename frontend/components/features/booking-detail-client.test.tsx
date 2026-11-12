@@ -103,7 +103,7 @@ describe("BookingDetailClient", () => {
     expect(
       screen.getByText("Dana yang sudah kamu bayar dikembalikan setelah dikurangi biaya admin Rp5.000."),
     ).toBeInTheDocument();
-    const buttons = screen.getAllByRole("button", { name: "Batalkan booking" });
+    const buttons = screen.getAllByRole("button", { name: "Batalkan" });
     await user.click(buttons[buttons.length - 1]!);
     expect(callBffMock).toHaveBeenCalledWith("/api/booking/2/cancel", { method: "POST" });
     expect(refreshMock).toHaveBeenCalled();

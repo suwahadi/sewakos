@@ -34,6 +34,7 @@ test("tenant registers, rents a room, and sees it paid after the Midtrans webhoo
   await page.locator('a[href^="/kost/"]').first().click();
 
   await page.getByRole("button", { name: "Ajukan sewa" }).click();
+  await page.getByRole("button", { name: "Lanjutkan" }).click();
   await expect(page).toHaveURL(/\/kost\/\d+\/sewa\?room=\d+$/);
   await expect(page.getByText("Total bayar sekarang")).toBeVisible();
   await page.getByRole("button", { name: "Ajukan sewa" }).click();

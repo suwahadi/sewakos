@@ -53,6 +53,7 @@ export interface ConfirmDialogProps {
   title: string;
   description: ReactNode;
   confirmLabel: string;
+  cancelLabel?: string;
   onConfirm: () => void;
   destructive?: boolean;
   loading?: boolean;
@@ -65,6 +66,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel,
+  cancelLabel = "Batal",
   onConfirm,
   destructive = true,
   loading = false,
@@ -75,7 +77,7 @@ export function ConfirmDialog({
       <div className="mt-6">
         <ButtonPair>
           <Button variant="neutral" onClick={onClose}>
-            Batal
+            {cancelLabel}
           </Button>
           <Button variant={destructive ? "danger" : "success"} loading={loading} onClick={onConfirm}>
             {confirmLabel}
