@@ -222,8 +222,13 @@ func TestAdminRefundAndPayoutCompletion(t *testing.T) {
 		t.Errorf("payout without bank account: status = %d, body = %s", resp.StatusCode, body)
 	}
 	bookingAuthedRequest(t, srv, http.MethodPut, "/api/owner/bank-account", ownerToken, `{"bank_name":"Mandiri","account_number":"9876543210","account_name":"Pemilik"}`)
-	_, body = bookingAuthedRequest(t, srv, http.MethodGet, "/api/admin/payouts?status=pending&limit=50", token, "")
-	if !strings.Contains(string(body), fmt.Sprintf(`"id":%d`, payoutID)) || !strings.Contains(string(body), `"account_number":"9876543210"`) {
+	var payoutsBefore int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM payouts WHERE status = 'pending' AND (created_at, id) < (SELECT created_at, id FROM payouts WHERE id = $1)`,
+		payoutID).Scan(&payoutsBefore); err != nil {
+		t.Fatal(err)
+	}
+	_, body = bookingAuthedRequest(t, srv, http.MethodGet, fmt.Sprintf("/api/admin/payouts?status=pending&limit=50&page=%d", payoutsBefore/50+1), token, "")
+	if !strings.Contains(string(body), fmt.Sprintf(`"id":%d,`, payoutID)) || !strings.Contains(string(body), `"account_number":"9876543210"`) {
 		t.Errorf("pending payouts lack the owner's current account: %s", body)
 	}
 	resp, body = bookingAuthedRequest(t, srv, http.MethodPost, payoutPath, token, `{"transfer_reference":"TRX-20261110-002"}`)
