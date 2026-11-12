@@ -448,7 +448,7 @@ Aturan:
 | Fasilitas | `Wifi`, `AirVent`, `Bath`, `BedDouble`, `Clock`, `Check` (fasilitas lain) |
 | Transaksi | `Wallet`, `CreditCard`, `CalendarDays`, `FileText`, `Download`, `Banknote` |
 | Akun | `Phone`, `Mail`, `LockKeyhole`, `LogOut`, `Pencil`, `ShieldCheck` |
-| Owner/admin | `Plus`, `Trash2`, `Upload`, `ImagePlus`, `ChartColumn`, `ListChecks`, `Flag`, `EyeOff` |
+| Owner/admin | `Plus`, `Trash2`, `Upload`, `ImagePlus`, `ChartColumn`, `ListChecks`, `Flag`, `EyeOff`, `GripVertical` |
 | Menu admin | `Menu`, `Building2`, `Star`, `ListChecks`, `ReceiptText`, `Undo2`, `Banknote`, `Wallet`, `Scale`, `History`, `Users`, `MapPin`, `Settings`, `UserRound` |
 | Lain | `Copy`, `ExternalLink`, `RefreshCw`, `LoaderCircle` (spinner), `ArrowUpDown` (urutkan), `MessageSquareText` (SMS) |
 
@@ -977,6 +977,18 @@ Foto lebar 112px rasio 4:5, radius `radius-md`; kolom info `min-w-0 flex flex-co
 - Varian `vertical`: bentuk ≥ 640px (foto 4:3 di atas) di semua lebar, untuk slot sempit: carousel promo dan grid
   "Kost terbaru" di beranda.
 
+### 6.28b ListingGrid & Kost lainnya
+
+`ListingGrid` membungkus daftar `ListingCard` (mode vertikal) dalam grid yang sama dengan beranda ("Kost terbaru")
+dan section "Kost lainnya" di detail kost. Dua varian kolom:
+- `home`: 2 kolom (mobile), 3 (≥ 640px), 4 (≥ 1024px).
+- `detail`: 2 kolom (mobile), 3 (≥ 1024px).
+
+Section **Kost lainnya** di bawah ulasan detail kost (`/kost/{id}`): judul `title-sm`, 6 kartu acak dari daftar kost
+terbaru (`GET /listings/latest?limit=50`) dengan properti yang sedang dibuka dikecualikan dan satu kartu per properti.
+Pengacakan dilakukan di server setiap permintaan halaman, sehingga setiap muat ulang menghasilkan kombinasi baru.
+Bila kurang dari 1 kartu tersedia, section disembunyikan.
+
 ### 6.28a AreaBannerGrid (kota populer)
 
 Grid card foto kota: 2 kolom (< 640), 3 kolom (≥ 640), jarak 12px (16px ≥ 1024). Card = satu tautan ke
@@ -1178,9 +1190,10 @@ Alur per file (boleh beberapa sekaligus, maks 3 paralel):
 Petak saat proses: pratinjau lokal (`URL.createObjectURL`, dibebaskan setelah selesai) + overlay progres
 (lingkaran tipis `brand-600`, persen `caption`). Tahap 3 tampil "Memproses…". Gagal: overlay `danger-bg`, tombol
 "Ulangi" & `X`. Selesai: ganti ke `thumbnail_url`. Tiap petak: tombol `Trash2` (ConfirmDialog) dan field caption.
-Urutan diubah dengan **seret-dan-lepas** langsung di grid (`PATCH /owner/photos/{id}` dengan `sort_order` setelah
-dilepas). Di layar sentuh, seret dimulai setelah tekan-tahan ±200 ms agar gulir halaman tetap berfungsi. Keyboard:
-fokus petak lalu `Alt` + panah kiri/kanan. Popup "Kelola foto" tidak lagi memuat tombol geser.
+Urutan diubah dengan **seret pegangan**: ikon `GripVertical` (36px, pojok kiri-atas petak, `touch-action: none`,
+`aria-label` "Geser foto {n}"). Seret langsung mulai saat pegangan ditekan, di mouse maupun sentuh; gulir halaman tetap
+berfungsi di luar pegangan. Saat dilepas: `PATCH /owner/photos/{id}` dengan `sort_order`. Keyboard: fokus pegangan lalu
+`Alt` + panah kiri/kanan. Ketuk petak membuka popup "Kelola foto" (tanpa tombol geser).
 
 ### 6.48 OtpChannelPicker
 

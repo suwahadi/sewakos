@@ -1,6 +1,6 @@
 "use client";
 
-import { ImagePlus, X } from "lucide-react";
+import { GripVertical, ImagePlus, X } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
@@ -20,18 +20,9 @@ const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_BYTES = 10 * 1024 * 1024;
 const MAX_PHOTOS = 30;
 const PARALLEL_UPLOADS = 3;
-const DRAG_THRESHOLD_PX = 6;
-const TOUCH_HOLD_MS = 200;
-const CLICK_SUPPRESS_MS = 300;
-
 interface PhotoGesture {
   id: number;
   pointerId: number;
-  pointerType: string;
-  x: number;
-  y: number;
-  active: boolean;
-  timer?: ReturnType<typeof setTimeout>;
 }
 
 interface UploadTask {
@@ -57,14 +48,17 @@ export function PhotoUploader({ propertyId, initialPhotos }: { propertyId: numbe
   const [dragId, setDragId] = useState<number | null>(null);
   const draftRef = useRef<OwnerPhoto[] | null>(null);
   const gesture = useRef<PhotoGesture | null>(null);
-  const suppressClick = useRef(false);
+  const detachDrag = useRef<(() => void) | null>(null);
   const taskCounter = useRef(0);
   const previews = useRef(new Set<string>());
   const view = draft ?? photos;
 
   useEffect(() => {
     const urls = previews.current;
-    return () => urls.forEach((url) => URL.revokeObjectURL(url));
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+      detachDrag.current?.();
+    };
   }, []);
 
   function patchTask(key: string, change: Partial<UploadTask>) {
@@ -135,70 +129,46 @@ export function PhotoUploader({ propertyId, initialPhotos }: { propertyId: numbe
     setDraft(next);
   }
 
-  function activateDrag(element: HTMLElement) {
-    const current = gesture.current;
-    if (!current || current.active) return;
-    current.active = true;
-    clearTimeout(current.timer);
-    try {
-      element.setPointerCapture(current.pointerId);
-    } catch {
-      gesture.current = null;
-      return;
-    }
-    setDragId(current.id);
+  function beginDrag(event: ReactPointerEvent<HTMLButtonElement>, photo: OwnerPhoto) {
+    const pointerId = event.pointerId;
+    gesture.current = { id: photo.id, pointerId };
     draftRef.current = photos;
+    setDragId(photo.id);
     setDraft(photos);
+
+    const onMove = (native: PointerEvent) => {
+      if (native.pointerId === pointerId) handleDragMove(native);
+    };
+    const onUp = (native: PointerEvent) => {
+      if (native.pointerId === pointerId) endDrag(false);
+    };
+    const onCancel = (native: PointerEvent) => {
+      if (native.pointerId === pointerId) endDrag(true);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
+    detachDrag.current = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+    };
   }
 
-  function endDrag(commit: boolean) {
+  function handleDragMove(event: PointerEvent) {
+    const hovered = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-photo-id]");
+    if (hovered?.dataset.photoId) previewMove(Number(hovered.dataset.photoId));
+  }
+
+  function endDrag(cancelled: boolean) {
+    detachDrag.current?.();
+    detachDrag.current = null;
     const next = draftRef.current;
     draftRef.current = null;
     gesture.current = null;
     setDraft(null);
     setDragId(null);
-    if (commit && next) void persistOrder(next);
-  }
-
-  function handlePointerDown(event: ReactPointerEvent<HTMLButtonElement>, photo: OwnerPhoto) {
-    if (event.pointerType === "mouse" && event.button !== 0) return;
-    const current: PhotoGesture = { id: photo.id, pointerId: event.pointerId, pointerType: event.pointerType, x: event.clientX, y: event.clientY, active: false };
-    gesture.current = current;
-    if (event.pointerType !== "mouse") {
-      const element = event.currentTarget;
-      current.timer = setTimeout(() => activateDrag(element), TOUCH_HOLD_MS);
-    }
-  }
-
-  function handlePointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
-    const current = gesture.current;
-    if (!current || current.pointerId !== event.pointerId) return;
-    if (!current.active) {
-      if (Math.hypot(event.clientX - current.x, event.clientY - current.y) < DRAG_THRESHOLD_PX) return;
-      if (current.pointerType !== "mouse") {
-        clearTimeout(current.timer);
-        gesture.current = null;
-        return;
-      }
-      activateDrag(event.currentTarget);
-    }
-    const hovered = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-photo-id]");
-    if (hovered?.dataset.photoId) previewMove(Number(hovered.dataset.photoId));
-  }
-
-  function handlePointerEnd(event: ReactPointerEvent<HTMLButtonElement>, cancelled: boolean) {
-    const current = gesture.current;
-    if (!current || current.pointerId !== event.pointerId) return;
-    clearTimeout(current.timer);
-    if (!current.active) {
-      gesture.current = null;
-      return;
-    }
-    suppressClick.current = true;
-    setTimeout(() => {
-      suppressClick.current = false;
-    }, CLICK_SUPPRESS_MS);
-    endDrag(!cancelled);
+    if (!cancelled && next) void persistOrder(next);
   }
 
   async function persistOrder(next: OwnerPhoto[]) {
@@ -244,39 +214,37 @@ export function PhotoUploader({ propertyId, initialPhotos }: { propertyId: numbe
           Tambah foto
         </button>
         {view.map((photo, index) => (
-          <button
+          <div
             key={photo.id}
-            type="button"
             data-photo-id={photo.id}
-            onClick={() => {
-              if (suppressClick.current) return;
-              setSelected(photo);
-            }}
-            onPointerDown={(event) => handlePointerDown(event, photo)}
-            onPointerMove={handlePointerMove}
-            onPointerUp={(event) => handlePointerEnd(event, false)}
-            onPointerCancel={(event) => handlePointerEnd(event, true)}
-            onKeyDown={(event) => {
-              if (!event.altKey || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
-              event.preventDefault();
-              move(photo, event.key === "ArrowLeft" ? -1 : 1);
-            }}
-            aria-label={`Kelola foto ${index + 1}${photo.caption ? `: ${photo.caption}` : ""}`}
-            aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
             className={cn(
-              "relative aspect-square select-none overflow-hidden rounded-md bg-neutral-100 transition-transform duration-[var(--duration-fast)] ease-standard",
+              "relative aspect-square overflow-hidden rounded-md bg-neutral-100 transition-transform duration-[var(--duration-fast)] ease-standard",
               dragId === photo.id && "scale-95 opacity-80 ring-2 ring-brand-600",
             )}
           >
-            <Image
-              src={photo.thumbnail_url}
-              alt=""
-              fill
-              draggable={false}
-              sizes="(min-width: 1024px) 20vw, 33vw"
-              className="pointer-events-none object-cover"
-            />
-          </button>
+            <button
+              type="button"
+              onClick={() => setSelected(photo)}
+              aria-label={`Kelola foto ${index + 1}${photo.caption ? `: ${photo.caption}` : ""}`}
+              className="absolute inset-0"
+            >
+              <Image src={photo.thumbnail_url} alt="" fill draggable={false} sizes="(min-width: 1024px) 20vw, 33vw" className="pointer-events-none object-cover" />
+            </button>
+            <button
+              type="button"
+              aria-label={`Geser foto ${index + 1}`}
+              aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
+              onPointerDown={(event) => beginDrag(event, photo)}
+              onKeyDown={(event) => {
+                if (!event.altKey || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
+                event.preventDefault();
+                move(photo, event.key === "ArrowLeft" ? -1 : 1);
+              }}
+              className="absolute left-1 top-1 flex size-9 touch-none select-none items-center justify-center rounded-full bg-neutral-0/92 text-neutral-700 shadow-raised"
+            >
+              <GripVertical aria-hidden="true" size={18} strokeWidth={1.75} />
+            </button>
+          </div>
         ))}
         {tasks.map((task) => (
           <UploadTile key={task.key} task={task} onRetry={() => void upload(task)} onRemove={() => dropTask(task)} />

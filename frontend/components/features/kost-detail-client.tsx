@@ -13,11 +13,13 @@ export function KostDetailClient({
   description,
   rooms,
   reviews,
+  similar,
 }: {
   propertyId: number;
   description: string;
   rooms: RoomOptionData[];
   reviews?: ReactNode;
+  similar?: ReactNode;
 }) {
   const router = useRouter();
   const firstAvailable = rooms.find((room) => room.available > 0) ?? rooms[0];
@@ -33,7 +35,7 @@ export function KostDetailClient({
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId);
 
   return (
-    <div className="flex flex-col gap-6 px-4 pb-8">
+    <div className="flex flex-col gap-6 px-4 pb-28">
       {rooms.length > 0 && (
         <section>
           <p className="mb-3 text-title-sm font-semibold text-neutral-900">Pilih kamar</p>
@@ -60,6 +62,8 @@ export function KostDetailClient({
       )}
 
       {reviews}
+
+      {similar}
 
       {selectedRoom && (
         <StickyActionBar

@@ -103,7 +103,7 @@ describe("PhotoUploader", () => {
     callBffMock.mockResolvedValue(ok({}, "Foto diperbarui."));
     render(<PhotoUploader propertyId={12} initialPhotos={[photo(1, 0), photo(2, 0)]} />);
 
-    screen.getByRole("button", { name: "Kelola foto 1" }).focus();
+    screen.getByRole("button", { name: "Geser foto 1" }).focus();
     await user.keyboard("{Alt>}{ArrowRight}{/Alt}");
 
     await waitFor(() => expect(callBffMock).toHaveBeenCalledTimes(2));

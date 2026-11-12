@@ -3,6 +3,7 @@ import { AreaBannerGrid, type AreaBannerOption } from "@/components/features/are
 import { AreaChipRow } from "@/components/features/area-chip-row";
 import { HomeSearchEntry } from "@/components/features/home-search-entry";
 import { ListingCard } from "@/components/features/listing-card";
+import { ListingGrid } from "@/components/features/listing-grid";
 import { apiFetch } from "@/lib/api/client";
 import { getNavRole } from "@/lib/auth/nav-role";
 import { buildSearchBody, DEFAULT_SEARCH_FILTERS, type SearchResponseBody } from "@/lib/listings";
@@ -77,11 +78,7 @@ export default async function HomePage() {
         {latestRooms.length > 0 && (
           <section className="flex flex-col gap-2">
             <h2 className="text-title-sm font-semibold text-neutral-900">Kost terbaru</h2>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 lg:grid-cols-4">
-              {latestRooms.map((room) => (
-                <ListingCard key={room.id} room={room} vertical />
-              ))}
-            </div>
+            <ListingGrid rooms={latestRooms} layout="home" />
           </section>
         )}
       </main>
