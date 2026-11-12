@@ -17,7 +17,7 @@ describe("KostDetailClient ajukan sewa", () => {
     render(<KostDetailClient propertyId={3} description="" rooms={[room]} />);
 
     await user.click(screen.getByRole("button", { name: "Ajukan sewa" }));
-    expect(screen.getByText("Yakin melanjutkan ajukan sewa properti ini?")).toBeInTheDocument();
+    expect(screen.getByText("Yakin melanjutkan pengajuan sewa properti ini?")).toBeInTheDocument();
     expect(pushMock).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Lanjutkan" }));

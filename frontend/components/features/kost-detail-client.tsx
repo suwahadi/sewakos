@@ -81,7 +81,7 @@ export function KostDetailClient({
       <ConfirmDialog
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
-        title="Yakin melanjutkan ajukan sewa properti ini?"
+        title="Yakin melanjutkan pengajuan sewa properti ini?"
         description={null}
         cancelLabel="Batal"
         confirmLabel="Lanjutkan"
