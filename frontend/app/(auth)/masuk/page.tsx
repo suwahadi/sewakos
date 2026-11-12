@@ -59,6 +59,7 @@ function MasukForm() {
       return;
     }
     toast.success("Login berhasil.");
+    router.refresh();
     router.push(destination(result.data.user.role));
   }
 
@@ -95,6 +96,7 @@ function MasukForm() {
       return;
     }
     toast.success("Login berhasil.");
+    router.refresh();
     router.push(destination(result.data.user.role));
   }
 

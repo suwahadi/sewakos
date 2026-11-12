@@ -211,6 +211,7 @@ function LogoutSection() {
     await callBff("/api/auth/logout", { method: "POST" });
     setLoading(false);
     setOpen(false);
+    router.refresh();
     router.push("/masuk");
   }
 

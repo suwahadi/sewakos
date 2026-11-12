@@ -10,7 +10,7 @@ export function OwnerPropertyCard({ property }: { property: OwnerProperty }) {
   const cover = property.photos.find((photo) => photo.room_id === null) ?? property.photos[0];
 
   return (
-    <Link href={`/owner/properti/${property.id}`} className="flex min-w-0 gap-3 rounded-lg border border-neutral-200 p-3">
+    <Link href={`/owner/properti/${property.id}`} prefetch={false} className="flex min-w-0 gap-3 rounded-lg border border-neutral-200 p-3">
       <span className="relative flex aspect-[4/3] w-24 shrink-0 items-center justify-center overflow-hidden rounded-md bg-neutral-100">
         {cover ? (
           <Image src={cover.thumbnail_url} alt="" fill sizes="96px" className="object-cover" />

@@ -42,6 +42,7 @@ export function BottomNav({ role }: BottomNavProps) {
           <Link
             key={item.href}
             href={item.href}
+            prefetch={false}
             onClick={handleClick}
             aria-current={active ? "page" : undefined}
             className={cn(
