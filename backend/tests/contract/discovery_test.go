@@ -317,3 +317,90 @@ func TestSearchRejectsUnknownAreaID(t *testing.T) {
 		t.Fatalf("status = %d, body = %s", resp.StatusCode, body)
 	}
 }
+
+// API.md §3.4: one cheapest monthly room per listed property, newest property first.
+func TestLatestListingsFixture(t *testing.T) {
+	srv, pool := newTestServerAndPool(t)
+	ownerID := seedOwner(t, pool)
+	areaID := seedArea(t, pool, "Kota Terbaru", "city", false, -6.2, 106.8)
+	ctx := context.Background()
+	var seeded []int64
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `UPDATE properties SET created_at = now() - interval '1 year' WHERE id = ANY($1)`, seeded)
+	})
+	seedAgedProperty := func(name string, days int) int64 {
+		t.Helper()
+		id := seedProperty(t, pool, propertyFixture{ownerID: ownerID, areaID: areaID, name: name, gender: "putri", lat: -6.2, lng: 106.8})
+		seeded = append(seeded, id)
+		if _, err := pool.Exec(ctx, `UPDATE properties SET created_at = now() + make_interval(days => $2) WHERE id = $1`, id, days); err != nil {
+			t.Fatalf("set created_at: %v", err)
+		}
+		return id
+	}
+
+	older := seedAgedProperty("Kost Lama", 30)
+	seedRoom(t, pool, older, "Kamar Lama", 2000000, 1)
+
+	newer := seedAgedProperty("Kost Baru", 31)
+	seedRoom(t, pool, newer, "Kamar Mahal", 3000000, 1)
+	cheapest := seedRoom(t, pool, newer, "Kamar Hemat", 1500000, 2)
+
+	roomless := seedAgedProperty("Kost Kosong", 32)
+
+	pending := seedAgedProperty("Kost Moderasi", 33)
+	seedRoom(t, pool, pending, "Kamar Moderasi", 1000000, 1)
+	if _, err := pool.Exec(ctx, `UPDATE properties SET moderation_status = 'pending' WHERE id = $1`, pending); err != nil {
+		t.Fatalf("set pending: %v", err)
+	}
+
+	latestRooms := func(query string) []map[string]any {
+		t.Helper()
+		resp, body := discoveryGetJSON(t, srv, "/api/listings/latest"+query)
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("status = %d, body = %s", resp.StatusCode, body)
+		}
+		var parsed struct {
+			Rooms []map[string]any `json:"rooms"`
+		}
+		if err := json.Unmarshal(body, &parsed); err != nil {
+			t.Fatalf("parse body: %v", err)
+		}
+		return parsed.Rooms
+	}
+
+	rooms := latestRooms("?limit=50")
+	position := map[int64]int{}
+	for i, room := range rooms {
+		propertyID := int64(room["property_id"].(float64))
+		if _, seen := position[propertyID]; seen {
+			t.Fatalf("property %d appears more than once", propertyID)
+		}
+		position[propertyID] = i
+	}
+	if _, ok := position[roomless]; ok {
+		t.Fatalf("a property without rooms must not be listed")
+	}
+	if _, ok := position[pending]; ok {
+		t.Fatalf("a property awaiting moderation must not be listed")
+	}
+	newerAt, okNewer := position[newer]
+	olderAt, okOlder := position[older]
+	if !okNewer || !okOlder || newerAt != 0 || newerAt > olderAt {
+		t.Fatalf("expected the newest listed property first and the older one after it, got positions %d/%d", newerAt, olderAt)
+	}
+	first := rooms[newerAt]
+	if int64(first["id"].(float64)) != cheapest || first["price"].(float64) != 1500000 ||
+		first["price_label"] != "Rp1.500.000" || first["name"] != "Kamar Hemat" {
+		t.Fatalf("expected the cheapest room of the newest property, got %+v", first)
+	}
+	if first["rating_average"] != nil || first["thumbnail_url"] != nil {
+		t.Fatalf("rating_average and thumbnail_url should be null without reviews/photos, got %+v", first)
+	}
+
+	if rooms := latestRooms("?limit=0"); len(rooms) != 1 {
+		t.Fatalf("limit=0 should clamp to 1, got %d", len(rooms))
+	}
+	if rooms := latestRooms("?limit=abc"); len(rooms) == 0 || len(rooms) > 12 {
+		t.Fatalf("invalid limit should fall back to 12, got %d", len(rooms))
+	}
+}

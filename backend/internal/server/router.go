@@ -136,6 +136,7 @@ func NewRouter(deps Deps) chi.Router {
 		api.Get("/area/{type}", area.ListHandler(areaDeps))
 		api.Get("/suggestion", search.SuggestionHandler(searchDeps))
 		api.Post("/listings/search", search.SearchHandler(searchDeps))
+		api.Get("/listings/latest", search.LatestHandler(searchDeps))
 		api.Post("/listings/{property}/view", listing.ViewHandler(listingDeps))
 		api.Get("/listings/{property}/gallery", listing.GalleryHandler(listingDeps))
 		api.Get("/listings/{property}/reviews", review.ListHandler(reviewDeps))

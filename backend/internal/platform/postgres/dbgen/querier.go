@@ -134,6 +134,7 @@ type Querier interface {
 	ListGalleryRooms(ctx context.Context, propertyID int64) ([]ListGalleryRoomsRow, error)
 	ListInvoicesForOwner(ctx context.Context, arg ListInvoicesForOwnerParams) ([]ListInvoicesForOwnerRow, error)
 	ListInvoicesForTenant(ctx context.Context, arg ListInvoicesForTenantParams) ([]ListInvoicesForTenantRow, error)
+	ListLatestRooms(ctx context.Context, resultLimit int32) ([]ListLatestRoomsRow, error)
 	ListListingPropertyPhotos(ctx context.Context, propertyID int64) ([]ListListingPropertyPhotosRow, error)
 	ListListingRoomPhotos(ctx context.Context, propertyID int64) ([]ListListingRoomPhotosRow, error)
 	ListListingRooms(ctx context.Context, propertyID int64) ([]ListListingRoomsRow, error)

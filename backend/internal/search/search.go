@@ -14,6 +14,7 @@ type Store interface {
 	GetAreaByID(ctx context.Context, id int64) (dbgen.GetAreaByIDRow, error)
 	SearchRooms(ctx context.Context, arg dbgen.SearchRoomsParams) ([]dbgen.SearchRoomsRow, error)
 	CountSearchRooms(ctx context.Context, arg dbgen.CountSearchRoomsParams) (dbgen.CountSearchRoomsRow, error)
+	ListLatestRooms(ctx context.Context, resultLimit int32) ([]dbgen.ListLatestRoomsRow, error)
 }
 
 // Deps bundles this package's shared dependencies.

@@ -90,6 +90,87 @@ func (q *Queries) CountSearchRooms(ctx context.Context, arg CountSearchRoomsPara
 	return i, err
 }
 
+const listLatestRooms = `-- name: ListLatestRooms :many
+SELECT
+  r.id, r.property_id, r.name AS room_name, p.name AS property_name, a.name AS area_name,
+  coalesce(thumb.object_key, '') AS thumbnail_key,
+  p.gender, r.price_monthly AS active_price, r.available, p.is_flash_sale,
+  coalesce(rv.rating_average, 0) AS rating_average,
+  coalesce(rv.rating_count, 0) AS rating_count
+FROM (
+  SELECT lp.id, lp.created_at
+  FROM properties lp
+  JOIN users o ON o.id = lp.owner_id
+  WHERE lp.is_active = true AND lp.moderation_status = 'approved' AND o.suspended_at IS NULL
+    AND EXISTS (SELECT 1 FROM rooms er WHERE er.property_id = lp.id)
+  ORDER BY lp.created_at DESC, lp.id DESC
+  LIMIT $1::int
+) latest
+JOIN properties p ON p.id = latest.id
+JOIN rooms r ON r.id = (
+  SELECT cr.id FROM rooms cr WHERE cr.property_id = p.id ORDER BY cr.price_monthly, cr.id LIMIT 1
+)
+JOIN areas a ON a.id = p.area_id
+LEFT JOIN LATERAL (
+  SELECT ph.object_key FROM property_photos ph
+  WHERE ph.property_id = p.id AND ph.room_id IS NULL
+  ORDER BY ph.sort_order, ph.id LIMIT 1
+) thumb ON true
+LEFT JOIN LATERAL (
+  SELECT round(avg(rating)::numeric, 1)::float8 AS rating_average, count(*) AS rating_count
+  FROM reviews WHERE property_id = p.id AND NOT is_hidden
+) rv ON true
+ORDER BY latest.created_at DESC, latest.id DESC
+`
+
+type ListLatestRoomsRow struct {
+	ID            int64
+	PropertyID    int64
+	RoomName      string
+	PropertyName  string
+	AreaName      string
+	ThumbnailKey  string
+	Gender        string
+	ActivePrice   int64
+	Available     int16
+	IsFlashSale   bool
+	RatingAverage float64
+	RatingCount   int64
+}
+
+func (q *Queries) ListLatestRooms(ctx context.Context, resultLimit int32) ([]ListLatestRoomsRow, error) {
+	rows, err := q.db.Query(ctx, listLatestRooms, resultLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListLatestRoomsRow{}
+	for rows.Next() {
+		var i ListLatestRoomsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.PropertyID,
+			&i.RoomName,
+			&i.PropertyName,
+			&i.AreaName,
+			&i.ThumbnailKey,
+			&i.Gender,
+			&i.ActivePrice,
+			&i.Available,
+			&i.IsFlashSale,
+			&i.RatingAverage,
+			&i.RatingCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const searchRooms = `-- name: SearchRooms :many
 WITH page AS (
   SELECT r.id,

@@ -758,6 +758,12 @@ Tidak ada baris → 404.
 
 Tidak ditemukan atau tidak tayang → 404. `gallery[]`: `{room_id, name, facilities, photos}`, urut `rooms.id ASC`.
 
+### 7.7 `GET /listings/latest?limit=`
+
+`limit`: default 12, clamp 1..50; bukan angka → default. Ambil properti tayang (§2) urut `created_at DESC, id DESC`,
+lalu per properti satu kamar lewat `LATERAL` dengan `price_monthly` terkecil (seri → `rooms.id ASC`); properti tanpa
+kamar tidak ikut. Respons `rooms[]` berbentuk sama dengan §7.3 (`price` = `price_monthly`), tanpa `total`/offset.
+
 ## 8. Booking
 
 ### 8.1 `GET /booking/draft-price/{room}?is_flash_sale=` (PUBLIK)

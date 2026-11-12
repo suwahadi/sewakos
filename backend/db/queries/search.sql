@@ -126,3 +126,35 @@ WHERE p.is_active = true AND p.moderation_status = 'approved' AND o.suspended_at
       ) <= sqlc.narg(area_radius_km)::float8
     )
   );
+
+-- name: ListLatestRooms :many
+SELECT
+  r.id, r.property_id, r.name AS room_name, p.name AS property_name, a.name AS area_name,
+  coalesce(thumb.object_key, '') AS thumbnail_key,
+  p.gender, r.price_monthly AS active_price, r.available, p.is_flash_sale,
+  coalesce(rv.rating_average, 0) AS rating_average,
+  coalesce(rv.rating_count, 0) AS rating_count
+FROM (
+  SELECT lp.id, lp.created_at
+  FROM properties lp
+  JOIN users o ON o.id = lp.owner_id
+  WHERE lp.is_active = true AND lp.moderation_status = 'approved' AND o.suspended_at IS NULL
+    AND EXISTS (SELECT 1 FROM rooms er WHERE er.property_id = lp.id)
+  ORDER BY lp.created_at DESC, lp.id DESC
+  LIMIT sqlc.arg(result_limit)::int
+) latest
+JOIN properties p ON p.id = latest.id
+JOIN rooms r ON r.id = (
+  SELECT cr.id FROM rooms cr WHERE cr.property_id = p.id ORDER BY cr.price_monthly, cr.id LIMIT 1
+)
+JOIN areas a ON a.id = p.area_id
+LEFT JOIN LATERAL (
+  SELECT ph.object_key FROM property_photos ph
+  WHERE ph.property_id = p.id AND ph.room_id IS NULL
+  ORDER BY ph.sort_order, ph.id LIMIT 1
+) thumb ON true
+LEFT JOIN LATERAL (
+  SELECT round(avg(rating)::numeric, 1)::float8 AS rating_average, count(*) AS rating_count
+  FROM reviews WHERE property_id = p.id AND NOT is_hidden
+) rv ON true
+ORDER BY latest.created_at DESC, latest.id DESC;

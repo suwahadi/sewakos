@@ -279,6 +279,28 @@ Keyword minimal 3 karakter (`422` jika kurang).
 dari titik area. Area tidak ada → `422`. `rating_average` (1 desimal) bernilai `null` bila belum ada ulasan.
 `thumbnail_url` = thumbnail foto properti pertama (urut `sort_order`, `id`, hanya foto tanpa `room_id`), atau `null`.
 
+### 3.4 `GET /listings/latest?limit=` — kost terbaru
+
+Satu item per properti tayang, urut properti terbaru (`created_at` lalu `id`, menurun). Item memakai kamar dengan
+harga bulanan termurah di properti itu (seri → `id` terkecil). `limit` default 12, dibatasi 1..50.
+
+**Sukses `200`:**
+```json
+{
+  "status": true, "meta": { "...": "OK" },
+  "rooms": [
+    { "id": 7, "property_id": 3, "name": "Kamar Standar", "property_name": "Kost Melati Tebet",
+      "area_name": "Jakarta Selatan",
+      "thumbnail_url": "https://cdn.example.com/properties/3/c3d4_thumb.webp",
+      "gender": "putri", "price": 1950000, "price_label": "Rp1.950.000",
+      "available": 3, "is_flash_sale": false,
+      "rating_average": null, "rating_count": 0 }
+  ]
+}
+```
+
+Bentuk item `rooms[]` sama dengan §3.3; `price` = harga bulanan.
+
 ---
 
 ## 4. Modul Detail Properti
@@ -667,6 +689,7 @@ access_tokens
 │ GET  /area/{type}          → dropdown area
 │ GET  /suggestion           → autocomplete lokasi
 │ POST /listings/search      → daftar kamar (filter+sort+offset)
+│ GET  /listings/latest      → kost terbaru (1 kamar termurah/kost)
 │ GET  /listings/{id}        → detail
 │ POST /listings/{id}/view   → counter
 │ GET  /booking/draft-price  → rincian harga (PUBLIK)

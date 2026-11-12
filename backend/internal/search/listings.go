@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math"
 	"net/http"
+	"strconv"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -14,9 +15,10 @@ import (
 )
 
 const (
-	defaultLimit = 20
-	maxLimit     = 50
-	earthRadiusK = 6371.0
+	defaultLimit       = 20
+	defaultLatestLimit = 12
+	maxLimit           = 50
+	earthRadiusK       = 6371.0
 )
 
 var genderCodes = map[int]string{0: "campur", 1: "putra", 2: "putri"}
@@ -205,22 +207,7 @@ func SearchHandler(deps Deps) http.HandlerFunc {
 
 		rooms := make([]map[string]any, len(rows))
 		for i, row := range rows {
-			var thumbnailURL any
-			if row.ThumbnailKey != "" {
-				thumbnailURL = deps.StorageBaseURL + "/" + row.ThumbnailKey
-			}
-			var ratingAverage any
-			if row.RatingCount > 0 {
-				ratingAverage = row.RatingAverage
-			}
-			rooms[i] = map[string]any{
-				"id": row.ID, "property_id": row.PropertyID, "name": row.RoomName,
-				"property_name": row.PropertyName, "area_name": row.AreaName,
-				"thumbnail_url": thumbnailURL, "gender": row.Gender,
-				"price": row.ActivePrice, "price_label": money.FormatRupiah(row.ActivePrice),
-				"available": row.Available, "is_flash_sale": row.IsFlashSale,
-				"rating_average": ratingAverage, "rating_count": row.RatingCount,
-			}
+			rooms[i] = roomItem(row, deps.StorageBaseURL)
 		}
 
 		hasMore := int64(offset)+int64(len(rows)) < counts.Total
@@ -233,5 +220,45 @@ func SearchHandler(deps Deps) http.HandlerFunc {
 			"source": "db", "property_total": counts.PropertyTotal, "total": counts.Total,
 			"limit": limit, "has-more": hasMore, "next-offset": nextOffset, "rooms": rooms,
 		})
+	}
+}
+
+func LatestHandler(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+		if err != nil {
+			limit = defaultLatestLimit
+		}
+		limit = min(max(limit, 1), maxLimit)
+
+		rows, err := deps.Store.ListLatestRooms(r.Context(), int32(limit))
+		if err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		rooms := make([]map[string]any, len(rows))
+		for i, row := range rows {
+			rooms[i] = roomItem(dbgen.SearchRoomsRow(row), deps.StorageBaseURL)
+		}
+		response.Success(w, http.StatusOK, "", map[string]any{"rooms": rooms})
+	}
+}
+
+func roomItem(row dbgen.SearchRoomsRow, storageBaseURL string) map[string]any {
+	var thumbnailURL any
+	if row.ThumbnailKey != "" {
+		thumbnailURL = storageBaseURL + "/" + row.ThumbnailKey
+	}
+	var ratingAverage any
+	if row.RatingCount > 0 {
+		ratingAverage = row.RatingAverage
+	}
+	return map[string]any{
+		"id": row.ID, "property_id": row.PropertyID, "name": row.RoomName,
+		"property_name": row.PropertyName, "area_name": row.AreaName,
+		"thumbnail_url": thumbnailURL, "gender": row.Gender,
+		"price": row.ActivePrice, "price_label": money.FormatRupiah(row.ActivePrice),
+		"available": row.Available, "is_flash_sale": row.IsFlashSale,
+		"rating_average": ratingAverage, "rating_count": row.RatingCount,
 	}
 }
