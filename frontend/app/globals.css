@@ -89,6 +89,7 @@
 }
 
 @layer base {
+  :root { --z-sticky: 20; --z-dropdown: 30; --z-toast: 50; }
   html { color-scheme: light; -webkit-tap-highlight-color: transparent; }
   body {
     @apply bg-neutral-0 font-sans text-body text-neutral-900 antialiased;

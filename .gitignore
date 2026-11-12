@@ -31,3 +31,6 @@ frontend/*.tsbuildinfo
 
 # Local Redis snapshot (created by `redis-server` when run directly in dev)
 dump.rdb
+
+# Playwright MCP browser session output (screenshots, console logs)
+.playwright-mcp/

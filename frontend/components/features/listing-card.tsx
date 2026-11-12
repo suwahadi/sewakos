@@ -28,10 +28,12 @@ const RENT_TYPE_SUFFIX: Record<1 | 2 | 3, string> = { 1: "/hari", 2: "/minggu", 
 export function ListingCard({
   room,
   rentType = 3,
+  vertical = false,
   className,
 }: {
   room: ListingCardRoom;
   rentType?: 1 | 2 | 3;
+  vertical?: boolean;
   className?: string;
 }) {
   const availabilityLabel =
@@ -41,17 +43,23 @@ export function ListingCard({
     <Link
       href={`/kost/${room.property_id}`}
       className={cn(
-        "flex h-full min-w-0 gap-3 sm:flex-col sm:gap-0 sm:[&>div:first-child]:mb-2",
+        "flex h-full min-w-0",
+        vertical ? "flex-col gap-2" : "gap-3 sm:flex-col sm:gap-2",
         className,
       )}
     >
-      <div className="relative aspect-[4/5] w-28 shrink-0 overflow-hidden rounded-md bg-neutral-100 sm:aspect-[4/3] sm:w-full">
+      <div
+        className={cn(
+          "relative shrink-0 overflow-hidden rounded-md bg-neutral-100",
+          vertical ? "aspect-[4/3] w-full" : "aspect-[4/5] w-28 sm:aspect-[4/3] sm:w-full",
+        )}
+      >
         {room.thumbnail_url ? (
           <Image
             src={room.thumbnail_url}
             alt=""
             fill
-            sizes="(min-width:1024px) 25vw, (min-width:640px) 50vw, 112px"
+            sizes={vertical ? "192px" : "(min-width:1024px) 25vw, (min-width:640px) 50vw, 112px"}
             className="object-cover"
           />
         ) : (
@@ -74,12 +82,12 @@ export function ListingCard({
         <p className="truncate text-caption text-neutral-600">{room.name}</p>
         <div className="flex h-[18px] items-center gap-3 text-caption text-neutral-600">
           {room.rating_count > 0 && (
-            <span className="inline-flex items-center gap-1">
+            <span className="inline-flex shrink-0 items-center gap-1">
               <RatingStars size={14} />
               {formatRating(room.rating_average ?? 0)} ({room.rating_count})
             </span>
           )}
-          {availabilityLabel && <span>{availabilityLabel}</span>}
+          {availabilityLabel && <span className="truncate">{availabilityLabel}</span>}
         </div>
         <p className="mt-auto text-price font-bold text-neutral-900">
           {room.price_label}

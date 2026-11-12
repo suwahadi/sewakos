@@ -47,25 +47,25 @@ export default async function HomePage() {
         </div>
 
         {cities.length > 0 && (
-          <section className="flex flex-col gap-2">
+          <section className="-mx-4 flex flex-col gap-2">
             <p className="px-4 text-title-sm font-semibold text-neutral-900">Kota populer</p>
             <AreaChipRow areas={cities} />
           </section>
         )}
 
         {campuses.length > 0 && (
-          <section className="flex flex-col gap-2">
+          <section className="-mx-4 flex flex-col gap-2">
             <p className="px-4 text-title-sm font-semibold text-neutral-900">Kampus terdekat</p>
             <AreaChipRow areas={campuses} />
           </section>
         )}
 
         {promoRooms.length > 0 && (
-          <section className="flex flex-col gap-2">
+          <section className="-mx-4 flex flex-col gap-2">
             <p className="px-4 text-title-sm font-semibold text-neutral-900">Promo minggu ini</p>
             <div className="flex gap-3 overflow-x-auto px-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               {promoRooms.map((room) => (
-                <ListingCard key={room.id} room={room} className="w-40 shrink-0 sm:w-48" />
+                <ListingCard key={room.id} room={room} vertical className="w-40 shrink-0 sm:w-48" />
               ))}
             </div>
           </section>
