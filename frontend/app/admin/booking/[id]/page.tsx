@@ -50,7 +50,7 @@ export default async function AdminBookingPage({ params }: { params: Promise<{ i
           </Row>
           {booking.reject_reason && <Row label="Alasan ditolak">{booking.reject_reason}</Row>}
         </Panel>
-        <Panel title="Uang">
+        <Panel title="Biaya">
           <Row label="Harga sewa">{booking.price_label}</Row>
           <Row label="Deposit">{booking.deposit_label}</Row>
           <Row label="Biaya admin">{booking.admin_fee_label}</Row>
@@ -58,7 +58,7 @@ export default async function AdminBookingPage({ params }: { params: Promise<{ i
           {booking.paid_at && <Row label="Dibayar">{dateTime(booking.paid_at)}</Row>}
           {booking.owner_deadline_at && booking.status === "paid" && <Row label="Batas respons">{dateTime(booking.owner_deadline_at)}</Row>}
         </Panel>
-        <Panel title="Pembayaran Midtrans">
+        <Panel title="Pembayaran">
           {payment ? (
             <>
               <Row label="Order ID">{payment.order_id}</Row>

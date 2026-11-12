@@ -165,7 +165,7 @@ test("tenant extends and pays, owner records the deposit, admin reviews finance,
   expect(adminCsv.toString()).toContain("id,occurred_at_wib,type,amount,owner_id,booking_id,invoice_number,description");
 
   await admin.goto("/admin/rekonsiliasi");
-  await expect(admin.getByRole("heading", { name: "Rekonsiliasi Midtrans" })).toBeVisible();
+  await expect(admin.getByRole("heading", { name: "Rekonsiliasi" })).toBeVisible();
   const issueRow = admin.locator("tr, li").filter({ hasText: payment.order_id }).filter({ visible: true });
   const loadMore = admin.getByRole("button", { name: "Muat lebih banyak" });
   while (!(await issueRow.count()) && (await loadMore.isVisible())) {

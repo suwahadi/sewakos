@@ -132,7 +132,7 @@ export function ledgerTypeLabel(type: string): string {
 const RECONCILIATION_KIND_LABEL: Record<string, string> = {
   status_mismatch: "Status tidak cocok",
   amount_mismatch: "Nominal tidak cocok",
-  not_found_at_midtrans: "Tidak ditemukan di Midtrans",
+  not_found_at_midtrans: "Tidak ditemukan di penyedia pembayaran",
 };
 
 export function reconciliationKindLabel(kind: string): string {

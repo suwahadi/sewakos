@@ -147,7 +147,7 @@ export function AdminReconciliationList({ initial }: { initial: AdminReconciliat
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-title-lg font-semibold text-neutral-900">Rekonsiliasi Midtrans</h1>
+      <h1 className="text-title-lg font-semibold text-neutral-900">Rekonsiliasi</h1>
       <div className="border-b border-neutral-200">
         <Tabs
           items={RECONCILIATION_TABS}
@@ -167,8 +167,8 @@ export function AdminReconciliationList({ initial }: { initial: AdminReconciliat
           columns={[
             { key: "order", header: "Order", render: (issue) => issue.order_id },
             { key: "kind", header: "Jenis", render: (issue) => reconciliationKindLabel(issue.kind) },
-            { key: "local", header: "Status lokal", render: (issue) => issue.local_status },
-            { key: "midtrans", header: "Status Midtrans", render: (issue) => issue.midtrans_status ?? "–" },
+            { key: "local", header: "Status sistem", render: (issue) => issue.local_status },
+            { key: "midtrans", header: "Status pembayaran", render: (issue) => issue.midtrans_status ?? "–" },
             {
               key: "amount",
               header: "Nominal",
