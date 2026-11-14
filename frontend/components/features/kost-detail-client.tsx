@@ -39,7 +39,7 @@ export function KostDetailClient({
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId);
 
   return (
-    <div className="flex flex-col gap-6 px-4 pb-28">
+    <div className="flex flex-col gap-6 px-4 pb-8">
       {rooms.length > 0 && (
         <section>
           <p className="mb-3 text-title-sm font-semibold text-neutral-900">Pilih kamar</p>

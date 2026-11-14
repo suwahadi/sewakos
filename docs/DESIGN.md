@@ -1072,8 +1072,9 @@ hanya bila ada diskon. Sewa bulanan dengan durasi > 1: caption "Bulan berikutnya
 
 Menempel di bawah (mobile) di halaman detail & form booking. Latar putih, border atas `neutral-200`, `shadow-raised`,
 padding 12px 16px + safe area. Kiri: caption "Mulai dari" + harga `price` (+ satuan); kanan: tombol `success` `lg`.
-Konten halaman diberi `padding-bottom` setinggi bar agar tidak tertutup. ≥ 1024px: berubah menjadi panel menempel
-(`position: sticky; top: 80px`) di kolom kanan.
+Konten halaman diberi `padding-bottom` setinggi bar agar tidak tertutup. ≥ 1024px: tetap `fixed` di bawah layar
+sebagai panel mengambang 16px dari tepi bawah, selebar kontainer konten (1200px), `radius-lg`, border `neutral-200`,
+`shadow-overlay`; tombol aksi selalu terlihat tanpa harus scroll.
 
 ### 6.34 Accordion
 
