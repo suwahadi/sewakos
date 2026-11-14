@@ -1031,11 +1031,12 @@ Grid card foto kota: 2 kolom (< 640), 3 kolom (≥ 640), jarak 12px (16px ≥ 10
 ### 6.29 PropertyGallery
 
 Sumber: `property.photos[]` + `rooms[].photos[]` dari `GET /listings/{id}` (atau `GET /listings/{id}/gallery`).
-- Diberi jarak dari header: padding 16px kiri/kanan, 16px atas (24px ≥ 1024px); foto `radius-md`.
+- Jarak dari header 5px; padding 16px kiri/kanan; foto `radius-md`.
 - Mobile: rasio 4:3, geser horizontal dengan `scroll-snap-type: x mandatory`.
   Penanda posisi "1/8" (`caption`, latar `neutral-900` 64%, teks putih) di kanan bawah.
-- ≥ 1024px: foto utama 16:9 di kiri (2/3 lebar) + dua foto bertumpuk di kanan; tombol "Lihat semua foto" membuka
-  lightbox di foto pertama.
+- ≥ 1024px: foto utama 16:9 di kiri (2/3 lebar) + dua foto bertumpuk di kanan. Bila foto lebih dari 3, foto
+  terakhir yang tampil diberi lapisan `neutral-900` 60% dengan teks "+{sisa} foto" (`title-lg` 700 putih, di tengah;
+  label aksesibel "Lihat {sisa} foto lainnya"). Tidak ada tombol "Lihat semua foto".
 - Setiap foto adalah tombol ("Perbesar foto n") yang membuka **Lightbox** di foto itu: `<dialog>` layar penuh latar
   `neutral-900` solid, foto `object-contain`, tanpa judul atau caption; tombol Tutup, Foto sebelumnya/berikutnya (memutar),
   panah kiri/kanan di keyboard, geser di layar sentuh; Esc atau klik area kosong menutup.

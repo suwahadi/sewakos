@@ -18,9 +18,22 @@ describe("PropertyGallery", () => {
     expect(within(lightbox).getByRole("img", { name: "Foto Kost Melati 2" })).toBeInTheDocument();
   });
 
-  it("opens the lightbox from Lihat semua foto at the first photo", () => {
+  it("shows no extra-photo count when every photo already fits", () => {
     render(<PropertyGallery photos={photos} propertyName="Kost Melati" />);
-    fireEvent.click(screen.getByRole("button", { name: "Lihat semua foto" }));
-    expect(within(screen.getByLabelText("Foto Kost Melati")).getByRole("img", { name: "Foto Kost Melati 1" })).toBeInTheDocument();
+    expect(screen.queryByText(/foto$/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Lihat semua foto" })).not.toBeInTheDocument();
+  });
+
+  it("counts the photos beyond the three on the last tile and opens the lightbox there", () => {
+    const five = [
+      ...photos,
+      { url: "https://cdn.example.com/4.webp", thumbnail_url: "https://cdn.example.com/4_t.webp", caption: null },
+      { url: "https://cdn.example.com/5.webp", thumbnail_url: "https://cdn.example.com/5_t.webp", caption: null },
+    ];
+    render(<PropertyGallery photos={five} propertyName="Kost Melati" />);
+    expect(screen.getByText("+2 foto")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Lihat 2 foto lainnya" }));
+    expect(within(screen.getByLabelText("Foto Kost Melati")).getByRole("img", { name: "Foto Kost Melati 3" })).toBeInTheDocument();
   });
 });

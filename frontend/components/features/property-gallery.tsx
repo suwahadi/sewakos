@@ -5,6 +5,8 @@ import Image from "next/image";
 import { useState } from "react";
 import { Lightbox } from "@/components/ui/lightbox";
 
+const DESKTOP_VISIBLE = 3;
+
 export interface GalleryPhoto {
   url: string;
   thumbnail_url: string;
@@ -17,7 +19,7 @@ export function PropertyGallery({ photos, propertyName }: { photos: GalleryPhoto
 
   if (photos.length === 0) {
     return (
-      <div className="px-4 pt-4 lg:pt-6">
+      <div className="px-4 pt-[5px]">
         <div className="flex aspect-[4/3] items-center justify-center rounded-md bg-neutral-100 lg:aspect-auto lg:h-80">
           <span className="flex flex-col items-center gap-2 text-neutral-400">
             <Camera aria-hidden="true" size={40} strokeWidth={1.5} />
@@ -32,8 +34,10 @@ export function PropertyGallery({ photos, propertyName }: { photos: GalleryPhoto
     return photo.caption ?? `Foto ${propertyName} ${position}`;
   }
 
+  const hiddenCount = photos.length - DESKTOP_VISIBLE;
+
   return (
-    <div className="px-4 pt-4 lg:pt-6">
+    <div className="px-4 pt-[5px]">
       <div className="relative overflow-hidden rounded-md lg:hidden">
         <div
           className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
@@ -77,28 +81,27 @@ export function PropertyGallery({ photos, propertyName }: { photos: GalleryPhoto
           <Image src={photos[0]!.url} alt={altFor(photos[0]!, 1)} fill sizes="66vw" priority className="rounded-md object-cover" />
         </button>
         <div className="grid grid-rows-2 gap-2">
-          {photos.slice(1, 3).map((photo, i) => (
-            <button
-              key={photo.url}
-              type="button"
-              aria-label={`Perbesar foto ${i + 2}`}
-              onClick={() => setLightboxIndex(i + 1)}
-              className="relative aspect-[16/9]"
-            >
-              <Image src={photo.url} alt={altFor(photo, i + 2)} fill sizes="33vw" loading="lazy" className="rounded-md object-cover" />
-            </button>
-          ))}
+          {photos.slice(1, DESKTOP_VISIBLE).map((photo, i) => {
+            const isLast = i + 2 === DESKTOP_VISIBLE && hiddenCount > 0;
+            return (
+              <button
+                key={photo.url}
+                type="button"
+                aria-label={isLast ? `Lihat ${hiddenCount} foto lainnya` : `Perbesar foto ${i + 2}`}
+                onClick={() => setLightboxIndex(i + 1)}
+                className="relative aspect-[16/9] overflow-hidden rounded-md"
+              >
+                <Image src={photo.url} alt={altFor(photo, i + 2)} fill sizes="33vw" loading="lazy" className="object-cover" />
+                {isLast && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-neutral-900/60 text-title-lg font-bold text-neutral-0">
+                    +{hiddenCount} foto
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
-      {photos.length > 1 && (
-        <button
-          type="button"
-          onClick={() => setLightboxIndex(0)}
-          className="mt-2 hidden text-label font-semibold text-brand-700 lg:block"
-        >
-          Lihat semua foto
-        </button>
-      )}
 
       <Lightbox
         photos={photos.map((photo, i) => ({ src: photo.url, alt: altFor(photo, i + 1) }))}
