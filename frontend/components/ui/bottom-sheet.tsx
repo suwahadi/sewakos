@@ -28,7 +28,7 @@ export function BottomSheet({ open, onClose, title, children, footer }: BottomSh
   return (
     <dialog
       ref={dialogRef}
-      className="sheet w-full rounded-t-sheet bg-neutral-0 shadow-sheet"
+      className="sheet w-full rounded-t-sheet bg-neutral-0 shadow-sheet sm:rounded-sheet sm:shadow-overlay"
       aria-labelledby={titleId}
       onClose={(event) => {
         if (event.target === dialogRef.current) onClose();
@@ -40,18 +40,18 @@ export function BottomSheet({ open, onClose, title, children, footer }: BottomSh
         if (event.target === dialogRef.current) onClose();
       }}
     >
-      <div className="flex max-h-[90dvh] flex-col">
-        <div className="flex justify-center pt-2">
+      <div className="flex max-h-[90dvh] flex-col sm:max-h-[85dvh]">
+        <div className="flex justify-center pt-2 sm:hidden">
           <span aria-hidden="true" className="h-1 w-9 rounded-full bg-neutral-300" />
         </div>
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:pt-5">
           <p id={titleId} className="text-title-md font-semibold text-neutral-900">
             {title}
           </p>
           <IconButton icon={<X aria-hidden="true" />} aria-label="Tutup" onClick={onClose} />
         </div>
-        <div className="flex-1 overflow-y-auto px-4">{children}</div>
-        {footer && <div className="px-4 pt-4" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }}>{footer}</div>}
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 sm:px-6">{children}</div>
+        {footer && <div className="px-4 pt-4 sm:px-6" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }}>{footer}</div>}
       </div>
     </dialog>
   );

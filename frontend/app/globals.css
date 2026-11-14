@@ -166,6 +166,23 @@
   @starting-style {
     dialog.sheet[open]::backdrop { opacity: 0; }
   }
+  @media (min-width: 640px) {
+    dialog.sheet {
+      margin: auto;
+      max-height: 85dvh;
+      opacity: 1;
+      transform: scale(1);
+      transition:
+        transform var(--duration-slow) var(--ease-standard),
+        opacity var(--duration-slow) var(--ease-standard),
+        overlay var(--duration-slow) allow-discrete,
+        display var(--duration-slow) allow-discrete;
+    }
+    dialog.sheet:not([open]) { transform: scale(0.98); opacity: 0; }
+    @starting-style {
+      dialog.sheet[open] { transform: scale(0.98); opacity: 0; }
+    }
+  }
 
   dialog.drawer {
     border: none;

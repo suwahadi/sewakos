@@ -812,8 +812,10 @@ Untuk gagal muat (5xx/jaringan): pesan API atau "Tidak bisa memuat data." + tomb
 
 ### 6.20 BottomSheet
 
-`<dialog class="sheet">` (§5.3). Menempel di bawah, lebar penuh (maks 560px di tengah pada ≥ 640px),
-radius atas `radius-sheet`, `shadow-sheet`, tinggi maks `90dvh`.
+`<dialog class="sheet">` (§5.3). Mobile (< 640px): menempel di bawah, lebar penuh, radius atas `radius-sheet`,
+`shadow-sheet`, tinggi maks `90dvh`. ≥ 640px: dialog di tengah layar (lebar maks 560px), semua sudut `radius-sheet`,
+`shadow-overlay`, tinggi maks `85dvh`, tanpa pegangan, muncul dengan fade + skala 0,98. Isi selalu bisa di-scroll
+(`min-height: 0` pada area isi) sehingga ujung bawah popup panjang tetap terlihat.
 Anatomi: pegangan 36×4px `neutral-300` (dekoratif) → header (judul `title-md` + `X`) → isi yang bisa di-scroll →
 footer menempel (tombol aksi) dengan `padding-bottom: env(safe-area-inset-bottom)`.
 Menutup: tombol `X`, Esc, klik backdrop. Fokus kembali ke pemicu setelah ditutup.
