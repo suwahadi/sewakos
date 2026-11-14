@@ -1037,7 +1037,7 @@ Sumber: `property.photos[]` + `rooms[].photos[]` dari `GET /listings/{id}` (atau
 - ≥ 1024px: foto utama 16:9 di kiri (2/3 lebar) + dua foto bertumpuk di kanan; tombol "Lihat semua foto" membuka
   lightbox di foto pertama.
 - Setiap foto adalah tombol ("Perbesar foto n") yang membuka **Lightbox** di foto itu: `<dialog>` layar penuh latar
-  `neutral-900` 95%, foto `object-contain`, tanpa judul atau caption; tombol Tutup, Foto sebelumnya/berikutnya (memutar),
+  `neutral-900` solid, foto `object-contain`, tanpa judul atau caption; tombol Tutup, Foto sebelumnya/berikutnya (memutar),
   panah kiri/kanan di keyboard, geser di layar sentuh; Esc atau klik area kosong menutup.
 - Foto pertama: `priority` (LCP). Lainnya `loading="lazy"`. Pakai `url` (besar) di galeri, `thumbnail_url` di strip kecil.
 - `alt` = `caption` bila ada, selain itu "Foto {nama properti} {n}".

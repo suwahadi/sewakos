@@ -52,7 +52,7 @@ export function Lightbox({
     <dialog
       ref={dialogRef}
       aria-label={label}
-      className="m-0 h-dvh max-h-none w-screen max-w-none border-0 bg-neutral-900/95 p-0 backdrop:bg-transparent"
+      className="m-0 h-dvh max-h-none w-screen max-w-none border-0 bg-neutral-900 p-0 backdrop:bg-neutral-900"
       onKeyDown={handleKeyDown}
       onCancel={(event) => {
         event.preventDefault();
