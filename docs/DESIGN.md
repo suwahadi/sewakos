@@ -480,6 +480,8 @@ Aturan:
 Urutan pencocokan mengikuti urutan baris di atas (`CCTV 24 jam` menjadi `Camera`, bukan `Clock`).
 
 Logo aplikasi adalah aset SVG milik kamu sendiri (`/public/logo.svg`), bukan dibuat dari ikon.
+Favicon: lingkaran `brand-600` dengan teks "SK" putih tebal (`app/icon.svg`, plus `app/favicon.ico` 16/32/48px
+yang dirender dari SVG yang sama).
 
 **Logo merek pihak ketiga** mengikuti §0.1-C. Yang dipakai di v1:
 
