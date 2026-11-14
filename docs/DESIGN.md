@@ -1031,13 +1031,18 @@ Grid card foto kota: 2 kolom (< 640), 3 kolom (≥ 640), jarak 12px (16px ≥ 10
 ### 6.29 PropertyGallery
 
 Sumber: `property.photos[]` + `rooms[].photos[]` dari `GET /listings/{id}` (atau `GET /listings/{id}/gallery`).
-- Mobile: lebar penuh tanpa padding, rasio 4:3, geser horizontal dengan `scroll-snap-type: x mandatory`.
+- Diberi jarak dari header: padding 16px kiri/kanan, 16px atas (24px ≥ 1024px); foto `radius-md`.
+- Mobile: rasio 4:3, geser horizontal dengan `scroll-snap-type: x mandatory`.
   Penanda posisi "1/8" (`caption`, latar `neutral-900` 64%, teks putih) di kanan bawah.
 - ≥ 1024px: foto utama 16:9 di kiri (2/3 lebar) + dua foto bertumpuk di kanan; tombol "Lihat semua foto" membuka
-  dialog galeri layar penuh.
+  lightbox di foto pertama.
+- Setiap foto adalah tombol ("Perbesar foto n") yang membuka **Lightbox** di foto itu: `<dialog>` layar penuh latar
+  `neutral-900` 95%, foto `object-contain`, tanpa judul atau caption; tombol Tutup, Foto sebelumnya/berikutnya (memutar),
+  panah kiri/kanan di keyboard, geser di layar sentuh; Esc atau klik area kosong menutup.
 - Foto pertama: `priority` (LCP). Lainnya `loading="lazy"`. Pakai `url` (besar) di galeri, `thumbnail_url` di strip kecil.
 - `alt` = `caption` bila ada, selain itu "Foto {nama properti} {n}".
-- Tanpa foto: blok 4:3 `neutral-100` dengan ikon `Camera` dan teks "Belum ada foto".
+- Tanpa foto: blok `neutral-100` `radius-md` (4:3 di mobile, tinggi 320px ≥ 1024px) dengan ikon `Camera` dan teks
+  "Belum ada foto".
 
 ### 6.30 FacilityList
 
