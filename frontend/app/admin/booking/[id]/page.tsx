@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ErrorState } from "@/components/ui/error-state";
-import type { AdminBooking } from "@/lib/admin";
+import { adminOwnerFinanceHref, type AdminBooking } from "@/lib/admin";
 import { apiFetch } from "@/lib/api/client";
 import { formatDateShort, formatPhoneDisplay, formatTimeWIB, previousDay } from "@/lib/format";
 import { bookingStatusLabel, durationLabel, payoutStatusLabel, paymentStatusLabel, refundStatusLabel } from "@/lib/labels";
@@ -42,6 +42,11 @@ export default async function AdminBookingPage({ params }: { params: Promise<{ i
         <Panel title="Sewa">
           <Row label="Penyewa">{booking.tenant.name}</Row>
           <Row label="Nomor HP">{booking.tenant.phone_number ? formatPhoneDisplay(booking.tenant.phone_number) : "–"}</Row>
+          <Row label="Pemilik">
+            <Link href={adminOwnerFinanceHref(booking.owner.id)} className="text-brand-700 underline">
+              {booking.owner.name}
+            </Link>
+          </Row>
           <Row label="Kamar">{booking.room.name}</Row>
           <Row label="Kost">{booking.property.name}</Row>
           <Row label="Durasi">{durationLabel(booking.rent_type, booking.duration)}</Row>

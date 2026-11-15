@@ -1283,6 +1283,7 @@ Path ini juga dipakai backend untuk field `link` notifikasi (SPEC-GO.md §17). M
 | `/owner/keuangan` | Ringkasan (StatCard), lalu tab Buku besar · Payout · Rekening (form rekening hanya di tab Rekening) | Owner |
 | `/owner/ulasan` | Ulasan properti | Owner |
 | `/admin/...` | Panel admin (struktur mengikuti bagian di API-ADMIN.md) | Admin |
+| `/admin/keuangan?user={id}` | Keuangan per pemilik: chip "Pemilik: {nama}" (bisa dihapus) menggantikan kolom "Filter per pemilik"; StatCard, buku besar, tab, dan CSV memakai `owner_id`. Tanpa filter, tiap entri menampilkan nama pemilik yang menaut ke URL ini. Detail booking admin punya baris "Pemilik" (tanpa nomor HP) yang menaut ke sini | Admin |
 
 Halaman yang butuh login mengarahkan tamu ke `/masuk?next={path}`. Role yang salah → ErrorState 403
 ("Halaman ini tidak tersedia untuk akunmu.").

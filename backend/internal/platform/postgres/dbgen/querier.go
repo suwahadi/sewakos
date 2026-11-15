@@ -78,7 +78,7 @@ type Querier interface {
 	FinalizePayment(ctx context.Context, arg FinalizePaymentParams) error
 	GetAccessTokenForVerification(ctx context.Context, id int64) (GetAccessTokenForVerificationRow, error)
 	GetActivePaymentForInvoice(ctx context.Context, invoiceID int64) (GetActivePaymentForInvoiceRow, error)
-	GetAdminFinanceOutstanding(ctx context.Context) (GetAdminFinanceOutstandingRow, error)
+	GetAdminFinanceOutstanding(ctx context.Context, ownerID pgtype.Int8) (GetAdminFinanceOutstandingRow, error)
 	GetAdminFinanceSummary(ctx context.Context, arg GetAdminFinanceSummaryParams) (GetAdminFinanceSummaryRow, error)
 	GetAreaByID(ctx context.Context, id int64) (GetAreaByIDRow, error)
 	GetBookingByID(ctx context.Context, arg GetBookingByIDParams) (GetBookingByIDRow, error)

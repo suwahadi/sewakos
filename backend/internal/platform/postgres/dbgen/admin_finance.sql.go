@@ -13,9 +13,23 @@ import (
 
 const getAdminFinanceOutstanding = `-- name: GetAdminFinanceOutstanding :one
 SELECT
-  (SELECT COALESCE(SUM(amount), 0) FROM refunds WHERE status != 'completed')::bigint AS refunds_outstanding,
-  (SELECT COALESCE(SUM(amount), 0) FROM payouts WHERE status = 'pending')::bigint AS payouts_outstanding,
-  (SELECT COUNT(*) FROM reconciliation_issues WHERE status = 'open')::bigint AS open_reconciliation_issues
+  (SELECT COALESCE(SUM(rf.amount), 0)
+   FROM refunds rf
+   JOIN bookings b ON b.id = rf.booking_id
+   JOIN rooms r ON r.id = b.room_id
+   JOIN properties p ON p.id = r.property_id
+   WHERE rf.status != 'completed' AND ($1::bigint IS NULL OR p.owner_id = $1))::bigint AS refunds_outstanding,
+  (SELECT COALESCE(SUM(po.amount), 0)
+   FROM payouts po
+   WHERE po.status = 'pending' AND ($1::bigint IS NULL OR po.owner_id = $1))::bigint AS payouts_outstanding,
+  (SELECT COUNT(*)
+   FROM reconciliation_issues ri
+   JOIN payments pm ON pm.id = ri.payment_id
+   JOIN invoices i ON i.id = pm.invoice_id
+   JOIN bookings b ON b.id = i.booking_id
+   JOIN rooms r ON r.id = b.room_id
+   JOIN properties p ON p.id = r.property_id
+   WHERE ri.status = 'open' AND ($1::bigint IS NULL OR p.owner_id = $1))::bigint AS open_reconciliation_issues
 `
 
 type GetAdminFinanceOutstandingRow struct {
@@ -24,8 +38,8 @@ type GetAdminFinanceOutstandingRow struct {
 	OpenReconciliationIssues int64
 }
 
-func (q *Queries) GetAdminFinanceOutstanding(ctx context.Context) (GetAdminFinanceOutstandingRow, error) {
-	row := q.db.QueryRow(ctx, getAdminFinanceOutstanding)
+func (q *Queries) GetAdminFinanceOutstanding(ctx context.Context, ownerID pgtype.Int8) (GetAdminFinanceOutstandingRow, error) {
+	row := q.db.QueryRow(ctx, getAdminFinanceOutstanding, ownerID)
 	var i GetAdminFinanceOutstandingRow
 	err := row.Scan(&i.RefundsOutstanding, &i.PayoutsOutstanding, &i.OpenReconciliationIssues)
 	return i, err
@@ -33,17 +47,22 @@ func (q *Queries) GetAdminFinanceOutstanding(ctx context.Context) (GetAdminFinan
 
 const getAdminFinanceSummary = `-- name: GetAdminFinanceSummary :one
 SELECT
-  COALESCE(SUM(amount) FILTER (WHERE type = 'payment_received'), 0)::bigint AS payments_received,
-  COALESCE(SUM(amount) FILTER (WHERE type = 'admin_fee_earned'), 0)::bigint AS admin_fee_revenue,
-  COALESCE(-SUM(amount) FILTER (WHERE type = 'refund_completed'), 0)::bigint AS refunds_completed,
-  COALESCE(-SUM(amount) FILTER (WHERE type = 'payout_completed'), 0)::bigint AS payouts_completed
-FROM ledger_entries
-WHERE occurred_at >= $1 AND occurred_at < $2
+  COALESCE(SUM(l.amount) FILTER (WHERE l.type = 'payment_received'), 0)::bigint AS payments_received,
+  COALESCE(SUM(l.amount) FILTER (WHERE l.type = 'admin_fee_earned'), 0)::bigint AS admin_fee_revenue,
+  COALESCE(-SUM(l.amount) FILTER (WHERE l.type = 'refund_completed'), 0)::bigint AS refunds_completed,
+  COALESCE(-SUM(l.amount) FILTER (WHERE l.type = 'payout_completed'), 0)::bigint AS payouts_completed
+FROM ledger_entries l
+LEFT JOIN bookings b ON b.id = l.booking_id
+LEFT JOIN rooms r ON r.id = b.room_id
+LEFT JOIN properties p ON p.id = r.property_id
+WHERE l.occurred_at >= $1 AND l.occurred_at < $2
+  AND ($3::bigint IS NULL OR COALESCE(l.owner_id, p.owner_id) = $3)
 `
 
 type GetAdminFinanceSummaryParams struct {
 	FromTime pgtype.Timestamptz
 	ToTime   pgtype.Timestamptz
+	OwnerID  pgtype.Int8
 }
 
 type GetAdminFinanceSummaryRow struct {
@@ -54,7 +73,7 @@ type GetAdminFinanceSummaryRow struct {
 }
 
 func (q *Queries) GetAdminFinanceSummary(ctx context.Context, arg GetAdminFinanceSummaryParams) (GetAdminFinanceSummaryRow, error) {
-	row := q.db.QueryRow(ctx, getAdminFinanceSummary, arg.FromTime, arg.ToTime)
+	row := q.db.QueryRow(ctx, getAdminFinanceSummary, arg.FromTime, arg.ToTime, arg.OwnerID)
 	var i GetAdminFinanceSummaryRow
 	err := row.Scan(
 		&i.PaymentsReceived,
@@ -93,12 +112,17 @@ func (q *Queries) InsertReconciliationIssue(ctx context.Context, arg InsertRecon
 }
 
 const listAdminLedgerEntries = `-- name: ListAdminLedgerEntries :many
-SELECT l.id, l.occurred_at, l.type, l.amount, l.owner_id, l.booking_id, i.number AS invoice_number, l.description
+SELECT l.id, l.occurred_at, l.type, l.amount, o.id AS owner_id, o.name AS owner_name,
+  l.booking_id, i.number AS invoice_number, l.description
 FROM ledger_entries l
 LEFT JOIN invoices i ON i.id = l.invoice_id
+LEFT JOIN bookings b ON b.id = l.booking_id
+LEFT JOIN rooms r ON r.id = b.room_id
+LEFT JOIN properties p ON p.id = r.property_id
+LEFT JOIN users o ON o.id = COALESCE(l.owner_id, p.owner_id)
 WHERE l.occurred_at >= $1 AND l.occurred_at < $2
   AND ($3::varchar IS NULL OR l.type = $3)
-  AND ($4::bigint IS NULL OR l.owner_id = $4)
+  AND ($4::bigint IS NULL OR COALESCE(l.owner_id, p.owner_id) = $4)
 ORDER BY l.occurred_at DESC, l.id DESC
 LIMIT $6 OFFSET $5
 `
@@ -118,6 +142,7 @@ type ListAdminLedgerEntriesRow struct {
 	Type          string
 	Amount        int64
 	OwnerID       pgtype.Int8
+	OwnerName     pgtype.Text
 	BookingID     pgtype.Int8
 	InvoiceNumber pgtype.Text
 	Description   string
@@ -145,6 +170,7 @@ func (q *Queries) ListAdminLedgerEntries(ctx context.Context, arg ListAdminLedge
 			&i.Type,
 			&i.Amount,
 			&i.OwnerID,
+			&i.OwnerName,
 			&i.BookingID,
 			&i.InvoiceNumber,
 			&i.Description,
@@ -300,12 +326,17 @@ func (q *Queries) SelectPaymentsForReconciliation(ctx context.Context, arg Selec
 }
 
 const streamAdminLedgerEntries = `-- name: StreamAdminLedgerEntries :many
-SELECT l.id, l.occurred_at, l.type, l.amount, l.owner_id, l.booking_id, i.number AS invoice_number, l.description
+SELECT l.id, l.occurred_at, l.type, l.amount, o.id AS owner_id, o.name AS owner_name,
+  l.booking_id, i.number AS invoice_number, l.description
 FROM ledger_entries l
 LEFT JOIN invoices i ON i.id = l.invoice_id
+LEFT JOIN bookings b ON b.id = l.booking_id
+LEFT JOIN rooms r ON r.id = b.room_id
+LEFT JOIN properties p ON p.id = r.property_id
+LEFT JOIN users o ON o.id = COALESCE(l.owner_id, p.owner_id)
 WHERE l.occurred_at >= $1 AND l.occurred_at < $2
   AND ($3::varchar IS NULL OR l.type = $3)
-  AND ($4::bigint IS NULL OR l.owner_id = $4)
+  AND ($4::bigint IS NULL OR COALESCE(l.owner_id, p.owner_id) = $4)
 ORDER BY l.occurred_at DESC, l.id DESC
 `
 
@@ -322,6 +353,7 @@ type StreamAdminLedgerEntriesRow struct {
 	Type          string
 	Amount        int64
 	OwnerID       pgtype.Int8
+	OwnerName     pgtype.Text
 	BookingID     pgtype.Int8
 	InvoiceNumber pgtype.Text
 	Description   string
@@ -347,6 +379,7 @@ func (q *Queries) StreamAdminLedgerEntries(ctx context.Context, arg StreamAdminL
 			&i.Type,
 			&i.Amount,
 			&i.OwnerID,
+			&i.OwnerName,
 			&i.BookingID,
 			&i.InvoiceNumber,
 			&i.Description,

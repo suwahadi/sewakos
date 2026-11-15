@@ -1,6 +1,7 @@
 "use client";
 
-import { Download } from "lucide-react";
+import { Download, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +14,14 @@ import { MoneyRow } from "@/components/ui/money-row";
 import { StatCard } from "@/components/ui/stat-card";
 import { Tabs, type TabItem } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import type { AdminFinanceSummary, AdminLedgerEntry, AdminReconciliationIssue } from "@/lib/admin";
+import { TextField } from "@/components/ui/text-field";
+import {
+  adminOwnerFinanceHref,
+  type AdminFinanceSummary,
+  type AdminLedgerEntry,
+  type AdminReconciliationIssue,
+  type AdminUser,
+} from "@/lib/admin";
 import { callBff } from "@/lib/api/browser";
 import { showApiError } from "@/lib/api/show-error";
 import { formatDateShort, formatRupiah, formatTimeWIB } from "@/lib/format";
@@ -37,19 +45,31 @@ const LEDGER_TABS: TabItem<string>[] = [
   ...LEDGER_TYPES.map((type) => ({ value: type, label: ledgerTypeLabel(type) })),
 ];
 
+export interface FinanceOwner {
+  id: number;
+  name: string;
+}
+
 export function AdminFinanceSummaryAndLedger({
   summary,
   initialLedger,
+  owner,
 }: {
   summary: AdminFinanceSummary | null;
   initialLedger: AdminLedgerEntry[];
+  owner: FinanceOwner | null;
 }) {
-  const list = useAdminList<AdminLedgerEntry>("finance/ledger", "entries", initialLedger, { type: "" });
-  const csvHref = list.query.type ? `/api/admin/finance/ledger.csv?type=${list.query.type}` : "/api/admin/finance/ledger.csv";
+  const list = useAdminList<AdminLedgerEntry>("finance/ledger", "entries", initialLedger, {
+    type: "",
+    owner_id: owner ? String(owner.id) : "",
+  });
+  const csvParams = new URLSearchParams(Object.entries(list.query).filter(([, value]) => value !== ""));
+  const csvHref = `/api/admin/finance/ledger.csv${csvParams.size > 0 ? `?${csvParams}` : ""}`;
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-title-lg font-semibold text-neutral-900">Keuangan platform</h1>
+      <OwnerFilter owner={owner} />
       {summary && (
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatCard label="Tagihan dibayar" value={summary.payments_received_label} />
@@ -71,7 +91,7 @@ export function AdminFinanceSummaryAndLedger({
           </a>
         </div>
         <div className="border-b border-neutral-200">
-          <Tabs items={LEDGER_TABS} value={list.query.type ?? ""} onChange={(type) => list.filter({ type })} aria-label="Jenis entri" idPrefix="admin-ledger" />
+          <Tabs items={LEDGER_TABS} value={list.query.type ?? ""} onChange={(type) => list.filter({ ...list.query, type })} aria-label="Jenis entri" idPrefix="admin-ledger" />
         </div>
         {list.rows.length === 0 && !list.loading ? (
           <p className="text-body text-neutral-600">Tidak ada entri buku besar untuk jenis ini.</p>
@@ -80,7 +100,14 @@ export function AdminFinanceSummaryAndLedger({
             {list.rows.map((entry) => (
               <MoneyRow
                 key={entry.id}
-                description={`${ledgerTypeLabel(entry.type)}${entry.owner_id ? ` — Pemilik #${entry.owner_id}` : ""}`}
+                description={ledgerTypeLabel(entry.type)}
+                detail={
+                  entry.owner_id && !owner ? (
+                    <Link href={adminOwnerFinanceHref(entry.owner_id)} className="text-brand-700 underline">
+                      {entry.owner_name ?? `Pemilik #${entry.owner_id}`}
+                    </Link>
+                  ) : undefined
+                }
                 date={entry.occurred_at}
                 amount={entry.amount}
                 isNote={entry.type === "deposit_returned"}
@@ -91,6 +118,73 @@ export function AdminFinanceSummaryAndLedger({
         {list.hasMore && <LoadMore loading={list.loading} onClick={list.loadMore} />}
       </section>
     </div>
+  );
+}
+
+function OwnerFilter({ owner }: { owner: FinanceOwner | null }) {
+  const router = useRouter();
+  const [search, setSearch] = useState("");
+  const [error, setError] = useState<string>();
+  const [results, setResults] = useState<AdminUser[] | null>(null);
+  const [searching, setSearching] = useState(false);
+
+  if (owner) {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-label text-neutral-600">Difilter:</span>
+        <span className="inline-flex h-8 items-center gap-1 rounded-full border border-brand-600 bg-brand-50 pl-3 pr-1 text-label font-medium text-brand-800">
+          Pemilik: {owner.name}
+          <button
+            type="button"
+            aria-label={`Hapus filter pemilik ${owner.name}`}
+            onClick={() => router.push("/admin/keuangan")}
+            className="inline-flex size-6 items-center justify-center rounded-full hover:bg-brand-100"
+          >
+            <X aria-hidden="true" size={14} strokeWidth={2} />
+          </button>
+        </span>
+      </div>
+    );
+  }
+
+  async function findOwners() {
+    const q = search.trim();
+    if (q.length < 3) return setError("Masukkan minimal 3 karakter.");
+    setError(undefined);
+    setSearching(true);
+    const result = await callBff<{ users: AdminUser[] }>(`/api/admin/users?${new URLSearchParams({ role: "owner", q, limit: "5" })}`);
+    setSearching(false);
+    if (!result.ok) return showApiError(result, (href) => router.push(href), findOwners);
+    setResults(result.data.users);
+  }
+
+  return (
+    <section className="flex flex-col gap-2">
+      <form
+        className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start"
+        onSubmit={(event) => {
+          event.preventDefault();
+          findOwners();
+        }}
+      >
+        <TextField label="Filter per pemilik" placeholder="Nama atau nomor HP pemilik" value={search} onChange={(event) => setSearch(event.target.value)} error={error} />
+        <Button type="submit" variant="neutral" loading={searching} className="sm:mt-[26px]">
+          Cari
+        </Button>
+      </form>
+      {results && results.length === 0 && <p className="text-body text-neutral-600">Pemilik tidak ditemukan.</p>}
+      {results && results.length > 0 && (
+        <ul aria-label="Hasil pencarian pemilik" className="flex flex-col divide-y divide-neutral-200 rounded-lg border border-neutral-200">
+          {results.map((user) => (
+            <li key={user.id}>
+              <Link href={adminOwnerFinanceHref(user.id)} className="flex min-h-11 items-center px-3 text-body text-neutral-900 hover:bg-neutral-50">
+                {user.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

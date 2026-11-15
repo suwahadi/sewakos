@@ -21,6 +21,7 @@ func bookingBody(row dbgen.AdminListBookingsRow) map[string]any {
 		"start_date": row.StartDate.Time.Format(time.DateOnly), "duration": row.Duration,
 		"end_date": row.EndDate.Time.Format(time.DateOnly),
 		"tenant":   map[string]any{"id": row.TenantID, "name": row.TenantName, "phone_number": row.TenantPhone},
+		"owner":    map[string]any{"id": row.OwnerID, "name": row.OwnerName},
 		"property": map[string]any{"id": row.PropertyID, "name": row.PropertyName},
 		"room":     map[string]any{"id": row.RoomID, "name": row.RoomName},
 		"price":    row.Price, "price_label": money.FormatRupiah(row.Price),

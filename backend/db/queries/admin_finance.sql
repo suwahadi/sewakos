@@ -1,35 +1,63 @@
 -- name: GetAdminFinanceSummary :one
 SELECT
-  COALESCE(SUM(amount) FILTER (WHERE type = 'payment_received'), 0)::bigint AS payments_received,
-  COALESCE(SUM(amount) FILTER (WHERE type = 'admin_fee_earned'), 0)::bigint AS admin_fee_revenue,
-  COALESCE(-SUM(amount) FILTER (WHERE type = 'refund_completed'), 0)::bigint AS refunds_completed,
-  COALESCE(-SUM(amount) FILTER (WHERE type = 'payout_completed'), 0)::bigint AS payouts_completed
-FROM ledger_entries
-WHERE occurred_at >= sqlc.arg(from_time) AND occurred_at < sqlc.arg(to_time);
+  COALESCE(SUM(l.amount) FILTER (WHERE l.type = 'payment_received'), 0)::bigint AS payments_received,
+  COALESCE(SUM(l.amount) FILTER (WHERE l.type = 'admin_fee_earned'), 0)::bigint AS admin_fee_revenue,
+  COALESCE(-SUM(l.amount) FILTER (WHERE l.type = 'refund_completed'), 0)::bigint AS refunds_completed,
+  COALESCE(-SUM(l.amount) FILTER (WHERE l.type = 'payout_completed'), 0)::bigint AS payouts_completed
+FROM ledger_entries l
+LEFT JOIN bookings b ON b.id = l.booking_id
+LEFT JOIN rooms r ON r.id = b.room_id
+LEFT JOIN properties p ON p.id = r.property_id
+WHERE l.occurred_at >= sqlc.arg(from_time) AND l.occurred_at < sqlc.arg(to_time)
+  AND (sqlc.narg(owner_id)::bigint IS NULL OR COALESCE(l.owner_id, p.owner_id) = sqlc.narg(owner_id));
 
 -- name: GetAdminFinanceOutstanding :one
 SELECT
-  (SELECT COALESCE(SUM(amount), 0) FROM refunds WHERE status != 'completed')::bigint AS refunds_outstanding,
-  (SELECT COALESCE(SUM(amount), 0) FROM payouts WHERE status = 'pending')::bigint AS payouts_outstanding,
-  (SELECT COUNT(*) FROM reconciliation_issues WHERE status = 'open')::bigint AS open_reconciliation_issues;
+  (SELECT COALESCE(SUM(rf.amount), 0)
+   FROM refunds rf
+   JOIN bookings b ON b.id = rf.booking_id
+   JOIN rooms r ON r.id = b.room_id
+   JOIN properties p ON p.id = r.property_id
+   WHERE rf.status != 'completed' AND (sqlc.narg(owner_id)::bigint IS NULL OR p.owner_id = sqlc.narg(owner_id)))::bigint AS refunds_outstanding,
+  (SELECT COALESCE(SUM(po.amount), 0)
+   FROM payouts po
+   WHERE po.status = 'pending' AND (sqlc.narg(owner_id)::bigint IS NULL OR po.owner_id = sqlc.narg(owner_id)))::bigint AS payouts_outstanding,
+  (SELECT COUNT(*)
+   FROM reconciliation_issues ri
+   JOIN payments pm ON pm.id = ri.payment_id
+   JOIN invoices i ON i.id = pm.invoice_id
+   JOIN bookings b ON b.id = i.booking_id
+   JOIN rooms r ON r.id = b.room_id
+   JOIN properties p ON p.id = r.property_id
+   WHERE ri.status = 'open' AND (sqlc.narg(owner_id)::bigint IS NULL OR p.owner_id = sqlc.narg(owner_id)))::bigint AS open_reconciliation_issues;
 
 -- name: ListAdminLedgerEntries :many
-SELECT l.id, l.occurred_at, l.type, l.amount, l.owner_id, l.booking_id, i.number AS invoice_number, l.description
+SELECT l.id, l.occurred_at, l.type, l.amount, o.id AS owner_id, o.name AS owner_name,
+  l.booking_id, i.number AS invoice_number, l.description
 FROM ledger_entries l
 LEFT JOIN invoices i ON i.id = l.invoice_id
+LEFT JOIN bookings b ON b.id = l.booking_id
+LEFT JOIN rooms r ON r.id = b.room_id
+LEFT JOIN properties p ON p.id = r.property_id
+LEFT JOIN users o ON o.id = COALESCE(l.owner_id, p.owner_id)
 WHERE l.occurred_at >= sqlc.arg(from_time) AND l.occurred_at < sqlc.arg(to_time)
   AND (sqlc.narg(type)::varchar IS NULL OR l.type = sqlc.narg(type))
-  AND (sqlc.narg(owner_id)::bigint IS NULL OR l.owner_id = sqlc.narg(owner_id))
+  AND (sqlc.narg(owner_id)::bigint IS NULL OR COALESCE(l.owner_id, p.owner_id) = sqlc.narg(owner_id))
 ORDER BY l.occurred_at DESC, l.id DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: StreamAdminLedgerEntries :many
-SELECT l.id, l.occurred_at, l.type, l.amount, l.owner_id, l.booking_id, i.number AS invoice_number, l.description
+SELECT l.id, l.occurred_at, l.type, l.amount, o.id AS owner_id, o.name AS owner_name,
+  l.booking_id, i.number AS invoice_number, l.description
 FROM ledger_entries l
 LEFT JOIN invoices i ON i.id = l.invoice_id
+LEFT JOIN bookings b ON b.id = l.booking_id
+LEFT JOIN rooms r ON r.id = b.room_id
+LEFT JOIN properties p ON p.id = r.property_id
+LEFT JOIN users o ON o.id = COALESCE(l.owner_id, p.owner_id)
 WHERE l.occurred_at >= sqlc.arg(from_time) AND l.occurred_at < sqlc.arg(to_time)
   AND (sqlc.narg(type)::varchar IS NULL OR l.type = sqlc.narg(type))
-  AND (sqlc.narg(owner_id)::bigint IS NULL OR l.owner_id = sqlc.narg(owner_id))
+  AND (sqlc.narg(owner_id)::bigint IS NULL OR COALESCE(l.owner_id, p.owner_id) = sqlc.narg(owner_id))
 ORDER BY l.occurred_at DESC, l.id DESC;
 
 -- name: ListReconciliationIssues :many

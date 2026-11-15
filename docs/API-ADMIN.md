@@ -92,7 +92,7 @@ Properti yang di-suspend tetap memproses booking yang sudah `paid` (owner tetap 
 | `GET /admin/bookings/{booking}` | Detail + `payment`, `refund`, `payout` |
 
 Objek booking = objek booking owner (`API-OWNER.md` §5) ditambah `admin_fee`, `admin_fee_label`,
-dan `tenant.phone_number` selalu terisi. Status yang mungkin sama dengan `API.md` §5.3.
+`owner: { "id": 12, "name": "Pemilik Contoh" }` (tanpa nomor HP), dan `tenant.phone_number` selalu terisi. Status yang mungkin sama dengan `API.md` §5.3.
 
 ---
 
@@ -185,9 +185,10 @@ Kategori selalu `promo`. Hanya ke user yang tidak dinonaktifkan.
 
 ## 10. Keuangan platform
 
-### 10.1 `GET /admin/finance/summary?from=&to=`
+### 10.1 `GET /admin/finance/summary?from=&to=&owner_id=`
 
-Rentang sama seperti owner (`YYYY-MM-DD` WIB, default bulan berjalan, maks 366 hari).
+Rentang sama seperti owner (`YYYY-MM-DD` WIB, default bulan berjalan, maks 366 hari). `owner_id` (opsional)
+membatasi semua angka, termasuk `*_outstanding` dan `open_reconciliation_issues`, ke satu pemilik.
 
 ```json
 {
@@ -206,9 +207,15 @@ Rentang sama seperti owner (`YYYY-MM-DD` WIB, default bulan berjalan, maks 366 h
 ```
 `*_outstanding` dan `open_reconciliation_issues` dihitung seluruh waktu.
 
+**Pemilik efektif** sebuah entri buku besar = `owner_id` entri itu, atau bila kosong, pemilik properti dari booking
+entri tersebut (mis. `refund_due`/`refund_completed` yang dicatat per penyewa). Filter `owner_id` di §10.1–10.2
+memakai pemilik efektif ini; refund, payout, dan selisih rekonsiliasi yang belum selesai dihitung lewat booking-nya.
+
 ### 10.2 `GET /admin/finance/ledger?from=&to=&type=&owner_id=&page=&limit=` dan `GET /admin/finance/ledger.csv`
 
-Seluruh entri buku besar. Bentuk dan format CSV sama dengan owner (`API-OWNER.md` §8), ditambah kolom `owner_id`.
+Seluruh entri buku besar. Bentuk dan format CSV sama dengan owner (`API-OWNER.md` §8), ditambah `owner_id` dan
+`owner_name` (pemilik efektif, `null` bila tidak ada). Kolom CSV: `id,occurred_at_wib,type,amount,owner_id,booking_id,
+invoice_number,description,owner_name`.
 
 | `type` | Tanda | Kapan |
 |---|---|---|

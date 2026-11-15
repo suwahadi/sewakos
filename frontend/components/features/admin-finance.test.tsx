@@ -38,6 +38,7 @@ const ledgerEntry: AdminLedgerEntry = {
   amount: 4250000,
   amount_label: "Rp4.250.000",
   owner_id: 1,
+  owner_name: "Pemilik Contoh",
   booking_id: 2,
   invoice_number: "INV/2026/11/000002",
   description: "Tagihan dibayar",
@@ -47,7 +48,7 @@ describe("AdminFinanceSummaryAndLedger", () => {
   it("shows the summary cards, the ledger, and a CSV link that follows the type filter", async () => {
     const user = userEvent.setup();
     callBffMock.mockResolvedValue(ok({ entries: [{ ...ledgerEntry, type: "owner_earning" }] }));
-    render(<AdminFinanceSummaryAndLedger summary={summary} initialLedger={[ledgerEntry]} />);
+    render(<AdminFinanceSummaryAndLedger summary={summary} initialLedger={[ledgerEntry]} owner={null} />);
 
     expect(screen.getByText("Rp12.750.000")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "CSV" })).toHaveAttribute("href", "/api/admin/finance/ledger.csv");
@@ -55,6 +56,44 @@ describe("AdminFinanceSummaryAndLedger", () => {
     await user.click(screen.getByRole("tab", { name: "Pendapatan pemilik" }));
     expect(callBffMock).toHaveBeenCalledWith("/api/admin/finance/ledger?type=owner_earning&page=1&limit=20");
     expect(await screen.findByRole("link", { name: "CSV" })).toHaveAttribute("href", "/api/admin/finance/ledger.csv?type=owner_earning");
+  });
+});
+
+describe("AdminFinanceSummaryAndLedger per owner", () => {
+  it("links each entry to its owner's finance view", () => {
+    render(<AdminFinanceSummaryAndLedger summary={summary} initialLedger={[ledgerEntry]} owner={null} />);
+
+    expect(screen.getByRole("link", { name: "Pemilik Contoh" })).toHaveAttribute("href", "/admin/keuangan?user=1");
+  });
+
+  it("keeps the owner filter on the ledger, its tabs, and the CSV link", async () => {
+    const user = userEvent.setup();
+    callBffMock.mockResolvedValue(ok({ entries: [] }));
+    render(<AdminFinanceSummaryAndLedger summary={summary} initialLedger={[ledgerEntry]} owner={{ id: 1, name: "Pemilik Contoh" }} />);
+
+    expect(screen.getByText("Pemilik: Pemilik Contoh")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hapus filter pemilik Pemilik Contoh" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "CSV" })).toHaveAttribute("href", "/api/admin/finance/ledger.csv?owner_id=1");
+    expect(screen.queryByRole("link", { name: "Pemilik Contoh" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Pendapatan pemilik" }));
+    expect(callBffMock).toHaveBeenCalledWith("/api/admin/finance/ledger?type=owner_earning&owner_id=1&page=1&limit=20");
+  });
+
+  it("searches owners by name and links to their finance view", async () => {
+    const user = userEvent.setup();
+    callBffMock.mockResolvedValue(ok({ users: [{ id: 7, name: "Budi Pemilik", role: "owner" }] }));
+    render(<AdminFinanceSummaryAndLedger summary={summary} initialLedger={[ledgerEntry]} owner={null} />);
+
+    await user.type(screen.getByLabelText("Filter per pemilik"), "Bu");
+    await user.click(screen.getByRole("button", { name: "Cari" }));
+    expect(screen.getByText("Masukkan minimal 3 karakter.")).toBeInTheDocument();
+    expect(callBffMock).not.toHaveBeenCalled();
+
+    await user.type(screen.getByLabelText("Filter per pemilik"), "di");
+    await user.click(screen.getByRole("button", { name: "Cari" }));
+    expect(callBffMock).toHaveBeenCalledWith("/api/admin/users?role=owner&q=Budi&limit=5");
+    expect(await screen.findByRole("link", { name: "Budi Pemilik" })).toHaveAttribute("href", "/admin/keuangan?user=7");
   });
 });
 

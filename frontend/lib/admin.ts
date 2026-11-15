@@ -33,6 +33,11 @@ export interface AdminProperty extends OwnerProperty {
 export interface AdminBooking extends OwnerBooking {
   admin_fee_label: string;
   created_at: string;
+  owner: { id: number; name: string };
+}
+
+export function adminOwnerFinanceHref(ownerId: number): string {
+  return `/admin/keuangan?user=${ownerId}`;
 }
 
 export interface AdminBankAccount {
@@ -95,6 +100,7 @@ export interface AdminLedgerEntry {
   amount: number;
   amount_label: string;
   owner_id: number | null;
+  owner_name: string | null;
   booking_id: number | null;
   invoice_number: string | null;
   description: string;

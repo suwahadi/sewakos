@@ -276,14 +276,15 @@ func FinanceSummaryHandler(deps Deps, _ authctx.User) http.HandlerFunc {
 		}
 		ctx := r.Context()
 
+		ownerID := queryID(r, "owner_id")
 		summary, err := deps.Store.GetAdminFinanceSummary(ctx, dbgen.GetAdminFinanceSummaryParams{
-			FromTime: toPgTimestamptz(from), ToTime: toPgTimestamptz(toExclusive),
+			FromTime: toPgTimestamptz(from), ToTime: toPgTimestamptz(toExclusive), OwnerID: ownerID,
 		})
 		if err != nil {
 			response.InternalErrorHandler(w, r)
 			return
 		}
-		outstanding, err := deps.Store.GetAdminFinanceOutstanding(ctx)
+		outstanding, err := deps.Store.GetAdminFinanceOutstanding(ctx, ownerID)
 		if err != nil {
 			response.InternalErrorHandler(w, r)
 			return
@@ -302,12 +303,12 @@ func FinanceSummaryHandler(deps Deps, _ authctx.User) http.HandlerFunc {
 	}
 }
 
-func adminLedgerEntryBody(id int64, occurredAt pgtype.Timestamptz, entryType string, amount int64, ownerID, bookingID pgtype.Int8, invoiceNumber pgtype.Text, description string) map[string]any {
+func adminLedgerEntryBody(row dbgen.ListAdminLedgerEntriesRow) map[string]any {
 	return map[string]any{
-		"id": id, "occurred_at": money.FormatExpiresAt(occurredAt.Time), "type": entryType,
-		"amount": amount, "amount_label": money.FormatRupiah(amount),
-		"owner_id": nullableInt8(ownerID), "booking_id": nullableInt8(bookingID),
-		"invoice_number": nullableText(invoiceNumber), "description": description,
+		"id": row.ID, "occurred_at": money.FormatExpiresAt(row.OccurredAt.Time), "type": row.Type,
+		"amount": row.Amount, "amount_label": money.FormatRupiah(row.Amount),
+		"owner_id": nullableInt8(row.OwnerID), "owner_name": nullableText(row.OwnerName), "booking_id": nullableInt8(row.BookingID),
+		"invoice_number": nullableText(row.InvoiceNumber), "description": row.Description,
 	}
 }
 
@@ -329,7 +330,7 @@ func FinanceLedgerHandler(deps Deps, _ authctx.User) http.HandlerFunc {
 		}
 		entries := make([]map[string]any, len(rows))
 		for i, row := range rows {
-			entries[i] = adminLedgerEntryBody(row.ID, row.OccurredAt, row.Type, row.Amount, row.OwnerID, row.BookingID, row.InvoiceNumber, row.Description)
+			entries[i] = adminLedgerEntryBody(row)
 		}
 		response.Success(w, http.StatusOK, "", map[string]any{"entries": entries, "current_page": page})
 	}
@@ -355,11 +356,12 @@ func FinanceLedgerCSVHandler(deps Deps, _ authctx.User) http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="ledger-%s-%s.csv"`, from.Format("2006-01-02"), lastDay))
 		writer := csv.NewWriter(w)
-		_ = writer.Write([]string{"id", "occurred_at_wib", "type", "amount", "owner_id", "booking_id", "invoice_number", "description"})
+		_ = writer.Write([]string{"id", "occurred_at_wib", "type", "amount", "owner_id", "booking_id", "invoice_number", "description", "owner_name"})
 		for _, row := range rows {
 			_ = writer.Write([]string{
 				strconv.FormatInt(row.ID, 10), money.FormatHumanWIB(row.OccurredAt.Time), row.Type, strconv.FormatInt(row.Amount, 10),
 				csvNullableInt8(row.OwnerID), csvNullableInt8(row.BookingID), csvNullableText(row.InvoiceNumber), row.Description,
+				csvNullableText(row.OwnerName),
 			})
 		}
 		writer.Flush()

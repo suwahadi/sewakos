@@ -112,7 +112,7 @@ func TestAdminFinanceSummaryAndLedger(t *testing.T) {
 		t.Fatalf("csv: status = %d, body = %s", resp.StatusCode, body)
 	}
 	lines := strings.Split(strings.TrimRight(string(body), "\n"), "\n")
-	if lines[0] != "id,occurred_at_wib,type,amount,owner_id,booking_id,invoice_number,description" {
+	if lines[0] != "id,occurred_at_wib,type,amount,owner_id,booking_id,invoice_number,description,owner_name" {
 		t.Errorf("csv header = %q", lines[0])
 	}
 	if !strings.Contains(string(body), strconv.FormatInt(bookingID, 10)) {
@@ -216,5 +216,101 @@ func TestReconcilePaymentsDetectsStatusMismatch(t *testing.T) {
 	var paymentStatus string
 	if err := pool.QueryRow(ctx, `SELECT status FROM payments WHERE id = $1`, paymentID).Scan(&paymentStatus); err != nil || paymentStatus != "settlement" {
 		t.Errorf("payment status = %q (err %v), want settlement (ApplyPaymentStatus should have caught it up)", paymentStatus, err)
+	}
+}
+
+// API-ADMIN.md §10.1-10.2 and §4: owner_id narrows the summary and ledger to one owner, ledger entries carry the
+// owner's name, and the admin booking names its owner.
+func TestAdminFinanceFiltersByOwner(t *testing.T) {
+	t.Setenv("OTP_DEBUG_ECHO", "true")
+	t.Setenv("MIDTRANS_SERVER_KEY", webhookTestServerKey)
+	var grossAmount int64
+	mock := &midtrans.MockClient{
+		CreateTransactionFunc: func(_ context.Context, req midtrans.TransactionRequest) (midtrans.TransactionResponse, error) {
+			grossAmount = req.TransactionDetails.GrossAmount
+			return midtrans.TransactionResponse{Token: "snap-token", RedirectURL: "https://example.test/redirect"}, nil
+		},
+		GetStatusFunc: func(_ context.Context, orderID string) (midtrans.StatusResponse, error) {
+			return midtrans.StatusResponse{OrderID: orderID, TransactionStatus: "settlement", FraudStatus: "accept", GrossAmount: grossAmountString(grossAmount)}, nil
+		},
+	}
+	srv, pool := newTestServerAndPoolWithMidtrans(t, mock)
+	token := adminToken(t, srv)
+
+	roomID := seedBookingFixture(t, pool, 2250000, 2, false)
+	var ownerID int64
+	if err := pool.QueryRow(context.Background(),
+		`SELECT p.owner_id FROM rooms r JOIN properties p ON p.id = r.property_id WHERE r.id = $1`, roomID).Scan(&ownerID); err != nil {
+		t.Fatalf("read owner: %v", err)
+	}
+	_, tenantToken := bookingRegisterAndVerify(t, srv)
+	bookingID := submitBookingFixture(t, srv, tenantToken, roomID)
+	resp, body := checkoutBooking(t, srv, tenantToken, bookingID)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("checkout: status = %d, body = %s", resp.StatusCode, body)
+	}
+	var checkout struct {
+		Payment struct {
+			OrderID     string `json:"order_id"`
+			GrossAmount int64  `json:"gross_amount"`
+		} `json:"payment"`
+	}
+	mustUnmarshal(t, body, &checkout)
+	if resp, body := postWebhookNotification(t, srv, checkout.Payment.OrderID, "200", grossAmountString(checkout.Payment.GrossAmount)); resp.StatusCode != http.StatusOK {
+		t.Fatalf("webhook: status = %d, body = %s", resp.StatusCode, body)
+	}
+
+	resp, body = bookingAuthedRequest(t, srv, http.MethodGet, fmt.Sprintf("/api/admin/finance/summary?owner_id=%d", ownerID), token, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("summary: status = %d, body = %s", resp.StatusCode, body)
+	}
+	var summary struct {
+		Summary struct {
+			PaymentsReceived   int64 `json:"payments_received"`
+			PayoutsOutstanding int64 `json:"payouts_outstanding"`
+		} `json:"summary"`
+	}
+	mustUnmarshal(t, body, &summary)
+	if summary.Summary.PaymentsReceived != checkout.Payment.GrossAmount {
+		t.Errorf("owner summary payments_received = %d, want %d (only this owner's booking)",
+			summary.Summary.PaymentsReceived, checkout.Payment.GrossAmount)
+	}
+
+	resp, body = bookingAuthedRequest(t, srv, http.MethodGet, fmt.Sprintf("/api/admin/finance/ledger?owner_id=%d", ownerID), token, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("ledger: status = %d, body = %s", resp.StatusCode, body)
+	}
+	var ledger struct {
+		Entries []struct {
+			OwnerID   int64  `json:"owner_id"`
+			OwnerName string `json:"owner_name"`
+			BookingID int64  `json:"booking_id"`
+		} `json:"entries"`
+	}
+	mustUnmarshal(t, body, &ledger)
+	if len(ledger.Entries) == 0 {
+		t.Fatal("owner ledger is empty")
+	}
+	for _, entry := range ledger.Entries {
+		if entry.OwnerID != ownerID || entry.OwnerName == "" || entry.BookingID != bookingID {
+			t.Errorf("entry %+v, want owner %d with a name, booking %d", entry, ownerID, bookingID)
+		}
+	}
+
+	resp, body = bookingAuthedRequest(t, srv, http.MethodGet, fmt.Sprintf("/api/admin/bookings/%d", bookingID), token, "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("admin booking: status = %d, body = %s", resp.StatusCode, body)
+	}
+	var detail struct {
+		Booking struct {
+			Owner struct {
+				ID   int64  `json:"id"`
+				Name string `json:"name"`
+			} `json:"owner"`
+		} `json:"booking"`
+	}
+	mustUnmarshal(t, body, &detail)
+	if detail.Booking.Owner.ID != ownerID || detail.Booking.Owner.Name == "" {
+		t.Errorf("booking owner = %+v, want id %d with a name", detail.Booking.Owner, ownerID)
 	}
 }

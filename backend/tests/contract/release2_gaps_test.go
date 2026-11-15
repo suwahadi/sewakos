@@ -119,7 +119,7 @@ func TestFinanceRangeLimitsAndCSVHeaders(t *testing.T) {
 
 	for _, tc := range []struct{ path, token, header string }{
 		{"/api/owner/finance/ledger.csv", ownerToken, "id,occurred_at_wib,type,amount,booking_id,invoice_number,description"},
-		{"/api/admin/finance/ledger.csv", admin, "id,occurred_at_wib,type,amount,owner_id,booking_id,invoice_number,description"},
+		{"/api/admin/finance/ledger.csv", admin, "id,occurred_at_wib,type,amount,owner_id,booking_id,invoice_number,description,owner_name"},
 	} {
 		resp, body := bookingAuthedRequest(t, srv, http.MethodGet, tc.path+"?from=2024-02-01&to=2024-02-29", tc.token, "")
 		if resp.StatusCode != http.StatusOK {

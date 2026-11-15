@@ -15,6 +15,7 @@ const adminListBookings = `-- name: AdminListBookings :many
 SELECT
   b.id, b.status, b.rent_type, b.start_date, b.duration, b.end_date,
   t.id AS tenant_id, t.name AS tenant_name, t.phone AS tenant_phone,
+  o.id AS owner_id, o.name AS owner_name,
   p.id AS property_id, p.name AS property_name, r.id AS room_id, r.name AS room_name,
   b.price, b.deposit, b.admin_fee, (i.total - i.admin_fee)::bigint AS payout_amount, i.id AS invoice_id,
   b.paid_at, b.owner_deadline_at, b.reject_reason, b.deposit_returned_at, b.created_at
@@ -22,6 +23,7 @@ FROM bookings b
 JOIN rooms r ON r.id = b.room_id
 JOIN properties p ON p.id = r.property_id
 JOIN users t ON t.id = b.tenant_id
+JOIN users o ON o.id = p.owner_id
 JOIN invoices i ON i.booking_id = b.id AND i.type = 'initial'
 WHERE ($1::bigint IS NULL OR b.id = $1)
   AND ($2::text IS NULL OR b.status = $2)
@@ -46,6 +48,8 @@ type AdminListBookingsRow struct {
 	TenantID          int64
 	TenantName        string
 	TenantPhone       string
+	OwnerID           int64
+	OwnerName         string
 	PropertyID        int64
 	PropertyName      string
 	RoomID            int64
@@ -86,6 +90,8 @@ func (q *Queries) AdminListBookings(ctx context.Context, arg AdminListBookingsPa
 			&i.TenantID,
 			&i.TenantName,
 			&i.TenantPhone,
+			&i.OwnerID,
+			&i.OwnerName,
 			&i.PropertyID,
 			&i.PropertyName,
 			&i.RoomID,
