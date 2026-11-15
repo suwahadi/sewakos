@@ -1242,7 +1242,7 @@ berfungsi di luar pegangan. Saat dilepas: `PATCH /owner/photos/{id}` dengan `sor
 
 ### 6.48 Kanal OTP (WhatsApp)
 
-Gateway OTP hanya WhatsApp (Fazpass), jadi tidak ada pilihan kanal dan SMS tidak ditampilkan. Langkah sebelum
+Gateway OTP hanya WhatsApp, jadi tidak ada pilihan kanal dan SMS tidak ditampilkan. Langkah sebelum
 `POST /auth/otp/request` berisi teks `body` `neutral-600` "Kode verifikasi akan dikirim lewat WhatsApp ke {nomor}."
 dan tombol penuh "Kirim kode lewat WhatsApp" (`success`, `loading` selama request). Setelah terkirim, teks
 "Kode dikirim lewat WhatsApp ke {nomor}." Request selalu mengirim `via: "1"`.

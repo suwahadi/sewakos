@@ -68,6 +68,9 @@ func TestRequestThenCheckRoundTrip(t *testing.T) {
 	if len(result.Code) != 4 {
 		t.Errorf("Code = %q, want length 4", result.Code)
 	}
+	if earliest := time.Now().Add(60 * time.Second); time.Unix(result.CanResendAt, 0).Before(earliest.Truncate(time.Second)) {
+		t.Errorf("CanResendAt = %d, must not be before the cooldown ends (%v)", result.CanResendAt, earliest)
+	}
 	if result.CanResendAfterSeconds != 60 {
 		t.Errorf("CanResendAfterSeconds = %d, want 60", result.CanResendAfterSeconds)
 	}
@@ -189,5 +192,15 @@ func TestRequestKeepsCooldownWhenProviderFails(t *testing.T) {
 	}
 	if len(sender.calls) != 1 {
 		t.Errorf("sender called %d times, want 1", len(sender.calls))
+	}
+}
+
+func TestUnixCeilNeverRoundsDown(t *testing.T) {
+	exact := time.Unix(1_800_000_000, 0)
+	if got := unixCeil(exact); got != 1_800_000_000 {
+		t.Errorf("unixCeil(whole second) = %d", got)
+	}
+	if got := unixCeil(exact.Add(time.Millisecond)); got != 1_800_000_001 {
+		t.Errorf("unixCeil(just past a second) = %d, want the next second", got)
 	}
 }

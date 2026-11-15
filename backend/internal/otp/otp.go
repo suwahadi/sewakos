@@ -109,6 +109,7 @@ func (s *Service) Request(ctx context.Context, p RequestParams) (RequestResult, 
 	if err := s.rdb.Set(ctx, p.CooldownKey, "1", s.cfg.ResendAfter).Err(); err != nil {
 		return RequestResult{}, fmt.Errorf("store otp cooldown: %w", err)
 	}
+	canResendAt := unixCeil(time.Now().Add(s.cfg.ResendAfter))
 
 	if err := s.sender.Send(ctx, p.Destination, code); err != nil {
 		return RequestResult{}, fmt.Errorf("%w: %w", ErrSendFailed, err)
@@ -116,9 +117,16 @@ func (s *Service) Request(ctx context.Context, p RequestParams) (RequestResult, 
 
 	return RequestResult{
 		Code:                  code,
-		CanResendAt:           time.Now().Add(s.cfg.ResendAfter).Unix(),
+		CanResendAt:           canResendAt,
 		CanResendAfterSeconds: int(s.cfg.ResendAfter.Seconds()),
 	}, nil
+}
+
+func unixCeil(t time.Time) int64 {
+	if t.Nanosecond() > 0 {
+		return t.Unix() + 1
+	}
+	return t.Unix()
 }
 
 func (s *Service) consumeSendBudget(ctx context.Context, key string, limit int, window time.Duration) error {
