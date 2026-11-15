@@ -97,6 +97,18 @@ describe("AdminUserList", () => {
     await user.click(within(dialog).getByRole("button", { name: "Nonaktifkan", hidden: true }));
     expect(callBffMock).toHaveBeenCalledWith("/api/admin/users/4/suspend", { method: "POST" });
   });
+
+  it("offers Set Password before Nonaktifkan and opens the password dialog for that user", async () => {
+    const user = userEvent.setup();
+    render(<AdminUserList initial={[tenant]} />);
+    const actions = screen.getAllByRole("button", { name: /^(Set Password|Nonaktifkan)$/ }).map((button) => button.textContent);
+    expect(actions.slice(0, 2)).toEqual(["Set Password", "Nonaktifkan"]);
+
+    await user.click(screen.getAllByRole("button", { name: "Set Password" })[0]!);
+    const dialog = screen.getByRole("dialog", { hidden: true });
+    expect(within(dialog).getByText("Set password Budi")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Password baru")).toHaveAttribute("type", "password");
+  });
 });
 
 describe("AdminAreaList", () => {

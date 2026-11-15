@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AdminSetPasswordDialog } from "@/components/features/admin-set-password-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -22,6 +23,7 @@ export function AdminUserList({ initial }: { initial: AdminUser[] }) {
   const [search, setSearch] = useState("");
   const [searchError, setSearchError] = useState<string>();
   const [target, setTarget] = useState<AdminUser | null>(null);
+  const [passwordTarget, setPasswordTarget] = useState<AdminUser | null>(null);
   const [saving, setSaving] = useState(false);
 
   async function toggle(user: AdminUser) {
@@ -84,15 +86,21 @@ export function AdminUserList({ initial }: { initial: AdminUser[] }) {
                 user.role === "admin" ? (
                   "–"
                 ) : (
-                  <Button size="sm" variant={user.suspended_at ? "success" : "danger"} onClick={() => setTarget(user)}>
-                    {user.suspended_at ? "Aktifkan" : "Nonaktifkan"}
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="neutral" onClick={() => setPasswordTarget(user)}>
+                      Set Password
+                    </Button>
+                    <Button size="sm" variant={user.suspended_at ? "success" : "danger"} onClick={() => setTarget(user)}>
+                      {user.suspended_at ? "Aktifkan" : "Nonaktifkan"}
+                    </Button>
+                  </div>
                 ),
             },
           ]}
         />
       )}
       {list.hasMore && <LoadMore loading={list.loading} onClick={list.loadMore} />}
+      {passwordTarget && <AdminSetPasswordDialog user={passwordTarget} onClose={() => setPasswordTarget(null)} />}
       {target && (
         <ConfirmDialog
           open

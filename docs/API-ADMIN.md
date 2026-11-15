@@ -55,6 +55,7 @@ Objek:
 | `GET /admin/users/{user}` | → `user` |
 | `POST /admin/users/{user}/suspend` | Nonaktifkan → message `"Pengguna dinonaktifkan."` |
 | `POST /admin/users/{user}/unsuspend` | Aktifkan kembali → message `"Pengguna diaktifkan kembali."` |
+| `POST /admin/users/{user}/password` | Body `{ "password": "...", "password_confirmation": "..." }` (min:8, max:72, harus sama) → message `"Password pengguna diperbarui."`. Semua sesi pengguna itu dicabut. Akun admin → `400` `"Password admin tidak dapat diubah di sini."`. Dicatat di audit log sebagai `user.password_set` tanpa nilai password |
 
 Efek nonaktif:
 - Semua token user dihapus; login (password maupun OTP) → `403` `Akun dinonaktifkan.`

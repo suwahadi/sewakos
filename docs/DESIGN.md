@@ -1228,6 +1228,11 @@ bukan error). `deposit_returned` diberi badge netral "Catatan".
 Grid thumbnail 3 kolom (mobile) / 5 (≥ 1024px), rasio 1:1, radius `radius-md`. Petak pertama: tombol tambah
 (border putus-putus `neutral-300`, ikon `ImagePlus`, "Tambah foto").
 
+Grid yang bisa diurutkan hanya berisi foto umum properti (`room_id` kosong). Foto pertamanya diberi Badge `brand`
+"Utama" di pojok kiri bawah dan menjadi thumbnail properti di semua kartu (owner dan publik). Foto kamar tampil di
+bawahnya dalam bagian "Foto kamar" (keterangan "Foto kamar tidak dipakai sebagai foto utama properti."), bisa
+diketuk untuk dikelola, tanpa pegangan geser.
+
 Alur per file (boleh beberapa sekaligus, maks 3 paralel):
 1. Validasi klien: JPEG/PNG/WebP, ≤ 10 MB, total foto ≤ 30 → bila gagal, toast error per file.
 2. `POST /owner/uploads/presign` → `PUT` ke `upload.url` dengan header persis dari `upload.headers`
@@ -1276,13 +1281,14 @@ Path ini juga dipakai backend untuk field `link` notifikasi (SPEC-GO.md §17). M
 | `/booking` | Daftar booking | Tenant |
 | `/booking/{id}` | Detail booking, pembayaran, tagihan, refund | Tenant |
 | `/notifikasi` | Notifikasi | Login |
-| `/akun` | Profil, ganti password, ganti nomor, keluar | Login |
+| `/akun` | Tab Profil · Pengaturan (ganti password dan ganti nomor HP). Tombol `danger` "Keluar" selebar penuh selalu tepat di bawah panel aktif, di luar tab. Panel tidak dilepas dari DOM saat berpindah tab sehingga isian tidak hilang | Login |
 | `/owner` | Beranda owner | Owner |
 | `/owner/properti`, `/owner/properti/{id}` | Properti, kamar, foto | Owner |
 | `/owner/booking`, `/owner/booking/{id}` | Booking masuk | Owner |
 | `/owner/keuangan` | Ringkasan (StatCard), lalu tab Buku besar · Payout · Rekening (form rekening hanya di tab Rekening) | Owner |
 | `/owner/ulasan` | Ulasan properti | Owner |
 | `/admin/...` | Panel admin (struktur mengikuti bagian di API-ADMIN.md) | Admin |
+| `/admin/pengguna` | Tiap baris non-admin: tombol `neutral` "Set Password" lalu "Nonaktifkan"/"Aktifkan". "Set Password" membuka Dialog: "Password baru" dan "Ulangi password" (`type="password"`, `autoComplete="new-password"`), error inline (wajib, 8–72 karakter, harus sama) sebelum request; tombol "Batal" (`neutral`) dan "Simpan". Isian dikosongkan setiap dialog ditutup | Admin |
 | `/admin/keuangan?user={id}` | Keuangan per pemilik: chip "Pemilik: {nama}" (bisa dihapus) menggantikan kolom "Filter per pemilik"; StatCard, buku besar, tab, dan CSV memakai `owner_id`. Tanpa filter, tiap entri menampilkan nama pemilik yang menaut ke URL ini. Detail booking admin punya baris "Pemilik" (tanpa nomor HP) yang menaut ke sini | Admin |
 
 Halaman yang butuh login mengarahkan tamu ke `/masuk?next={path}`. Role yang salah → ErrorState 403

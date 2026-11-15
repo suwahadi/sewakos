@@ -197,6 +197,7 @@ func NewRouter(deps Deps) chi.Router {
 				adminRoutes.Get("/admin/users/{user}", withAuthedUser(adminDeps, admin.GetUserHandler))
 				adminRoutes.Post("/admin/users/{user}/suspend", withAuthedUser(adminDeps, admin.SuspendUserHandler))
 				adminRoutes.Post("/admin/users/{user}/unsuspend", withAuthedUser(adminDeps, admin.UnsuspendUserHandler))
+				adminRoutes.Post("/admin/users/{user}/password", withAuthedUser(adminDeps, admin.SetUserPasswordHandler))
 				adminRoutes.Get("/admin/properties", withAuthedUser(adminDeps, admin.ListPropertiesHandler))
 				adminRoutes.Get("/admin/properties/{property}", withAuthedUser(adminDeps, admin.GetPropertyHandler))
 				adminRoutes.Post("/admin/properties/{property}/approve", withAuthedUser(adminDeps, admin.ApprovePropertyHandler))

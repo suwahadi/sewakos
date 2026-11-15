@@ -1,11 +1,14 @@
 package admin
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/suwahadi/sewakos/backend/internal/auth"
 	"github.com/suwahadi/sewakos/backend/internal/authctx"
 	"github.com/suwahadi/sewakos/backend/internal/money"
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres/dbgen"
@@ -132,5 +135,80 @@ func setSuspension(deps Deps, actor authctx.User, suspend bool) http.HandlerFunc
 			return
 		}
 		response.Success(w, http.StatusOK, message, nil)
+	}
+}
+
+func SetUserPasswordHandler(deps Deps, actor authctx.User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := parseID(r, "user")
+		if !ok {
+			response.NotFoundHandler(w, r)
+			return
+		}
+		var body map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&body)
+
+		v := validation.New()
+		v.Field("password", body["password"]).Required().String().MinStringLen(8).MaxStringLen(72)
+		v.Field("password_confirmation", body["password_confirmation"]).Required().String()
+		errs := v.Errors()
+		password, _ := body["password"].(string)
+		confirmation, _ := body["password_confirmation"].(string)
+		if _, invalid := errs["password_confirmation"]; !invalid && confirmation != password {
+			if errs == nil {
+				errs = map[string][]string{}
+			}
+			errs["password_confirmation"] = []string{"The password confirmation does not match."}
+		}
+		if len(errs) > 0 {
+			response.Fail(w, http.StatusUnprocessableEntity, response.MsgValidationFailed, errs)
+			return
+		}
+
+		ctx := r.Context()
+		tx, err := deps.DB.Begin(ctx)
+		if err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		defer func() { _ = tx.Rollback(ctx) }()
+		queries := dbgen.New(tx)
+
+		user, err := queries.AdminLockUser(ctx, userID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			response.NotFoundHandler(w, r)
+			return
+		}
+		if err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		if user.Role == "admin" {
+			response.Fail(w, http.StatusBadRequest, "Password admin tidak dapat diubah di sini.", nil)
+			return
+		}
+
+		hash, err := auth.HashPassword(password)
+		if err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		if err := queries.UpdateUserPassword(ctx, dbgen.UpdateUserPasswordParams{ID: user.ID, Password: pgtype.Text{String: hash, Valid: true}}); err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		if err := queries.DeleteAllAccessTokensForUser(ctx, user.ID); err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		if err := recordAudit(ctx, queries, r, actor, "user.password_set", "user", user.ID, nil, nil, map[string]any{"sessions_revoked": true}); err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		if err := tx.Commit(ctx); err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		response.Success(w, http.StatusOK, "Password pengguna diperbarui.", nil)
 	}
 }

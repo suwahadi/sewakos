@@ -149,3 +149,54 @@ func TestAdminUsersAndSuspension(t *testing.T) {
 		t.Errorf("suspend admin: status = %d, body = %s", resp.StatusCode, body)
 	}
 }
+
+// API-ADMIN.md §3: an admin sets a user's password; both fields are validated, old sessions end, the new password
+// works, and admin accounts are refused.
+func TestAdminSetsUserPassword(t *testing.T) {
+	t.Setenv("OTP_DEBUG_ECHO", "true")
+	srv, pool := newTestServerAndPool(t)
+	token := adminToken(t, srv)
+	phone, tenantToken := bookingRegisterAndVerify(t, srv)
+	var tenantID int64
+	if err := pool.QueryRow(context.Background(), `SELECT id FROM users WHERE phone = $1`, phone).Scan(&tenantID); err != nil {
+		t.Fatal(err)
+	}
+	path := fmt.Sprintf("/api/admin/users/%d/password", tenantID)
+
+	if resp, _ := bookingAuthedRequest(t, srv, http.MethodPost, path, tenantToken, `{"password":"Baru12345","password_confirmation":"Baru12345"}`); resp.StatusCode != http.StatusForbidden {
+		t.Errorf("tenant setting a password: status = %d, want 403", resp.StatusCode)
+	}
+
+	resp, body := bookingAuthedRequest(t, srv, http.MethodPost, path, token, `{"password":"short","password_confirmation":"other"}`)
+	if resp.StatusCode != http.StatusUnprocessableEntity || !strings.Contains(string(body), `"password":[`) {
+		t.Errorf("short password: status = %d, body = %s", resp.StatusCode, body)
+	}
+	resp, body = bookingAuthedRequest(t, srv, http.MethodPost, path, token, `{"password":"Baru12345","password_confirmation":"Baru12346"}`)
+	if resp.StatusCode != http.StatusUnprocessableEntity || !strings.Contains(string(body), "The password confirmation does not match.") {
+		t.Errorf("mismatch: status = %d, body = %s", resp.StatusCode, body)
+	}
+
+	resp, body = bookingAuthedRequest(t, srv, http.MethodPost, path, token, `{"password":"Baru12345","password_confirmation":"Baru12345"}`)
+	if resp.StatusCode != http.StatusOK || !strings.Contains(string(body), `"Password pengguna diperbarui."`) {
+		t.Fatalf("set password: status = %d, body = %s", resp.StatusCode, body)
+	}
+	if resp, _ := bookingAuthedRequest(t, srv, http.MethodGet, "/api/me", tenantToken, ""); resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("old session still works: status = %d, want 401", resp.StatusCode)
+	}
+	if resp, body := postJSON(t, srv, "/api/auth/login", fmt.Sprintf(`{"phone_number":%q,"password":"Baru12345"}`, phone)); resp.StatusCode != http.StatusOK {
+		t.Errorf("login with the new password: status = %d, body = %s", resp.StatusCode, body)
+	}
+	var audits int
+	if err := pool.QueryRow(context.Background(),
+		`SELECT count(*) FROM audit_logs WHERE action = 'user.password_set' AND entity_id = $1 AND changes::text NOT LIKE '%Baru12345%'`, tenantID).Scan(&audits); err != nil {
+		t.Fatal(err)
+	}
+	if audits != 1 {
+		t.Errorf("audit rows without the password = %d, want 1", audits)
+	}
+
+	resp, body = bookingAuthedRequest(t, srv, http.MethodPost, "/api/admin/users/3/password", token, `{"password":"Baru12345","password_confirmation":"Baru12345"}`)
+	if resp.StatusCode != http.StatusBadRequest || !strings.Contains(string(body), "Password admin tidak dapat diubah di sini.") {
+		t.Errorf("admin target: status = %d, body = %s", resp.StatusCode, body)
+	}
+}
