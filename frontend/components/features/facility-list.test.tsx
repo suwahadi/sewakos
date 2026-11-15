@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { FacilityList } from "./facility-list";
@@ -9,24 +9,29 @@ describe("FacilityList", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("shows the first 6 facilities directly and the rest behind a collapsed accordion", async () => {
+  it("shows the first 6 facilities and opens all of them in a popup from a plain text link", async () => {
     const user = userEvent.setup();
     const facilities = ["WiFi", "AC", "Kamar mandi dalam", "Kasur", "Akses 24 jam", "Lemari", "Meja belajar"];
     render(<FacilityList facilities={facilities} />);
 
+    const outsidePopup = (text: string) => screen.queryAllByText(text).filter((element) => element.closest("dialog") === null);
     for (const facility of facilities.slice(0, 6)) {
-      expect(screen.getByText(facility)).toBeInTheDocument();
+      expect(outsidePopup(facility)).toHaveLength(1);
     }
-    const trigger = screen.getByRole("button", { name: "Lihat semua fasilitas (7)" });
-    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(outsidePopup("Meja belajar")).toHaveLength(0);
+    const link = screen.getByRole("button", { name: "Lihat semua fasilitas" });
+    expect(link).not.toHaveTextContent(/\(\d+\)/);
 
-    await user.click(trigger);
-    expect(trigger).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("Meja belajar")).toBeInTheDocument();
+    await user.click(link);
+    const sheet = within(screen.getByRole("dialog", { hidden: true }));
+    expect(sheet.getByText("Fasilitas")).toBeInTheDocument();
+    for (const facility of facilities) {
+      expect(sheet.getByText(facility)).toBeInTheDocument();
+    }
   });
 
-  it("omits the accordion when 6 or fewer facilities are given", () => {
+  it("omits the link when 6 or fewer facilities are given", () => {
     render(<FacilityList facilities={["WiFi", "AC"]} />);
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Lihat semua fasilitas" })).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
 import { AirVent, Bath, BedDouble, Bike, Camera, Car, Check, Clock, Fan, Shirt, Table2, Tv, Wifi, type LucideIcon } from "lucide-react";
 import { describe, expect, it } from "vitest";
-import { facilityIcon } from "./facility-list";
+import { facilityIcon } from "./facility-icons";
 
 describe("facilityIcon", () => {
   it.each<[string, LucideIcon]>([

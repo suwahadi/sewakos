@@ -1,5 +1,5 @@
 import { Check } from "lucide-react";
-import { facilityIcon } from "@/components/features/facility-list";
+import { facilityIcon } from "@/lib/facility-icons";
 import { cn } from "@/lib/cn";
 
 const MAX_FACILITY_ICONS = 3;

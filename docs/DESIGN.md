@@ -747,7 +747,8 @@ Badge hitungan notifikasi diambil dari `GET /notifications/counter` → `unread`
 ### 6.13 Avatar
 
 Lingkaran 40px (list) atau 64px (profil). Tidak ada foto profil di API → selalu **inisial**: huruf pertama dua kata
-pertama `name`, latar `brand-100`, teks `brand-800` 600.
+pertama `name`, latar `brand-100`, teks `brand-800` 600 (varian `soft`, default). Varian `solid`: latar `brand-600`,
+teks putih; dipakai untuk pemilik di detail kost.
 
 ### 6.14 Skeleton
 
@@ -1057,7 +1058,9 @@ Sumber: `property.photos[]` + `rooms[].photos[]` dari `GET /listings/{id}` (atau
 ### 6.30 FacilityList
 
 Grid 2 kolom (mobile) / 3 kolom (≥ 768px). Item: ikon 20px (`neutral-600`, pemetaan §4) + teks `body`.
-Tampilkan 6 pertama; sisanya di dalam Accordion "Lihat semua fasilitas ({n})". Sumber: `rooms[].facilities`.
+Tampilkan 6 pertama. Bila lebih dari 6: tautan teks "Lihat semua fasilitas" + `ChevronRight` 16px (gaya sama dengan
+"Lihat semua ulasan": `label` 600 `brand-700`, tinggi sentuh 44px, tanpa jumlah) yang membuka BottomSheet "Fasilitas"
+berisi seluruh daftar. Sumber: `rooms[].facilities`.
 
 ### 6.31 RoomOption
 
@@ -1343,8 +1346,9 @@ Jl. Contoh No. 42, Kota Depok  ← caption + tautan "Buka di peta"
                     Pemilik Kos · Aktif sejak {bulan tahun} (`caption`)
 [StickyActionBar: Mulai dari Rp2.250.000/bulan | Ajukan sewa]
 ```
-Bagian pemilik: pembatas atas `neutral-200` tipis; avatar memakai komponen `Avatar` ukuran `list` (§6.13) seperti
-di ulasan, tidak bisa diklik. Data dari `owner.name` dan `owner.active_since`.
+Bagian pemilik: blok selebar konten (menembus padding 16px) berlatar `neutral-50` dengan pembatas atas dan bawah
+`neutral-200` yang sama, padding vertikal 20px; avatar `Avatar` ukuran `list` varian `solid` (§6.13), tidak bisa
+diklik. Jarak ke "Kost lainnya" 34px (24px celah antar-section + 10px). Data dari `owner.name` dan `owner.active_since`.
 Tautan peta: `https://www.google.com/maps/search/?api=1&query={latitude},{longitude}` (tab baru,
 ikon `ExternalLink`). Tidak ada peta tertanam di v1 (menjaga bobot halaman).
 Setelah halaman tampil, kirim `POST /listings/{id}/view` sekali per sesi per properti.
