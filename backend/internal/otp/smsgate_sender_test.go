@@ -3,6 +3,7 @@ package otp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -61,8 +62,8 @@ func TestSMSGateSenderDoesNotRetryFailures(t *testing.T) {
 		sender := NewSMSGateSender(SMSGateConfig{BaseURL: server.URL, Username: "u", Password: "p", CodeTTL: time.Minute})
 		err := sender.Send(context.Background(), "081234567890", "1234")
 		server.Close()
-		if err == nil {
-			t.Errorf("status %d: Send succeeded, want error", status)
+		if !errors.Is(err, ErrProviderRejected) {
+			t.Errorf("status %d: Send err = %v, want ErrProviderRejected", status, err)
 		}
 		if calls.Load() != 1 {
 			t.Errorf("status %d: calls = %d, want exactly 1 (no retry)", status, calls.Load())

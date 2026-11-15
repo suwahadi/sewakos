@@ -294,7 +294,9 @@ func otpChannels(deps Deps) map[otp.Channel]otp.ChannelConfig {
 	if cfg.OTPWhatsAppProvider == "fazpass" {
 		whatsapp = otp.NewFazpassSender(cfg.FazpassBaseURL, cfg.FazpassMerchantKey, cfg.FazpassGatewayKey)
 	}
-	channels := map[otp.Channel]otp.ChannelConfig{otp.ChannelWhatsApp: {Sender: whatsapp}}
+	channels := map[otp.Channel]otp.ChannelConfig{
+		otp.ChannelWhatsApp: {Sender: whatsapp, ReleaseOnFailure: otp.ReleaseCooldownWhenRejected},
+	}
 
 	var sms otp.Sender
 	switch cfg.OTPSMSProvider {
@@ -308,7 +310,9 @@ func otpChannels(deps Deps) map[otp.Channel]otp.ChannelConfig {
 		})
 	}
 	if sms != nil {
-		channels[otp.ChannelSMS] = otp.ChannelConfig{Sender: sms, MaxPerDay: cfg.OTPSMSMaxPerDay, ReleaseCooldownOnFailure: true}
+		channels[otp.ChannelSMS] = otp.ChannelConfig{
+			Sender: sms, MaxPerDay: cfg.OTPSMSMaxPerDay, ReleaseOnFailure: otp.ReleaseCooldownOnAnyFailure,
+		}
 	}
 	return channels
 }

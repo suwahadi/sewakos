@@ -682,8 +682,8 @@ Varian:
   berjalan (klik ganda diabaikan); maksimal 3 kali kirim ulang per kunjungan halaman, lalu tombol diganti teks
   "Batas kirim ulang kode tercapai. Silakan coba lagi nanti."; respons 429 menghentikan pengiriman di halaman itu
   dan menampilkan pesan server; respons 503 menunggu 60 detik sebelum boleh mencoba lagi. Respons yang membawa
-  `messages.via` (SMS penuh atau gagal) tidak memblokir: halaman kembali ke langkah pemilihan dengan WhatsApp terpilih
-  dan toast menampilkan pesan server.
+  `messages.via` (kanal yang dipilih penuh atau sedang gangguan) tidak memblokir: halaman kembali ke langkah pemilihan
+  dengan kanal lainnya terpilih (SMS ↔ WhatsApp) dan toast menampilkan pesan server.
 
 ### 6.5 Textarea
 

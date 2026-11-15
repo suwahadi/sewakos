@@ -73,7 +73,7 @@ func (s FazpassSender) Send(ctx context.Context, destination, code string) error
 	var parsed fazpassResponse
 	_ = json.Unmarshal(body, &parsed)
 	if resp.StatusCode < 200 || resp.StatusCode > 299 || !parsed.Status {
-		return fmt.Errorf("fazpass rejected send: http %d: %s", resp.StatusCode, parsed.Message)
+		return fmt.Errorf("%w: fazpass http %d: %s", ErrProviderRejected, resp.StatusCode, parsed.Message)
 	}
 	return nil
 }

@@ -9,7 +9,13 @@ import { OtpResendCountdown } from "@/components/ui/otp-input";
 import { TextField } from "@/components/ui/text-field";
 import { callBff } from "@/lib/api/browser";
 import { toast } from "@/lib/toast";
-import { OTP_CHANNEL_LABEL, OTP_CHANNEL_VIA, useOtpChannels, type OtpChannel } from "@/lib/otp-channels";
+import {
+  OTP_CHANNEL_LABEL,
+  OTP_CHANNEL_VIA,
+  otherOtpChannel,
+  useOtpChannels,
+  type OtpChannel,
+} from "@/lib/otp-channels";
 import { useOtpRequest, type OtpRequestResponse } from "@/lib/use-otp-request";
 
 const PHONE_PATTERN = /^08\d{7,12}$/;
@@ -31,7 +37,8 @@ export default function LupaPasswordPage() {
       }),
     {
       onChannelUnavailable: () => {
-        setChannel("whatsapp");
+        const next = otherOtpChannel(channel, channels);
+        if (next) setChannel(next);
         setStep("channel");
       },
     },

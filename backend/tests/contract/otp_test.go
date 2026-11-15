@@ -390,3 +390,66 @@ func TestOTPRequestSMSDailyLimitPointsToWhatsApp(t *testing.T) {
 		t.Fatalf("WhatsApp right after the SMS refusal: status = %d, body = %s", resp.StatusCode, body)
 	}
 }
+
+func fakeFazpassDown(t *testing.T) {
+	t.Helper()
+	fake := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte(`{"status":false,"message":"Vendor is down","code":"503"}`))
+	}))
+	t.Cleanup(fake.Close)
+	t.Setenv("OTP_WHATSAPP_PROVIDER", "fazpass")
+	t.Setenv("FAZPASS_BASE_URL", fake.URL)
+	t.Setenv("FAZPASS_MERCHANT_KEY", "merchant-key")
+	t.Setenv("FAZPASS_GATEWAY_KEY", "gateway-key")
+}
+
+// API.md §2.2: a WhatsApp send the provider rejects points to SMS when SMS is on, with no cooldown left behind.
+func TestOTPRequestWhatsAppDownPointsToSMS(t *testing.T) {
+	t.Setenv("OTP_DEBUG_ECHO", "true")
+	t.Setenv("OTP_SMS_PROVIDER", "log")
+	t.Setenv("OTP_MAX_PER_MINUTE", "10")
+	fakeFazpassDown(t)
+	srv := newTestServer(t)
+	phone := registerFreshUserOn(t, srv)
+
+	resp, body := postJSON(t, srv, "/api/auth/otp/request", fmt.Sprintf(
+		`{"for":"tenant_verification","via":"1","destination":"%s"}`, phone))
+	if resp.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("WhatsApp: status = %d, body = %s", resp.StatusCode, body)
+	}
+	want := `{
+		"status": false,
+		"meta": { "response_code": 503, "code": 503, "severity": "ERROR",
+			"message": "Pengiriman kode lewat WhatsApp sedang tidak tersedia. Silakan kirim lewat SMS." },
+		"messages": { "via": ["Pengiriman kode lewat WhatsApp sedang tidak tersedia. Silakan kirim lewat SMS."] }
+	}`
+	AssertJSONMatches(t, body, []byte(want), nil)
+
+	resp, body = postJSON(t, srv, "/api/auth/otp/request", fmt.Sprintf(
+		`{"for":"tenant_verification","via":"0","destination":"%s"}`, phone))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("SMS right after the WhatsApp failure: status = %d, body = %s", resp.StatusCode, body)
+	}
+}
+
+// API.md §2.2: with SMS off there is nothing to switch to, so the plain 503 is returned without messages.via.
+func TestOTPRequestWhatsAppDownWithoutSMS(t *testing.T) {
+	t.Setenv("OTP_DEBUG_ECHO", "true")
+	t.Setenv("OTP_SMS_PROVIDER", "off")
+	fakeFazpassDown(t)
+	srv := newTestServer(t)
+	phone := registerFreshUserOn(t, srv)
+
+	resp, body := postJSON(t, srv, "/api/auth/otp/request", fmt.Sprintf(
+		`{"for":"tenant_verification","via":"1","destination":"%s"}`, phone))
+	if resp.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, body = %s", resp.StatusCode, body)
+	}
+	want := `{
+		"status": false,
+		"meta": { "response_code": 503, "code": 503, "severity": "ERROR",
+			"message": "Kode verifikasi gagal dikirim. Silakan coba lagi dalam 1 menit." }
+	}`
+	AssertJSONMatches(t, body, []byte(want), nil)
+}

@@ -152,8 +152,12 @@ Membuat user (phone **belum** terverifikasi). Verifikasi lewat OTP (2.2 – 2.3)
   gateway SMS gagal. Keduanya berpesan `Pengiriman kode lewat SMS sedang tidak tersedia. Silakan kirim lewat WhatsApp.`
   dengan `messages.via` berisi pesan yang sama, tanpa cooldown, sehingga klien bisa langsung mengirim ulang dengan
   `via: "1"`.
-- `503` — penyedia WhatsApp gagal mengirim: `Kode verifikasi gagal dikirim. Silakan coba lagi dalam 1 menit.`
-  (cooldown 60 detik tetap berlaku)
+- `503` — penyedia WhatsApp **menolak** pesan (mis. vendor sedang gangguan) saat SMS tersedia: `Pengiriman kode lewat
+  WhatsApp sedang tidak tersedia. Silakan kirim lewat SMS.` dengan `messages.via` berisi pesan yang sama, tanpa cooldown,
+  sehingga klien bisa langsung mengirim ulang dengan `via: "0"`.
+- `503` — WhatsApp gagal tanpa SMS tersedia, atau hasilnya tidak pasti (timeout): `Kode verifikasi gagal dikirim.
+  Silakan coba lagi dalam 1 menit.` Untuk kegagalan yang tidak pasti, cooldown 60 detik tetap berlaku karena pesan
+  bisa saja sudah terkirim.
 
 > Kode OTP: 4 digit, berlaku 300 detik, boleh kirim ulang setelah 60 detik. `via: "0"` saat SMS tidak tersedia
 > dikirim lewat WhatsApp. SMS berisi `Kode verifikasi Sewa Kos: {kode}. Berlaku 5 menit. Jangan berikan kode ini

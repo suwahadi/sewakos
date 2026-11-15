@@ -3,6 +3,7 @@ package otp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -61,8 +62,9 @@ func TestFazpassSenderDoesNotRetryFailures(t *testing.T) {
 			defer server.Close()
 
 			sender := NewFazpassSender(server.URL, "merchant-key", "gateway-key")
-			if err := sender.Send(context.Background(), "081234567890", "1234"); err == nil {
-				t.Fatal("Send succeeded, want error")
+			err := sender.Send(context.Background(), "081234567890", "1234")
+			if !errors.Is(err, ErrProviderRejected) {
+				t.Fatalf("Send err = %v, want ErrProviderRejected", err)
 			}
 			if calls.Load() != 1 {
 				t.Errorf("calls = %d, want exactly 1 (no retry)", calls.Load())
@@ -77,5 +79,15 @@ func TestFazpassPhone(t *testing.T) {
 	}
 	if got := FazpassPhone("6281234567890"); got != "6281234567890" {
 		t.Errorf("FazpassPhone(62...) = %q", got)
+	}
+}
+
+func TestFazpassSenderTransportFailureIsNotARejection(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	server.Close()
+
+	err := NewFazpassSender(server.URL, "merchant-key", "gateway-key").Send(context.Background(), "081234567890", "1234")
+	if err == nil || errors.Is(err, ErrProviderRejected) {
+		t.Fatalf("Send err = %v, want a non-rejection error", err)
 	}
 }

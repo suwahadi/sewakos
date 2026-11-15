@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useOtpChannels } from "./otp-channels";
+import { otherOtpChannel, useOtpChannels } from "./otp-channels";
 
 function respond(body: unknown, status = 200) {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status })));
@@ -29,5 +29,16 @@ describe("useOtpChannels", () => {
     const { result } = renderHook(() => useOtpChannels());
 
     await waitFor(() => expect(result.current).toEqual(["sms"]));
+  });
+});
+
+describe("otherOtpChannel", () => {
+  it("switches between WhatsApp and SMS", () => {
+    expect(otherOtpChannel("whatsapp", ["whatsapp", "sms"])).toBe("sms");
+    expect(otherOtpChannel("sms", ["whatsapp", "sms"])).toBe("whatsapp");
+  });
+
+  it("has nothing to switch to when only one channel exists", () => {
+    expect(otherOtpChannel("whatsapp", ["whatsapp"])).toBeNull();
   });
 });

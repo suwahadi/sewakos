@@ -89,7 +89,7 @@ func (s SMSGateSender) Send(ctx context.Context, destination, code string) error
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
 	var parsed smsGateError
 	_ = json.Unmarshal(body, &parsed)
-	return fmt.Errorf("sms gateway rejected send: http %d: %s", resp.StatusCode, parsed.Message)
+	return fmt.Errorf("%w: sms gateway http %d: %s", ErrProviderRejected, resp.StatusCode, parsed.Message)
 }
 
 func SMSText(code string, ttl time.Duration) string {

@@ -161,6 +161,37 @@ test.describe("OTP over WhatsApp and SMS", () => {
     await expect(page).not.toHaveURL(/\/daftar/, { timeout: 15_000 });
   });
 
+  test("a WhatsApp outage switches the page to SMS", async ({ page, request }) => {
+    test.skip(!(await smsEnabled(request)), "Needs the backend under test to run with OTP_SMS_PROVIDER=log");
+    const whatsappDown = "Pengiriman kode lewat WhatsApp sedang tidak tersedia. Silakan kirim lewat SMS.";
+    const phone = randomPhone();
+    await registerUntilChannelStep(page, phone);
+
+    await page.route("**/api/auth/otp/request", async (route) => {
+      if (JSON.parse(route.request().postData() ?? "{}").via !== "1") return route.fallback();
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({
+          status: false,
+          meta: { response_code: 503, code: 503, severity: "ERROR", message: whatsappDown },
+          messages: { via: [whatsappDown] },
+        }),
+      });
+    });
+
+    await page.getByRole("button", { name: "Kirim kode lewat WhatsApp" }).click();
+    await expect(page.getByText(whatsappDown).first()).toBeVisible();
+    await expect(page.getByRole("radio", { name: "SMS" })).toHaveAttribute("aria-checked", "true");
+
+    const otpResponse = page.waitForResponse("**/api/auth/otp/request");
+    await page.getByRole("button", { name: "Kirim kode lewat SMS" }).click();
+    const { debug_code: code } = await (await otpResponse).json();
+    await expect(page.getByText(`Kode dikirim lewat SMS ke ${phone}.`)).toBeVisible();
+    await page.getByLabel("Kode verifikasi").fill(code);
+    await expect(page).not.toHaveURL(/\/daftar/, { timeout: 15_000 });
+  });
+
   test("login by OTP caps resends at three and still logs in with the latest code", async ({ page, request }) => {
     const { phone, cooldownSeconds } = await createVerifiedUser(request, ip);
     await waitOutCooldown(page, cooldownSeconds);

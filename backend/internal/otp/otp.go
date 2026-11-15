@@ -30,16 +30,37 @@ const (
 	ChannelSMS      Channel = "sms"
 )
 
+type ReleasePolicy int
+
+const (
+	KeepCooldownOnFailure ReleasePolicy = iota
+	ReleaseCooldownWhenRejected
+	ReleaseCooldownOnAnyFailure
+)
+
 type ChannelConfig struct {
-	Sender                   Sender
-	MaxPerDay                int
-	ReleaseCooldownOnFailure bool
+	Sender           Sender
+	MaxPerDay        int
+	ReleaseOnFailure ReleasePolicy
+}
+
+func (c ChannelConfig) releasesAfter(err error) bool {
+	switch c.ReleaseOnFailure {
+	case ReleaseCooldownOnAnyFailure:
+		return true
+	case ReleaseCooldownWhenRejected:
+		return errors.Is(err, ErrProviderRejected)
+	default:
+		return false
+	}
 }
 
 var (
 	ErrCooldown           = errors.New("otp: cooldown active")
 	ErrSendLimit          = errors.New("otp: send limit reached")
 	ErrSendFailed         = errors.New("otp: provider failed to send")
+	ErrProviderRejected   = errors.New("otp: provider rejected the message")
+	ErrCooldownReleased   = errors.New("otp: cooldown released after the failure")
 	ErrChannelUnavailable = errors.New("otp: channel not configured")
 	ErrChannelLimit       = errors.New("otp: channel daily limit reached")
 )
@@ -154,9 +175,10 @@ func (s *Service) Request(ctx context.Context, p RequestParams) (RequestResult, 
 	canResendAt := unixCeil(time.Now().Add(s.cfg.ResendAfter))
 
 	if err := channel.Sender.Send(ctx, p.Destination, code); err != nil {
-		if channel.ReleaseCooldownOnFailure {
+		if channel.releasesAfter(err) {
 			s.refund(ctx, consumed)
 			_ = s.rdb.Del(ctx, p.CooldownKey, p.CodeKey).Err()
+			return RequestResult{}, fmt.Errorf("%w: %w: %w", ErrSendFailed, ErrCooldownReleased, err)
 		}
 		return RequestResult{}, fmt.Errorf("%w: %w", ErrSendFailed, err)
 	}

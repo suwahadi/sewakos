@@ -682,8 +682,13 @@ Urutan proses:
    - WhatsApp, `FazpassSender` (`OTP_WHATSAPP_PROVIDER=fazpass`): satu kali `POST {FAZPASS_BASE_URL}/v1/otp/send`,
      header `Authorization: Bearer {FAZPASS_MERCHANT_KEY}`, body `{"phone": "62…", "otp": "{kode}", "gateway_key": "…"}`,
      timeout 10 detik, **tanpa retry** (retry bisa mengirim dan menagih pesan dua kali). Sukses bila HTTP 2xx dan
-     `status: true`. Kode tetap diverifikasi lokal di Redis; endpoint verify Fazpass tidak dipakai. Gagal → 503
-     `Kode verifikasi gagal dikirim. Silakan coba lagi dalam 1 menit.`; cooldown tetap berlaku.
+     `status: true`. Kode tetap diverifikasi lokal di Redis; endpoint verify Fazpass tidak dipakai.
+     - Ditolak Fazpass (HTTP bukan 2xx atau `status: false`, mis. `503 Vendor is down`): kode, cooldown, dan kuota
+       yang terpakai dilepas. Bila SMS aktif → 503 `Pengiriman kode lewat WhatsApp sedang tidak tersedia. Silakan
+       kirim lewat SMS.` dengan `messages.via`; bila tidak → 503 `Kode verifikasi gagal dikirim. Silakan coba lagi
+       dalam 1 menit.`
+     - Gagal tanpa jawaban (timeout, koneksi putus): hasil tidak pasti, pesan mungkin sudah terkirim dan ditagih,
+       jadi cooldown dan kuota tetap berlaku → 503 `Kode verifikasi gagal dikirim. Silakan coba lagi dalam 1 menit.`
    - SMS, `SMSGateSender` (`OTP_SMS_PROVIDER=smsgate`): satu kali `POST {SMSGATE_BASE_URL}/messages` dengan Basic auth,
      body `{"textMessage": {"text": "Kode verifikasi Sewa Kos: {kode}. Berlaku 5 menit. Jangan berikan kode ini kepada
      siapa pun."}, "phoneNumbers": ["+62…"], "ttl": 300, "priority": 100, "withDeliveryReport": false}` plus

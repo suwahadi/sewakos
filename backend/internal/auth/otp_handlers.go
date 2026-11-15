@@ -26,31 +26,35 @@ const (
 )
 
 const (
-	msgOTPInvalid    = "Kode verifikasi salah atau kedaluwarsa."
-	msgOTPCooldown   = "Silakan tunggu sebelum meminta kode baru."
-	msgOTPSendLimit  = "Batas pengiriman kode untuk nomor ini sudah tercapai. Silakan coba lagi nanti."
-	msgOTPSendFailed = "Kode verifikasi gagal dikirim. Silakan coba lagi dalam 1 menit."
-	msgOTPSMSDown    = "Pengiriman kode lewat SMS sedang tidak tersedia. Silakan kirim lewat WhatsApp."
+	msgOTPInvalid     = "Kode verifikasi salah atau kedaluwarsa."
+	msgOTPCooldown    = "Silakan tunggu sebelum meminta kode baru."
+	msgOTPSendLimit   = "Batas pengiriman kode untuk nomor ini sudah tercapai. Silakan coba lagi nanti."
+	msgOTPSendFailed  = "Kode verifikasi gagal dikirim. Silakan coba lagi dalam 1 menit."
+	msgOTPChannelFull = "Pengiriman kode sedang tidak tersedia. Silakan coba lagi nanti."
 )
 
-func WriteOTPRequestError(w http.ResponseWriter, r *http.Request, logger *slog.Logger, channel otp.Channel, err error) {
-	smsDown := map[string][]string{"via": {msgOTPSMSDown}}
+var msgOTPSwitchChannel = map[otp.Channel]string{
+	otp.ChannelWhatsApp: "Pengiriman kode lewat SMS sedang tidak tersedia. Silakan kirim lewat WhatsApp.",
+	otp.ChannelSMS:      "Pengiriman kode lewat WhatsApp sedang tidak tersedia. Silakan kirim lewat SMS.",
+}
+
+func WriteOTPRequestError(w http.ResponseWriter, r *http.Request, logger *slog.Logger, channel, fallback otp.Channel, err error) {
+	switchMessage, canSwitch := msgOTPSwitchChannel[fallback]
+	if errors.Is(err, otp.ErrSendFailed) && logger != nil {
+		logger.Error("otp send failed", "channel", channel, "error", err)
+	}
 	switch {
 	case errors.Is(err, otp.ErrCooldown):
 		response.Fail(w, http.StatusUnprocessableEntity, msgOTPCooldown, map[string][]string{"destination": {msgOTPCooldown}})
 	case errors.Is(err, otp.ErrSendLimit):
 		response.Fail(w, http.StatusTooManyRequests, msgOTPSendLimit, nil)
+	case errors.Is(err, otp.ErrChannelLimit) && canSwitch:
+		response.Fail(w, http.StatusTooManyRequests, switchMessage, map[string][]string{"via": {switchMessage}})
 	case errors.Is(err, otp.ErrChannelLimit):
-		response.Fail(w, http.StatusTooManyRequests, msgOTPSMSDown, smsDown)
-	case errors.Is(err, otp.ErrSendFailed) && channel == otp.ChannelSMS:
-		if logger != nil {
-			logger.Error("otp sms send failed", "error", err)
-		}
-		response.Fail(w, http.StatusServiceUnavailable, msgOTPSMSDown, smsDown)
+		response.Fail(w, http.StatusTooManyRequests, msgOTPChannelFull, nil)
+	case errors.Is(err, otp.ErrSendFailed) && errors.Is(err, otp.ErrCooldownReleased) && canSwitch:
+		response.Fail(w, http.StatusServiceUnavailable, switchMessage, map[string][]string{"via": {switchMessage}})
 	case errors.Is(err, otp.ErrSendFailed):
-		if logger != nil {
-			logger.Error("otp send failed", "error", err)
-		}
 		response.Fail(w, http.StatusServiceUnavailable, msgOTPSendFailed, nil)
 	default:
 		if logger != nil {
@@ -102,9 +106,12 @@ func OTPRequestHandler(deps OTPDeps) http.HandlerFunc {
 
 		forType, _ := body["for"].(string)
 		destination, _ := body["destination"].(string)
-		channel := otp.ChannelWhatsApp
+		channel, fallback := otp.ChannelWhatsApp, otp.ChannelSMS
 		if via, _ := body["via"].(string); via == "0" && deps.Service.HasChannel(otp.ChannelSMS) {
-			channel = otp.ChannelSMS
+			channel, fallback = otp.ChannelSMS, otp.ChannelWhatsApp
+		}
+		if !deps.Service.HasChannel(fallback) {
+			fallback = ""
 		}
 
 		if !ratelimit.EnforceHTTP(ctx, w, deps.Redis, "otp", destination, int64(deps.MaxPerMinute), time.Minute) {
@@ -146,7 +153,7 @@ func OTPRequestHandler(deps OTPDeps) http.HandlerFunc {
 			Destination: destination, ClientIP: remoteIP(r),
 		})
 		if err != nil {
-			WriteOTPRequestError(w, r, deps.Logger, channel, err)
+			WriteOTPRequestError(w, r, deps.Logger, channel, fallback, err)
 			return
 		}
 

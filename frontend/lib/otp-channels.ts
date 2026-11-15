@@ -10,6 +10,10 @@ export const OTP_CHANNEL_VIA: Record<OtpChannel, "0" | "1"> = { whatsapp: "1", s
 
 const FALLBACK_CHANNELS: OtpChannel[] = ["whatsapp"];
 
+export function otherOtpChannel(current: OtpChannel, channels: OtpChannel[]): OtpChannel | null {
+  return channels.find((channel) => channel !== current) ?? null;
+}
+
 function isOtpChannel(value: unknown): value is OtpChannel {
   return value === "whatsapp" || value === "sms";
 }

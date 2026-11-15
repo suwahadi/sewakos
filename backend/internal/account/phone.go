@@ -42,7 +42,7 @@ func PhoneRequestHandler(deps Deps, user authctx.User) http.HandlerFunc {
 			Destination: phone, ClientIP: user.IP,
 		})
 		if err != nil {
-			auth.WriteOTPRequestError(w, r, deps.Logger, otp.ChannelWhatsApp, err)
+			auth.WriteOTPRequestError(w, r, deps.Logger, otp.ChannelWhatsApp, "", err)
 			return
 		}
 

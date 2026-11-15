@@ -282,7 +282,7 @@ func TestFailingChannelReleasesCooldownWhenConfigured(t *testing.T) {
 	ctx := context.Background()
 	failing := &recordingSender{err: errors.New("gateway offline")}
 	svc := NewService(rdb, map[Channel]ChannelConfig{
-		ChannelSMS:      {Sender: failing, ReleaseCooldownOnFailure: true},
+		ChannelSMS:      {Sender: failing, ReleaseOnFailure: ReleaseCooldownOnAnyFailure},
 		ChannelWhatsApp: {Sender: &recordingSender{}},
 	}, Config{CodeLength: 4, TTL: time.Minute, ResendAfter: time.Minute, MaxPerDay: 5})
 	params := testParams(t)
@@ -298,5 +298,37 @@ func TestFailingChannelReleasesCooldownWhenConfigured(t *testing.T) {
 	params.Channel = ChannelWhatsApp
 	if _, err := svc.Request(ctx, params); err != nil {
 		t.Fatalf("switching to WhatsApp right after a failed SMS: %v", err)
+	}
+}
+
+func TestRejectedWhatsAppReleasesCooldownButAnUncertainFailureDoesNot(t *testing.T) {
+	rdb := newTestClient(t)
+	ctx := context.Background()
+	cases := map[string]struct {
+		err          error
+		wantReleased bool
+	}{
+		"provider rejected": {fmt.Errorf("%w: vendor is down", ErrProviderRejected), true},
+		"timeout":           {errors.New("call fazpass: context deadline exceeded"), false},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			svc := NewService(rdb, map[Channel]ChannelConfig{
+				ChannelWhatsApp: {Sender: &recordingSender{err: tc.err}, ReleaseOnFailure: ReleaseCooldownWhenRejected},
+			}, Config{CodeLength: 4, TTL: time.Minute, ResendAfter: time.Minute})
+			params := testParams(t)
+
+			_, err := svc.Request(ctx, params)
+			if !errors.Is(err, ErrSendFailed) {
+				t.Fatalf("Request err = %v, want ErrSendFailed", err)
+			}
+			if got := errors.Is(err, ErrCooldownReleased); got != tc.wantReleased {
+				t.Errorf("ErrCooldownReleased = %v, want %v", got, tc.wantReleased)
+			}
+			exists, _ := rdb.Exists(ctx, params.CooldownKey).Result()
+			if (exists == 0) != tc.wantReleased {
+				t.Errorf("cooldown present = %v, want %v", exists == 1, !tc.wantReleased)
+			}
+		})
 	}
 }
