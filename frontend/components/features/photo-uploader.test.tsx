@@ -110,4 +110,22 @@ describe("PhotoUploader", () => {
     expect(callBffMock).toHaveBeenNthCalledWith(1, "/api/owner/photos/2", { method: "PATCH", body: { sort_order: 1 } });
     expect(callBffMock).toHaveBeenNthCalledWith(2, "/api/owner/photos/1", { method: "PATCH", body: { sort_order: 2 } });
   });
+
+  it("keeps room photos out of the cover order and marks the first general photo as the cover", async () => {
+    const user = userEvent.setup();
+    callBffMock.mockResolvedValue(ok({}, "Foto diperbarui."));
+    const roomPhoto = { ...photo(9, 1), room_id: 4, caption: "Kamar A" };
+    render(<PhotoUploader propertyId={12} initialPhotos={[roomPhoto, photo(1, 2), photo(2, 3)]} />);
+
+    expect(screen.getAllByRole("button", { name: /^Geser foto/ })).toHaveLength(2);
+    expect(screen.getByText("Utama")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Kelola foto kamar 1: Kamar A" })).toBeInTheDocument();
+
+    screen.getByRole("button", { name: "Geser foto 2" }).focus();
+    await user.keyboard("{Alt>}{ArrowLeft}{/Alt}");
+
+    await waitFor(() => expect(callBffMock).toHaveBeenCalledWith("/api/owner/photos/2", { method: "PATCH", body: { sort_order: 1 } }));
+    expect(callBffMock).toHaveBeenCalledTimes(1);
+    expect(callBffMock).not.toHaveBeenCalledWith("/api/owner/photos/9", expect.anything());
+  });
 });

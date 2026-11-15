@@ -4,6 +4,7 @@ import { GripVertical, ImagePlus, X } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { Badge } from "@/components/ui/badge";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialog";
@@ -51,7 +52,9 @@ export function PhotoUploader({ propertyId, initialPhotos }: { propertyId: numbe
   const detachDrag = useRef<(() => void) | null>(null);
   const taskCounter = useRef(0);
   const previews = useRef(new Set<string>());
-  const view = draft ?? photos;
+  const generalPhotos = photos.filter((photo) => photo.room_id === null);
+  const roomPhotos = photos.filter((photo) => photo.room_id !== null);
+  const view = draft ?? generalPhotos;
 
   useEffect(() => {
     const urls = previews.current;
@@ -119,7 +122,7 @@ export function PhotoUploader({ propertyId, initialPhotos }: { propertyId: numbe
 
   function previewMove(targetId: number) {
     const dragging = gesture.current?.id;
-    const base = draftRef.current ?? photos;
+    const base = draftRef.current ?? generalPhotos;
     const from = base.findIndex((photo) => photo.id === dragging);
     const to = base.findIndex((photo) => photo.id === targetId);
     if (from < 0 || to < 0 || from === to) return;
@@ -133,9 +136,9 @@ export function PhotoUploader({ propertyId, initialPhotos }: { propertyId: numbe
   function beginDrag(event: ReactPointerEvent<HTMLButtonElement>, photo: OwnerPhoto) {
     const pointerId = event.pointerId;
     gesture.current = { id: photo.id, pointerId };
-    draftRef.current = photos;
+    draftRef.current = generalPhotos;
     setDragId(photo.id);
-    setDraft(photos);
+    setDraft(generalPhotos);
 
     const onMove = (native: PointerEvent) => {
       if (native.pointerId === pointerId) handleDragMove(native);
@@ -174,7 +177,7 @@ export function PhotoUploader({ propertyId, initialPhotos }: { propertyId: numbe
 
   async function persistOrder(next: OwnerPhoto[]) {
     const previous = photos;
-    setPhotos(next);
+    setPhotos([...next, ...roomPhotos]);
     for (const [index, photo] of next.entries()) {
       if (photo.sort_order === index + 1) continue;
       const result = await callBff(`/api/owner/photos/${photo.id}`, { method: "PATCH", body: { sort_order: index + 1 } });
@@ -184,15 +187,15 @@ export function PhotoUploader({ propertyId, initialPhotos }: { propertyId: numbe
         return;
       }
     }
-    setPhotos(next.map((photo, index) => ({ ...photo, sort_order: index + 1 })));
+    setPhotos([...next.map((photo, index) => ({ ...photo, sort_order: index + 1 })), ...roomPhotos]);
     router.refresh();
   }
 
   function move(photo: OwnerPhoto, offset: -1 | 1) {
-    const index = photos.findIndex((item) => item.id === photo.id);
+    const index = generalPhotos.findIndex((item) => item.id === photo.id);
     const target = index + offset;
-    if (index < 0 || target < 0 || target >= photos.length) return;
-    const next = [...photos];
+    if (index < 0 || target < 0 || target >= generalPhotos.length) return;
+    const next = [...generalPhotos];
     [next[index], next[target]] = [next[target]!, next[index]!];
     void persistOrder(next);
   }
@@ -232,6 +235,11 @@ export function PhotoUploader({ propertyId, initialPhotos }: { propertyId: numbe
             >
               <Image src={photo.thumbnail_url} alt="" fill draggable={false} sizes="(min-width: 1024px) 20vw, 33vw" className="pointer-events-none object-cover" />
             </button>
+            {index === 0 && (
+              <Badge color="brand" className="pointer-events-none absolute bottom-1 left-1">
+                Utama
+              </Badge>
+            )}
             <button
               type="button"
               aria-label={`Geser foto ${index + 1}`}
@@ -252,6 +260,25 @@ export function PhotoUploader({ propertyId, initialPhotos }: { propertyId: numbe
           <UploadTile key={task.key} task={task} onRetry={() => void upload(task)} onRemove={() => dropTask(task)} />
         ))}
       </div>
+      {roomPhotos.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h3 className="text-title-sm font-semibold text-neutral-900">Foto kamar</h3>
+          <p className="text-caption text-neutral-600">Foto kamar tidak dipakai sebagai foto utama properti.</p>
+          <div className="grid grid-cols-3 gap-2 lg:grid-cols-5">
+            {roomPhotos.map((photo, index) => (
+              <button
+                key={photo.id}
+                type="button"
+                onClick={() => setSelected(photo)}
+                aria-label={`Kelola foto kamar ${index + 1}${photo.caption ? `: ${photo.caption}` : ""}`}
+                className="relative aspect-square overflow-hidden rounded-md bg-neutral-100"
+              >
+                <Image src={photo.thumbnail_url} alt="" fill sizes="(min-width: 1024px) 20vw, 33vw" className="object-cover" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <input
         ref={inputRef}
         type="file"
