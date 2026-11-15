@@ -13,9 +13,11 @@ export interface DataTableProps<T> {
   columns: DataTableColumn<T>[];
   rows: T[];
   rowKey: (row: T) => string | number;
+  size?: "default" | "compact";
 }
 
-export function DataTable<T>({ caption, columns, rows, rowKey }: DataTableProps<T>) {
+export function DataTable<T>({ caption, columns, rows, rowKey, size = "default" }: DataTableProps<T>) {
+  const valueText = size === "compact" ? "text-caption" : "text-body";
   return (
     <>
       <ul aria-label={caption} className="flex flex-col divide-y divide-neutral-200 rounded-lg border border-neutral-200 lg:hidden">
@@ -24,14 +26,14 @@ export function DataTable<T>({ caption, columns, rows, rowKey }: DataTableProps<
             {columns.map((column) => (
               <div key={column.key} className="flex min-w-0 items-start justify-between gap-3">
                 <span className="shrink-0 text-caption text-neutral-600">{column.header}</span>
-                <span className="min-w-0 break-words text-right text-body text-neutral-900">{column.render(row)}</span>
+                <span className={cn("min-w-0 break-words text-right text-neutral-900", valueText)}>{column.render(row)}</span>
               </div>
             ))}
           </li>
         ))}
       </ul>
       <div className="hidden overflow-x-auto rounded-lg border border-neutral-200 lg:block">
-        <table className="w-full text-left text-body text-neutral-900">
+        <table className={cn("w-full text-left text-neutral-900", valueText)}>
           <caption className="sr-only">{caption}</caption>
           <thead className="bg-neutral-50 text-caption-strong text-neutral-600">
             <tr>

@@ -267,6 +267,7 @@ Resolve hanya mencatat; perubahan data tetap lewat alur normal (mis. sistem memp
 |---|---|
 | `GET /admin/invoices?status=&type=&booking_id=&page=&limit=` | Semua invoice (bentuk `API.md` §12) |
 | `GET /admin/audit-logs?actor_id=&action=&entity_type=&entity_id=&from=&to=&page=&limit=` | Semua audit log (bentuk `API-OWNER.md` §11), ditambah `ip` dan `user_agent` |
+| `GET /admin/audit-logs/filters` | Pilihan filter dari isi audit log: `actors[]` (`id`, `name`, `role`; urut nama, tanpa aksi sistem) dan `actions[]` (kode aksi unik, urut abjad) |
 
 Audit log dan buku besar tidak bisa diubah atau dihapus oleh siapa pun lewat API maupun database aplikasi.
 

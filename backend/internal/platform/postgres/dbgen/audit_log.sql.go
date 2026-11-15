@@ -93,6 +93,63 @@ func (q *Queries) ListAdminAuditLogs(ctx context.Context, arg ListAdminAuditLogs
 	return items, nil
 }
 
+const listAuditLogActions = `-- name: ListAuditLogActions :many
+SELECT DISTINCT action FROM audit_logs ORDER BY action
+`
+
+func (q *Queries) ListAuditLogActions(ctx context.Context) ([]string, error) {
+	rows, err := q.db.Query(ctx, listAuditLogActions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var action string
+		if err := rows.Scan(&action); err != nil {
+			return nil, err
+		}
+		items = append(items, action)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAuditLogActors = `-- name: ListAuditLogActors :many
+SELECT DISTINCT u.id, u.name, u.role
+FROM audit_logs al
+JOIN users u ON u.id = al.actor_id
+ORDER BY u.name, u.id
+`
+
+type ListAuditLogActorsRow struct {
+	ID   int64
+	Name string
+	Role string
+}
+
+func (q *Queries) ListAuditLogActors(ctx context.Context) ([]ListAuditLogActorsRow, error) {
+	rows, err := q.db.Query(ctx, listAuditLogActors)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAuditLogActorsRow{}
+	for rows.Next() {
+		var i ListAuditLogActorsRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Role); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listOwnerAuditLogs = `-- name: ListOwnerAuditLogs :many
 SELECT al.id, al.created_at, al.actor_id, u.name AS actor_name, al.actor_role, al.action, al.entity_type, al.entity_id, al.changes
 FROM audit_logs al

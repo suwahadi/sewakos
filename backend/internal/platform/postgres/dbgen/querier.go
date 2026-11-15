@@ -130,6 +130,8 @@ type Querier interface {
 	ListAdminAuditLogs(ctx context.Context, arg ListAdminAuditLogsParams) ([]ListAdminAuditLogsRow, error)
 	ListAdminLedgerEntries(ctx context.Context, arg ListAdminLedgerEntriesParams) ([]ListAdminLedgerEntriesRow, error)
 	ListAreasByType(ctx context.Context, arg ListAreasByTypeParams) ([]ListAreasByTypeRow, error)
+	ListAuditLogActions(ctx context.Context) ([]string, error)
+	ListAuditLogActors(ctx context.Context) ([]ListAuditLogActorsRow, error)
 	ListBookingsForUser(ctx context.Context, arg ListBookingsForUserParams) ([]ListBookingsForUserRow, error)
 	ListFavorites(ctx context.Context, arg ListFavoritesParams) ([]ListFavoritesRow, error)
 	ListGalleryRooms(ctx context.Context, propertyID int64) ([]ListGalleryRoomsRow, error)

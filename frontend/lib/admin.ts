@@ -124,6 +124,11 @@ export interface AdminAuditLogEntry extends AuditLogEntry {
   user_agent: string | null;
 }
 
+export interface AdminAuditLogFilterOptions {
+  actors: { id: number; name: string; role: string }[];
+  actions: string[];
+}
+
 const AREA_TYPE_LABEL: Record<string, string> = { city: "Kota", campus: "Kampus", mrt: "Stasiun MRT" };
 const REFUND_REASON_LABEL: Record<string, string> = {
   owner_rejected: "Ditolak pemilik",

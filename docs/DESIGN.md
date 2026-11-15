@@ -1292,6 +1292,7 @@ Path ini juga dipakai backend untuk field `link` notifikasi (SPEC-GO.md §17). M
 | `/owner/ulasan` | Ulasan properti | Owner |
 | `/admin/...` | Panel admin (struktur mengikuti bagian di API-ADMIN.md) | Admin |
 | `/admin/pengguna` | Tiap baris non-admin: tombol `neutral` "Set Password" lalu "Nonaktifkan"/"Aktifkan". "Set Password" membuka Dialog: "Password baru" dan "Ulangi password" (`type="password"`, `autoComplete="new-password"`), error inline (wajib, 8–72 karakter, harus sama) sebelum request; tombol "Batal" (`neutral`) dan "Simpan". Isian dikosongkan setiap dialog ditutup | Admin |
+| `/admin/riwayat` | Filter "Aktor" dan "Aksi" (Select, isi dari `GET /admin/audit-logs/filters`) sebaris 50:50; di mobile tersembunyi di balik tombol "Filter" (ikon `SlidersHorizontal`, CountBadge jumlah filter aktif, `aria-expanded`), ≥ 1024px selalu tampil. DataTable varian `compact`: isi data `caption`, sama dengan label. Kolom "Perubahan" berupa tombol "Selengkapnya"/"Sembunyikan" (`label` 600 `brand-700`, `ChevronDown`) yang membuka daftar `field: lama → baru` per baris; berlaku juga di `/owner/riwayat` | Admin |
 | `/admin/keuangan?user={id}` | Keuangan per pemilik: chip "Pemilik: {nama}" (bisa dihapus) menggantikan kolom "Filter per pemilik"; StatCard, buku besar, tab, dan CSV memakai `owner_id`. Tanpa filter, tiap entri menampilkan nama pemilik yang menaut ke URL ini. Detail booking admin punya baris "Pemilik" (tanpa nomor HP) yang menaut ke sini | Admin |
 
 Halaman yang butuh login mengarahkan tamu ke `/masuk?next={path}`. Role yang salah → ErrorState 403

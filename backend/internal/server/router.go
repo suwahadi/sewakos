@@ -219,6 +219,7 @@ func NewRouter(deps Deps) chi.Router {
 				adminRoutes.Patch("/admin/settings", withAuthedUser(adminDeps, admin.PatchSettingsHandler))
 				adminRoutes.Post("/admin/notifications/broadcast", withAuthedUser(adminDeps, admin.BroadcastHandler))
 				adminRoutes.Get("/admin/audit-logs", withAuthedUser(adminDeps, admin.AuditLogsHandler))
+				adminRoutes.Get("/admin/audit-logs/filters", withAuthedUser(adminDeps, admin.AuditLogFiltersHandler))
 				adminRoutes.Get("/admin/reviews", withAuthedUser(adminDeps, admin.ListReviewsHandler))
 				adminRoutes.Post("/admin/reviews/{review}/hide", withAuthedUser(adminDeps, admin.HideReviewHandler))
 				adminRoutes.Post("/admin/reviews/{review}/unhide", withAuthedUser(adminDeps, admin.UnhideReviewHandler))

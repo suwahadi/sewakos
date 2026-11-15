@@ -70,3 +70,27 @@ func AuditLogsHandler(deps Deps, _ authctx.User) http.HandlerFunc {
 		response.Success(w, http.StatusOK, "", map[string]any{"audit_logs": logs, "current_page": page})
 	}
 }
+
+func AuditLogFiltersHandler(deps Deps, _ authctx.User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		actorRows, err := deps.Store.ListAuditLogActors(ctx)
+		if err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		actions, err := deps.Store.ListAuditLogActions(ctx)
+		if err != nil {
+			response.InternalErrorHandler(w, r)
+			return
+		}
+		actors := make([]map[string]any, len(actorRows))
+		for i, row := range actorRows {
+			actors[i] = map[string]any{"id": row.ID, "name": row.Name, "role": row.Role}
+		}
+		if actions == nil {
+			actions = []string{}
+		}
+		response.Success(w, http.StatusOK, "", map[string]any{"actors": actors, "actions": actions})
+	}
+}

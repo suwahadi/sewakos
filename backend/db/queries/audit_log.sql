@@ -22,3 +22,12 @@ WHERE (sqlc.narg(actor_id)::bigint IS NULL OR al.actor_id = sqlc.narg(actor_id))
   AND (sqlc.narg(to_time)::timestamptz IS NULL OR al.created_at < sqlc.narg(to_time))
 ORDER BY al.created_at DESC, al.id DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- name: ListAuditLogActors :many
+SELECT DISTINCT u.id, u.name, u.role
+FROM audit_logs al
+JOIN users u ON u.id = al.actor_id
+ORDER BY u.name, u.id;
+
+-- name: ListAuditLogActions :many
+SELECT DISTINCT action FROM audit_logs ORDER BY action;

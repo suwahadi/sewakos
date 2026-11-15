@@ -23,11 +23,19 @@ afterEach(() => {
 });
 
 describe("AuditLogList", () => {
-  it("shows the actor, action, and changes for each entry", () => {
+  it("shows the actor and action, with the changes collapsed behind Selengkapnya", async () => {
+    const user = userEvent.setup();
     render(<AuditLogList path="/api/owner/audit-logs" initialEntries={[entry]} />);
     expect(screen.getAllByText("Pemilik Contoh (owner)").length).toBeGreaterThan(0);
     expect(screen.getAllByText("booking.approve").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("status: paid → approved").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("status: paid → approved")[0]).not.toBeVisible();
+
+    const toggle = screen.getAllByRole("button", { name: "Selengkapnya" })[0]!;
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(toggle).toHaveTextContent("Sembunyikan");
+    expect(screen.getAllByText("status: paid → approved")[0]).toBeVisible();
   });
 
   it("falls back to Sistem when there is no actor", () => {
