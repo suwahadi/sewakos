@@ -66,12 +66,18 @@ type TransactionResponse struct {
 }
 
 type StatusResponse struct {
+	StatusCode        string `json:"status_code"`
 	OrderID           string `json:"order_id"`
 	TransactionStatus string `json:"transaction_status"`
 	FraudStatus       string `json:"fraud_status"`
 	GrossAmount       string `json:"gross_amount"`
 	PaymentType       string `json:"payment_type"`
 	TransactionID     string `json:"transaction_id"`
+}
+
+// Midtrans can report a missing transaction as HTTP 200 with status_code "404" in the body instead of an HTTP 404.
+func (s StatusResponse) NotFound() bool {
+	return s.StatusCode == "404"
 }
 
 type Client interface {

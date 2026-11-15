@@ -31,12 +31,15 @@ func selectExpiredPendingPaymentOrderIDs(ctx context.Context, deps Deps) ([]stri
 	return dbgen.New(tx).SelectExpiredPendingPaymentOrderIDs(ctx)
 }
 
+// A Snap order whose payer never picked a method does not exist at Midtrans, so a not-found answer after the
+// payment window means nothing can still be paid and the order expires like a pending one.
 func expireOnePayment(ctx context.Context, deps Deps, orderID string) error {
 	status, err := deps.Booking.Midtrans.GetStatus(ctx, orderID)
-	if err != nil {
+	notFound := midtrans.IsNotFound(err) || (err == nil && status.NotFound())
+	if err != nil && !notFound {
 		return err
 	}
-	if status.TransactionStatus != "pending" {
+	if !notFound && status.TransactionStatus != "pending" {
 		return booking.ApplyPaymentStatus(ctx, deps.Booking, orderID, status, nil)
 	}
 

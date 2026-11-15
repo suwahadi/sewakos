@@ -101,6 +101,62 @@ func TestExpirePaymentsMarksStillPendingAndReleasesLock(t *testing.T) {
 	}
 }
 
+// Midtrans has no record of a Snap order whose payer never chose a method; such a payment must still expire.
+func TestExpirePaymentsExpiresOrdersMidtransDoesNotKnow(t *testing.T) {
+	cases := map[string]func(orderID string) (midtrans.StatusResponse, error){
+		"http 404": func(string) (midtrans.StatusResponse, error) {
+			return midtrans.StatusResponse{}, &midtrans.StatusCodeError{StatusCode: http.StatusNotFound, Body: `{"status_code":"404"}`}
+		},
+		"status_code 404 in body": func(string) (midtrans.StatusResponse, error) {
+			return midtrans.StatusResponse{StatusCode: "404"}, nil
+		},
+	}
+	for name, getStatus := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("OTP_DEBUG_ECHO", "true")
+			var lastOrderID string
+			mock := &midtrans.MockClient{
+				CreateTransactionFunc: func(_ context.Context, req midtrans.TransactionRequest) (midtrans.TransactionResponse, error) {
+					lastOrderID = req.TransactionDetails.OrderID
+					return midtrans.TransactionResponse{Token: "snap-token", RedirectURL: "https://example.test/redirect"}, nil
+				},
+				GetStatusFunc: func(_ context.Context, orderID string) (midtrans.StatusResponse, error) {
+					return getStatus(orderID)
+				},
+				ExpireTransactionFunc: func(_ context.Context, _ string) error {
+					return &midtrans.StatusCodeError{StatusCode: http.StatusNotFound}
+				},
+			}
+			srv, pool := newTestServerAndPoolWithMidtrans(t, mock)
+			roomID := seedBookingFixture(t, pool, 2250000, 1, false)
+			_, token := bookingRegisterAndVerify(t, srv)
+			bookingID := submitBookingFixture(t, srv, token, roomID)
+			resp, body := checkoutBooking(t, srv, token, bookingID)
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("checkout: status = %d, body = %s", resp.StatusCode, body)
+			}
+			backdatePaymentExpiry(t, pool, lastOrderID, 2*time.Minute)
+
+			worker.ExpirePayments(context.Background(), workerDeps(pool, mock, nil), discardLogger())
+
+			var paymentStatus string
+			if err := pool.QueryRow(context.Background(), `SELECT status FROM payments WHERE order_id = $1`, lastOrderID).Scan(&paymentStatus); err != nil {
+				t.Fatalf("read payment: %v", err)
+			}
+			if paymentStatus != "expire" {
+				t.Errorf("payment.status = %q, want expire", paymentStatus)
+			}
+			var available int
+			if err := pool.QueryRow(context.Background(), `SELECT available FROM rooms WHERE id = $1`, roomID).Scan(&available); err != nil {
+				t.Fatalf("read room: %v", err)
+			}
+			if available != 1 {
+				t.Errorf("room available = %d, want 1 (lock released)", available)
+			}
+		})
+	}
+}
+
 func TestExpirePaymentsAppliesLateSettlement(t *testing.T) {
 	t.Setenv("OTP_DEBUG_ECHO", "true")
 	var lastOrderID string
