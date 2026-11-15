@@ -422,7 +422,7 @@ invoices
   due_date date NOT NULL                    -- WIB
   issued_at timestamptz NOT NULL
   paid_at timestamptz NULL
-  void_reason varchar(30) NULL
+  void_reason varchar(30) NULL  -- overdue | extension_expired | booking_expired | booking_cancelled
   reminder_sent_at timestamptz NULL
   UNIQUE INDEX (booking_id, type, period_start) WHERE type = 'renewal'
   UNIQUE INDEX (booking_id) WHERE type = 'initial'

@@ -151,6 +151,11 @@ func cancelPendingBooking(ctx context.Context, deps Deps, preRead dbgen.SelectBo
 	if err := queries.CancelBooking(ctx, row.ID); err != nil {
 		return cancelResult{}, err
 	}
+	if err := queries.VoidInvoice(ctx, dbgen.VoidInvoiceParams{
+		ID: row.InvoiceID, VoidReason: pgtextFrom("booking_cancelled"),
+	}); err != nil {
+		return cancelResult{}, err
+	}
 	if row.StockHeld {
 		if err := queries.ReleaseRoomLock(ctx, row.RoomID); err != nil {
 			return cancelResult{}, err

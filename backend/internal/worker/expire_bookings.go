@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/suwahadi/sewakos/backend/internal/platform/postgres/dbgen"
 )
@@ -63,6 +64,11 @@ func expireOneBooking(ctx context.Context, deps Deps, bookingID int64) error {
 	}
 
 	if err := queries.CancelBookingBySystem(ctx, bookingID); err != nil {
+		return err
+	}
+	if err := queries.VoidInvoice(ctx, dbgen.VoidInvoiceParams{
+		ID: row.InvoiceID, VoidReason: pgtype.Text{String: "booking_expired", Valid: true},
+	}); err != nil {
 		return err
 	}
 	if row.StockHeld {

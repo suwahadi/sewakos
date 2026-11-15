@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/suwahadi/sewakos/backend/internal/midtrans"
 )
 
@@ -370,5 +372,34 @@ func TestRefundAccountWithoutRefundIs400(t *testing.T) {
 		`{"bank_name":"BCA","account_number":"1234567890","account_name":"Anak Kos Contoh"}`)
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("status = %d, body = %s, want 400", resp.StatusCode, body)
+	}
+}
+
+func initialInvoiceStatus(t *testing.T, pool *pgxpool.Pool, bookingID int64) (status, voidReason string) {
+	t.Helper()
+	var reason *string
+	if err := pool.QueryRow(context.Background(),
+		`SELECT status, void_reason FROM invoices WHERE booking_id = $1 AND type = 'initial'`, bookingID).Scan(&status, &reason); err != nil {
+		t.Fatalf("read invoice: %v", err)
+	}
+	if reason != nil {
+		voidReason = *reason
+	}
+	return status, voidReason
+}
+
+// API.md §5: a pending booking the tenant cancels can no longer be paid, so its first invoice is void, not unpaid.
+func TestCancelPendingBookingVoidsItsInvoice(t *testing.T) {
+	t.Setenv("OTP_DEBUG_ECHO", "true")
+	srv, pool := newTestServerAndPool(t)
+	roomID := seedBookingFixture(t, pool, 2250000, 2, false)
+	_, token := bookingRegisterAndVerify(t, srv)
+	bookingID := submitBookingFixture(t, srv, token, roomID)
+
+	if resp, body := cancelBooking(t, srv, token, bookingID); resp.StatusCode != http.StatusOK {
+		t.Fatalf("cancel: status = %d, body = %s", resp.StatusCode, body)
+	}
+	if status, reason := initialInvoiceStatus(t, pool, bookingID); status != "void" || reason != "booking_cancelled" {
+		t.Errorf("invoice = (%q, %q), want void / booking_cancelled", status, reason)
 	}
 }

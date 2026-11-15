@@ -211,6 +211,9 @@ func TestExpireBookingsCancelsExpiredPendingBookingWithoutPayment(t *testing.T) 
 	if status != "cancelled" || cancelledBy != "system" {
 		t.Errorf("booking = (status=%q, cancelled_by=%q), want cancelled by system", status, cancelledBy)
 	}
+	if invoiceStatus, reason := initialInvoiceStatus(t, pool, bookingID); invoiceStatus != "void" || reason != "booking_expired" {
+		t.Errorf("invoice = (%q, %q), want void / booking_expired", invoiceStatus, reason)
+	}
 }
 
 func TestExpireBookingsSkipsBookingWithPendingPayment(t *testing.T) {

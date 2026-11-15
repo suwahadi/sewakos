@@ -864,6 +864,8 @@ saat booking dibuat (diskon flash sale hanya untuk pembayaran pertama).
 - `period_end` eksklusif. `due_date` dalam WIB.
 - `initial`: `due_date` = tanggal `expires_at` booking (WIB).
 - `renewal`: jatuh tempo = awal periode; lewat 3 hari setelah `due_date` → booking `terminated`, invoice `void`.
+- `initial` milik booking yang dibatalkan sebelum dibayar (kedaluwarsa otomatis atau dibatalkan penyewa) ikut `void`,
+  bukan tetap `unpaid`.
 
 ### 12.1 `GET /invoices?booking_id=&status=&page=&limit=` → `invoices[]` + `current_page` (milik tenant)
 
