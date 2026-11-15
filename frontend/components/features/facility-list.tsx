@@ -46,7 +46,9 @@ function FacilityPreview({ facilities }: { facilities: string[] }) {
         </button>
       )}
       <BottomSheet open={open} onClose={() => setOpen(false)} title="Fasilitas">
-        <FacilityGrid facilities={facilities} />
+        <div className="flex flex-col gap-4 pb-6">
+          <FacilityGrid facilities={facilities} />
+        </div>
       </BottomSheet>
     </div>
   );
