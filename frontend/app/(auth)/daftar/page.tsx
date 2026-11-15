@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { OtpChannelPicker, OtpSentNotice } from "@/components/features/otp-channel-picker";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { InlineAlert } from "@/components/ui/inline-alert";
@@ -10,6 +11,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { TextField } from "@/components/ui/text-field";
 import { callBff } from "@/lib/api/browser";
 import { toast } from "@/lib/toast";
+import { OTP_CHANNEL_LABEL, OTP_CHANNEL_VIA, useOtpChannels, type OtpChannel } from "@/lib/otp-channels";
 import { useOtpRequest, type OtpRequestResponse } from "@/lib/use-otp-request";
 
 const PHONE_PATTERN = /^08\d{7,12}$/;
@@ -48,11 +50,20 @@ function DaftarForm() {
   const [submitting, setSubmitting] = useState(false);
 
   const [otpError, setOtpError] = useState<string | undefined>();
-  const otp = useOtpRequest(() =>
-    callBff<OtpRequestResponse>("/api/auth/otp/request", {
-      method: "POST",
-      body: { for: "tenant_verification", via: "1", destination: phone },
-    }),
+  const channels = useOtpChannels();
+  const [channel, setChannel] = useState<OtpChannel>("whatsapp");
+  const otp = useOtpRequest(
+    () =>
+      callBff<OtpRequestResponse>("/api/auth/otp/request", {
+        method: "POST",
+        body: { for: "tenant_verification", via: OTP_CHANNEL_VIA[channel], destination: phone },
+      }),
+    {
+      onChannelUnavailable: () => {
+        setChannel("whatsapp");
+        setStep("channel");
+      },
+    },
   );
 
   function validate(): FieldErrors {
@@ -120,10 +131,13 @@ function DaftarForm() {
       <div className="flex flex-col gap-6">
         <div className="text-center">
           <p className="text-title-lg font-semibold text-neutral-900">Verifikasi nomor HP</p>
-          <p className="mt-1 text-body text-neutral-600">Kode verifikasi akan dikirim lewat WhatsApp ke {phone}.</p>
+          <p className="mt-1 text-body text-neutral-600">
+            Kode verifikasi akan dikirim lewat {OTP_CHANNEL_LABEL[channel]} ke {phone}.
+          </p>
         </div>
+        <OtpChannelPicker channels={channels} value={channel} onChange={setChannel} />
         <Button fullWidth onClick={sendOtp} loading={otp.sending}>
-          Kirim kode lewat WhatsApp
+          Kirim kode lewat {OTP_CHANNEL_LABEL[channel]}
         </Button>
       </div>
     );
@@ -134,7 +148,7 @@ function DaftarForm() {
       <div className="flex flex-col items-center gap-6">
         <div className="text-center">
           <p className="text-title-lg font-semibold text-neutral-900">Masukkan kode verifikasi</p>
-          <p className="mt-1 text-body text-neutral-600">Kode dikirim lewat WhatsApp ke {phone}.</p>
+          <OtpSentNotice channel={channel} phone={phone} className="mt-1" />
         </div>
         <OtpInput onComplete={checkOtp} error={otpError} />
         <OtpResendCountdown

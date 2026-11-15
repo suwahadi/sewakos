@@ -15,12 +15,12 @@ function success(canResendAt: number): ApiResult<OtpRequestResponse> {
   };
 }
 
-function failure(httpStatus: number, message: string): ApiResult<OtpRequestResponse> {
+function failure(httpStatus: number, message: string, messages: Record<string, string[]> | null = null): ApiResult<OtpRequestResponse> {
   return {
     ok: false,
     httpStatus,
     meta: { response_code: httpStatus, code: httpStatus, severity: "WARNING", message },
-    messages: null,
+    messages,
     retryAfterSeconds: null,
   };
 }
@@ -108,5 +108,30 @@ describe("useOtpRequest", () => {
 
     expect(send).toHaveBeenCalledTimes(1);
     expect(result.current.canResendAt).toBeGreaterThan(Math.floor(Date.now() / 1000));
+  });
+
+  it("hands a channel refusal to the page instead of blocking further sends", async () => {
+    const message = "Pengiriman kode lewat SMS sedang tidak tersedia. Silakan kirim lewat WhatsApp.";
+    const send = vi
+      .fn()
+      .mockResolvedValueOnce(failure(429, message, { via: [message] }))
+      .mockResolvedValueOnce(success(past()));
+    const onChannelUnavailable = vi.fn();
+    const { result } = renderHook(() => useOtpRequest(send, { onChannelUnavailable }));
+
+    let first = true;
+    await act(async () => {
+      first = await result.current.request();
+    });
+    let second = false;
+    await act(async () => {
+      second = await result.current.request();
+    });
+
+    expect(first).toBe(false);
+    expect(onChannelUnavailable).toHaveBeenCalledWith(message);
+    expect(result.current.blockedMessage).toBeNull();
+    expect(second).toBe(true);
+    expect(send).toHaveBeenCalledTimes(2);
   });
 });

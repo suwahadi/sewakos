@@ -38,11 +38,11 @@ func PhoneRequestHandler(deps Deps, user authctx.User) http.HandlerFunc {
 		}
 
 		result, err := deps.OTP.Request(ctx, otp.RequestParams{
-			CodeKey: otp.ChangePhoneCodeKey(user.UserID, phone), CooldownKey: otp.CooldownKey(phone),
+			Channel: otp.ChannelWhatsApp, CodeKey: otp.ChangePhoneCodeKey(user.UserID, phone), CooldownKey: otp.CooldownKey(phone),
 			Destination: phone, ClientIP: user.IP,
 		})
 		if err != nil {
-			auth.WriteOTPRequestError(w, r, deps.Logger, err)
+			auth.WriteOTPRequestError(w, r, deps.Logger, otp.ChannelWhatsApp, err)
 			return
 		}
 

@@ -53,13 +53,27 @@ function trackOtpRequests(page: Page): string[] {
   return bodies;
 }
 
-async function expectNoProviderOrSmsMention(page: Page) {
-  await expect(page.locator("body")).not.toContainText(/fazpass/i);
-  await expect(page.getByRole("radio", { name: /SMS|WhatsApp/ })).toHaveCount(0);
-  await expect(page.getByText("SMS", { exact: true })).toHaveCount(0);
+async function expectNoProviderNames(page: Page) {
+  await expect(page.locator("body")).not.toContainText(/fazpass|sms-?gate|textbee/i);
 }
 
-test.describe("OTP over WhatsApp", () => {
+async function smsEnabled(request: APIRequestContext): Promise<boolean> {
+  const response = await request.get(`${API_URL}/auth/otp/channels`, { headers: { "x-api-client": API_CLIENT_ID } });
+  expect(response.status(), await response.text()).toBe(200);
+  const { channels } = await response.json();
+  return channels.includes("sms");
+}
+
+async function registerUntilChannelStep(page: Page, phone: string) {
+  await page.goto("/daftar");
+  await page.getByLabel("Nama", { exact: true }).fill("Penyewa OTP E2E");
+  await page.getByLabel("Nomor HP").fill(phone);
+  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Daftar", exact: true }).click();
+}
+
+test.describe("OTP over WhatsApp and SMS", () => {
   let ip: string;
 
   test.beforeEach(async ({ page }) => {
@@ -67,17 +81,18 @@ test.describe("OTP over WhatsApp", () => {
     await page.setExtraHTTPHeaders({ "X-Forwarded-For": ip });
   });
 
-  test("register offers WhatsApp only, sends once on a double click, and verifies the code", async ({ page }) => {
+  test("register defaults to WhatsApp, sends once on a double click, and verifies the code", async ({ page, request }) => {
     const phone = randomPhone();
-    await page.goto("/daftar");
-    await page.getByLabel("Nama", { exact: true }).fill("Penyewa OTP E2E");
-    await page.getByLabel("Nomor HP").fill(phone);
-    await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
-    await page.getByRole("checkbox").check();
-    await page.getByRole("button", { name: "Daftar", exact: true }).click();
+    await registerUntilChannelStep(page, phone);
 
     await expect(page.getByText(`Kode verifikasi akan dikirim lewat WhatsApp ke ${phone}.`)).toBeVisible();
-    await expectNoProviderOrSmsMention(page);
+    if (await smsEnabled(request)) {
+      await expect(page.getByRole("radio", { name: "WhatsApp" })).toHaveAttribute("aria-checked", "true");
+      await expect(page.getByRole("radio", { name: "SMS" })).toBeVisible();
+    } else {
+      await expect(page.getByRole("radio", { name: "SMS" })).toHaveCount(0);
+    }
+    await expectNoProviderNames(page);
 
     const sent = trackOtpRequests(page);
     const otpResponse = page.waitForResponse("**/api/auth/otp/request");
@@ -85,10 +100,63 @@ test.describe("OTP over WhatsApp", () => {
     const { debug_code: code } = await (await otpResponse).json();
 
     await expect(page.getByText(`Kode dikirim lewat WhatsApp ke ${phone}.`)).toBeVisible();
-    await expectNoProviderOrSmsMention(page);
+    await expectNoProviderNames(page);
     expect(sent).toHaveLength(1);
     expect(JSON.parse(sent[0] ?? "{}").via).toBe("1");
 
+    await page.getByLabel("Kode verifikasi").fill(code);
+    await expect(page).not.toHaveURL(/\/daftar/, { timeout: 15_000 });
+  });
+
+  test("register by SMS shows the delivery delay note and verifies the code", async ({ page, request }) => {
+    test.skip(!(await smsEnabled(request)), "Needs the backend under test to run with OTP_SMS_PROVIDER=log");
+    const phone = randomPhone();
+    await registerUntilChannelStep(page, phone);
+
+    await page.getByRole("radio", { name: "SMS" }).click();
+    await expect(page.getByText(`Kode verifikasi akan dikirim lewat SMS ke ${phone}.`)).toBeVisible();
+    const sent = trackOtpRequests(page);
+    const otpResponse = page.waitForResponse("**/api/auth/otp/request");
+    await page.getByRole("button", { name: "Kirim kode lewat SMS" }).click();
+    const { debug_code: code } = await (await otpResponse).json();
+
+    await expect(page.getByText(`Kode dikirim lewat SMS ke ${phone}.`)).toBeVisible();
+    await expect(page.getByText("SMS bisa tiba hingga 1–2 menit.")).toBeVisible();
+    await expectNoProviderNames(page);
+    expect(JSON.parse(sent[0] ?? "{}").via).toBe("0");
+
+    await page.getByLabel("Kode verifikasi").fill(code);
+    await expect(page).not.toHaveURL(/\/daftar/, { timeout: 15_000 });
+  });
+
+  test("an unavailable SMS channel switches the page back to WhatsApp", async ({ page, request }) => {
+    test.skip(!(await smsEnabled(request)), "Needs the backend under test to run with OTP_SMS_PROVIDER=log");
+    const smsDown = "Pengiriman kode lewat SMS sedang tidak tersedia. Silakan kirim lewat WhatsApp.";
+    const phone = randomPhone();
+    await registerUntilChannelStep(page, phone);
+
+    await page.route("**/api/auth/otp/request", async (route) => {
+      if (JSON.parse(route.request().postData() ?? "{}").via !== "0") return route.fallback();
+      await route.fulfill({
+        status: 429,
+        contentType: "application/json",
+        body: JSON.stringify({
+          status: false,
+          meta: { response_code: 429, code: 429, severity: "WARNING", message: smsDown },
+          messages: { via: [smsDown] },
+        }),
+      });
+    });
+
+    await page.getByRole("radio", { name: "SMS" }).click();
+    await page.getByRole("button", { name: "Kirim kode lewat SMS" }).click();
+    await expect(page.getByText(smsDown).first()).toBeVisible();
+    await expect(page.getByRole("radio", { name: "WhatsApp" })).toHaveAttribute("aria-checked", "true");
+
+    const otpResponse = page.waitForResponse("**/api/auth/otp/request");
+    await page.getByRole("button", { name: "Kirim kode lewat WhatsApp" }).click();
+    const { debug_code: code } = await (await otpResponse).json();
+    await expect(page.getByText(`Kode dikirim lewat WhatsApp ke ${phone}.`)).toBeVisible();
     await page.getByLabel("Kode verifikasi").fill(code);
     await expect(page).not.toHaveURL(/\/daftar/, { timeout: 15_000 });
   });
@@ -100,7 +168,7 @@ test.describe("OTP over WhatsApp", () => {
     await page.getByRole("radio", { name: "Kode OTP" }).click();
     await page.getByLabel("Nomor HP").fill(phone);
     await page.getByRole("button", { name: "Lanjut" }).click();
-    await expectNoProviderOrSmsMention(page);
+    await expectNoProviderNames(page);
 
     const sent = trackOtpRequests(page);
     let response = page.waitForResponse("**/api/auth/otp/request");
@@ -133,7 +201,7 @@ test.describe("OTP over WhatsApp", () => {
     await page.getByLabel("Nomor HP").fill(phone);
     await page.getByRole("button", { name: "Lanjut" }).click();
     await expect(page.getByText(`Kode verifikasi akan dikirim lewat WhatsApp ke ${phone}.`)).toBeVisible();
-    await expectNoProviderOrSmsMention(page);
+    await expectNoProviderNames(page);
 
     const response = page.waitForResponse("**/api/auth/otp/request");
     await page.getByRole("button", { name: "Kirim kode lewat WhatsApp" }).click();

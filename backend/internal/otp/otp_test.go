@@ -45,11 +45,15 @@ func testKeys(t *testing.T) (codeKey, cooldownKey string) {
 	return "test:code:" + id, "test:cooldown:" + id
 }
 
+func whatsappOnly(sender Sender) map[Channel]ChannelConfig {
+	return map[Channel]ChannelConfig{ChannelWhatsApp: {Sender: sender}}
+}
+
 func testParams(t *testing.T) RequestParams {
 	t.Helper()
 	id := fmt.Sprintf("%d", time.Now().UnixNano())
 	return RequestParams{
-		CodeKey: "test:code:" + id, CooldownKey: "test:cooldown:" + id,
+		Channel: ChannelWhatsApp, CodeKey: "test:code:" + id, CooldownKey: "test:cooldown:" + id,
 		Destination: "0812" + id[len(id)-8:], ClientIP: "198.51.100." + id[len(id)-2:],
 	}
 }
@@ -57,11 +61,11 @@ func testParams(t *testing.T) RequestParams {
 func TestRequestThenCheckRoundTrip(t *testing.T) {
 	rdb := newTestClient(t)
 	sender := &recordingSender{}
-	svc := NewService(rdb, sender, Config{CodeLength: 4, TTL: 300 * time.Second, ResendAfter: 60 * time.Second})
+	svc := NewService(rdb, whatsappOnly(sender), Config{CodeLength: 4, TTL: 300 * time.Second, ResendAfter: 60 * time.Second})
 	ctx := context.Background()
 	codeKey, cooldownKey := testKeys(t)
 
-	result, err := svc.Request(ctx, RequestParams{CodeKey: codeKey, CooldownKey: cooldownKey, Destination: "081200000002"})
+	result, err := svc.Request(ctx, RequestParams{Channel: ChannelWhatsApp, CodeKey: codeKey, CooldownKey: cooldownKey, Destination: "081200000002"})
 	if err != nil {
 		t.Fatalf("Request: %v", err)
 	}
@@ -98,7 +102,7 @@ func TestRequestThenCheckRoundTrip(t *testing.T) {
 
 func TestCheckRejectsWrongOrMissingCode(t *testing.T) {
 	rdb := newTestClient(t)
-	svc := NewService(rdb, &recordingSender{}, Config{CodeLength: 4, TTL: 300 * time.Second, ResendAfter: 60 * time.Second})
+	svc := NewService(rdb, whatsappOnly(&recordingSender{}), Config{CodeLength: 4, TTL: 300 * time.Second, ResendAfter: 60 * time.Second})
 	ctx := context.Background()
 	codeKey, cooldownKey := testKeys(t)
 
@@ -106,7 +110,7 @@ func TestCheckRejectsWrongOrMissingCode(t *testing.T) {
 		t.Errorf("Check on never-requested key: ok=%v err=%v, want false/nil", ok, err)
 	}
 
-	result, err := svc.Request(ctx, RequestParams{CodeKey: codeKey, CooldownKey: cooldownKey, Destination: "081200000002"})
+	result, err := svc.Request(ctx, RequestParams{Channel: ChannelWhatsApp, CodeKey: codeKey, CooldownKey: cooldownKey, Destination: "081200000002"})
 	if err != nil {
 		t.Fatalf("Request: %v", err)
 	}
@@ -121,7 +125,7 @@ func TestCheckRejectsWrongOrMissingCode(t *testing.T) {
 
 func TestRequestEnforcesCooldown(t *testing.T) {
 	rdb := newTestClient(t)
-	svc := NewService(rdb, &recordingSender{}, Config{CodeLength: 4, TTL: 300 * time.Second, ResendAfter: 60 * time.Second})
+	svc := NewService(rdb, whatsappOnly(&recordingSender{}), Config{CodeLength: 4, TTL: 300 * time.Second, ResendAfter: 60 * time.Second})
 	ctx := context.Background()
 	params := testParams(t)
 
@@ -136,7 +140,7 @@ func TestRequestEnforcesCooldown(t *testing.T) {
 func TestRequestStopsAtDailyLimitPerDestination(t *testing.T) {
 	rdb := newTestClient(t)
 	sender := &recordingSender{}
-	svc := NewService(rdb, sender, Config{CodeLength: 4, TTL: time.Minute, ResendAfter: time.Millisecond, MaxPerDay: 2})
+	svc := NewService(rdb, whatsappOnly(sender), Config{CodeLength: 4, TTL: time.Minute, ResendAfter: time.Millisecond, MaxPerDay: 2})
 	ctx := context.Background()
 	params := testParams(t)
 	params.ClientIP = ""
@@ -159,7 +163,7 @@ func TestRequestStopsAtDailyLimitPerDestination(t *testing.T) {
 func TestRequestStopsAtHourlyLimitPerClientIP(t *testing.T) {
 	rdb := newTestClient(t)
 	sender := &recordingSender{}
-	svc := NewService(rdb, sender, Config{CodeLength: 4, TTL: time.Minute, ResendAfter: time.Minute, MaxPerIPPerHour: 1})
+	svc := NewService(rdb, whatsappOnly(sender), Config{CodeLength: 4, TTL: time.Minute, ResendAfter: time.Minute, MaxPerIPPerHour: 1})
 	ctx := context.Background()
 	first := testParams(t)
 	second := testParams(t)
@@ -180,7 +184,7 @@ func TestRequestStopsAtHourlyLimitPerClientIP(t *testing.T) {
 func TestRequestKeepsCooldownWhenProviderFails(t *testing.T) {
 	rdb := newTestClient(t)
 	sender := &recordingSender{err: errors.New("gateway down")}
-	svc := NewService(rdb, sender, Config{CodeLength: 4, TTL: time.Minute, ResendAfter: time.Minute})
+	svc := NewService(rdb, whatsappOnly(sender), Config{CodeLength: 4, TTL: time.Minute, ResendAfter: time.Minute})
 	ctx := context.Background()
 	params := testParams(t)
 
@@ -202,5 +206,97 @@ func TestUnixCeilNeverRoundsDown(t *testing.T) {
 	}
 	if got := unixCeil(exact.Add(time.Millisecond)); got != 1_800_000_001 {
 		t.Errorf("unixCeil(just past a second) = %d, want the next second", got)
+	}
+}
+
+func TestRequestRoutesToTheChosenChannel(t *testing.T) {
+	rdb := newTestClient(t)
+	whatsapp := &recordingSender{}
+	sms := &recordingSender{}
+	svc := NewService(rdb, map[Channel]ChannelConfig{ChannelWhatsApp: {Sender: whatsapp}, ChannelSMS: {Sender: sms}},
+		Config{CodeLength: 4, TTL: time.Minute, ResendAfter: time.Minute})
+	params := testParams(t)
+	params.Channel = ChannelSMS
+
+	if _, err := svc.Request(context.Background(), params); err != nil {
+		t.Fatalf("Request: %v", err)
+	}
+	if len(sms.calls) != 1 || len(whatsapp.calls) != 0 {
+		t.Errorf("sms calls = %d, whatsapp calls = %d, want 1 and 0", len(sms.calls), len(whatsapp.calls))
+	}
+	if got := svc.Channels(); len(got) != 2 || got[0] != ChannelWhatsApp || got[1] != ChannelSMS {
+		t.Errorf("Channels() = %v, want [whatsapp sms]", got)
+	}
+}
+
+func TestRequestRejectsAnUnconfiguredChannel(t *testing.T) {
+	rdb := newTestClient(t)
+	svc := NewService(rdb, whatsappOnly(&recordingSender{}), Config{CodeLength: 4, TTL: time.Minute, ResendAfter: time.Minute})
+	params := testParams(t)
+	params.Channel = ChannelSMS
+
+	if _, err := svc.Request(context.Background(), params); !errors.Is(err, ErrChannelUnavailable) {
+		t.Fatalf("Request err = %v, want ErrChannelUnavailable", err)
+	}
+	if svc.HasChannel(ChannelSMS) {
+		t.Error("HasChannel(sms) = true for a WhatsApp-only service")
+	}
+}
+
+func TestChannelDailyLimitRefundsTheOtherBudgets(t *testing.T) {
+	rdb := newTestClient(t)
+	ctx := context.Background()
+	channel := Channel(fmt.Sprintf("sms-test-%d", time.Now().UnixNano()))
+	sender := &recordingSender{}
+	svc := NewService(rdb, map[Channel]ChannelConfig{channel: {Sender: sender, MaxPerDay: 1}},
+		Config{CodeLength: 4, TTL: time.Minute, ResendAfter: time.Minute, MaxPerDay: 5})
+	t.Cleanup(func() { rdb.Del(context.Background(), ChannelDayKey(channel, time.Now())) })
+
+	first := testParams(t)
+	first.Channel = channel
+	if _, err := svc.Request(ctx, first); err != nil {
+		t.Fatalf("first Request: %v", err)
+	}
+	second := testParams(t)
+	second.Channel = channel
+	t.Cleanup(func() {
+		rdb.Del(context.Background(), "otp:sent:day:"+second.Destination, "otp:sent:day:"+first.Destination)
+	})
+	if _, err := svc.Request(ctx, second); !errors.Is(err, ErrChannelLimit) {
+		t.Fatalf("second Request err = %v, want ErrChannelLimit", err)
+	}
+
+	if used, _ := rdb.Get(ctx, "otp:sent:day:"+second.Destination).Int(); used != 0 {
+		t.Errorf("per-number budget after a channel refusal = %d, want 0 (refunded)", used)
+	}
+	if exists, _ := rdb.Exists(ctx, second.CooldownKey).Result(); exists != 0 {
+		t.Error("a refused channel must not start the cooldown")
+	}
+	if len(sender.calls) != 1 {
+		t.Errorf("sender called %d times, want 1", len(sender.calls))
+	}
+}
+
+func TestFailingChannelReleasesCooldownWhenConfigured(t *testing.T) {
+	rdb := newTestClient(t)
+	ctx := context.Background()
+	failing := &recordingSender{err: errors.New("gateway offline")}
+	svc := NewService(rdb, map[Channel]ChannelConfig{
+		ChannelSMS:      {Sender: failing, ReleaseCooldownOnFailure: true},
+		ChannelWhatsApp: {Sender: &recordingSender{}},
+	}, Config{CodeLength: 4, TTL: time.Minute, ResendAfter: time.Minute, MaxPerDay: 5})
+	params := testParams(t)
+	params.Channel = ChannelSMS
+	t.Cleanup(func() { rdb.Del(context.Background(), "otp:sent:day:"+params.Destination) })
+
+	if _, err := svc.Request(ctx, params); !errors.Is(err, ErrSendFailed) {
+		t.Fatalf("SMS Request err = %v, want ErrSendFailed", err)
+	}
+	if used, _ := rdb.Get(ctx, "otp:sent:day:"+params.Destination).Int(); used != 0 {
+		t.Errorf("per-number budget after a failed SMS = %d, want 0 (refunded)", used)
+	}
+	params.Channel = ChannelWhatsApp
+	if _, err := svc.Request(ctx, params); err != nil {
+		t.Fatalf("switching to WhatsApp right after a failed SMS: %v", err)
 	}
 }

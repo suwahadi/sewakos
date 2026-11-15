@@ -30,14 +30,23 @@ const (
 	msgOTPCooldown   = "Silakan tunggu sebelum meminta kode baru."
 	msgOTPSendLimit  = "Batas pengiriman kode untuk nomor ini sudah tercapai. Silakan coba lagi nanti."
 	msgOTPSendFailed = "Kode verifikasi gagal dikirim. Silakan coba lagi dalam 1 menit."
+	msgOTPSMSDown    = "Pengiriman kode lewat SMS sedang tidak tersedia. Silakan kirim lewat WhatsApp."
 )
 
-func WriteOTPRequestError(w http.ResponseWriter, r *http.Request, logger *slog.Logger, err error) {
+func WriteOTPRequestError(w http.ResponseWriter, r *http.Request, logger *slog.Logger, channel otp.Channel, err error) {
+	smsDown := map[string][]string{"via": {msgOTPSMSDown}}
 	switch {
 	case errors.Is(err, otp.ErrCooldown):
 		response.Fail(w, http.StatusUnprocessableEntity, msgOTPCooldown, map[string][]string{"destination": {msgOTPCooldown}})
 	case errors.Is(err, otp.ErrSendLimit):
 		response.Fail(w, http.StatusTooManyRequests, msgOTPSendLimit, nil)
+	case errors.Is(err, otp.ErrChannelLimit):
+		response.Fail(w, http.StatusTooManyRequests, msgOTPSMSDown, smsDown)
+	case errors.Is(err, otp.ErrSendFailed) && channel == otp.ChannelSMS:
+		if logger != nil {
+			logger.Error("otp sms send failed", "error", err)
+		}
+		response.Fail(w, http.StatusServiceUnavailable, msgOTPSMSDown, smsDown)
 	case errors.Is(err, otp.ErrSendFailed):
 		if logger != nil {
 			logger.Error("otp send failed", "error", err)
@@ -93,6 +102,10 @@ func OTPRequestHandler(deps OTPDeps) http.HandlerFunc {
 
 		forType, _ := body["for"].(string)
 		destination, _ := body["destination"].(string)
+		channel := otp.ChannelWhatsApp
+		if via, _ := body["via"].(string); via == "0" && deps.Service.HasChannel(otp.ChannelSMS) {
+			channel = otp.ChannelSMS
+		}
 
 		if !ratelimit.EnforceHTTP(ctx, w, deps.Redis, "otp", destination, int64(deps.MaxPerMinute), time.Minute) {
 			return
@@ -129,11 +142,11 @@ func OTPRequestHandler(deps OTPDeps) http.HandlerFunc {
 		}
 
 		result, err := deps.Service.Request(ctx, otp.RequestParams{
-			CodeKey: otp.CodeKey(forType, destination), CooldownKey: otp.CooldownKey(destination),
+			Channel: channel, CodeKey: otp.CodeKey(forType, destination), CooldownKey: otp.CooldownKey(destination),
 			Destination: destination, ClientIP: remoteIP(r),
 		})
 		if err != nil {
-			WriteOTPRequestError(w, r, deps.Logger, err)
+			WriteOTPRequestError(w, r, deps.Logger, channel, err)
 			return
 		}
 
@@ -220,5 +233,11 @@ func OTPCheckHandler(deps OTPDeps) http.HandlerFunc {
 				"role": user.Role,
 			},
 		})
+	}
+}
+
+func OTPChannelsHandler(deps OTPDeps) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		response.Success(w, http.StatusOK, "", map[string]any{"channels": deps.Service.Channels()})
 	}
 }

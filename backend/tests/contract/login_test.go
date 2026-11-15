@@ -77,6 +77,9 @@ func newTestServerAndPoolWithMidtrans(t *testing.T, midtransClient midtrans.Clie
 	if os.Getenv("OTP_MAX_PER_IP_PER_HOUR") == "" {
 		cfg.OTPMaxPerIPPerHour = 0
 	}
+	if os.Getenv("OTP_SMS_MAX_PER_DAY") == "" {
+		cfg.OTPSMSMaxPerDay = 0
+	}
 
 	deps := server.Deps{
 		Config:   cfg,

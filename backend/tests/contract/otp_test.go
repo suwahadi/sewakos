@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+
+	"github.com/suwahadi/sewakos/backend/internal/otp"
 )
 
 // registerFreshUserOn registers a brand-new, unverified user on srv and
@@ -288,5 +290,103 @@ func TestOTPRequestClientIPLimitIs429(t *testing.T) {
 	}
 	if status := send(second); status != http.StatusTooManyRequests {
 		t.Fatalf("second number from the same IP: status = %d, want 429", status)
+	}
+}
+
+func getOTPChannels(t *testing.T, srv *httptest.Server) []string {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodGet, srv.URL+"/api/auth/otp/channels", nil)
+	if err != nil {
+		t.Fatalf("build request: %v", err)
+	}
+	req.Header.Set("x-api-client", "KOSAPI WEB:WEB")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("do request: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("channels status = %d", resp.StatusCode)
+	}
+	var parsed struct {
+		Channels []string `json:"channels"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		t.Fatalf("parse channels: %v", err)
+	}
+	return parsed.Channels
+}
+
+// API.md §2.2a: SMS is listed only when an SMS provider is configured.
+func TestOTPChannelsListsSMSOnlyWhenEnabled(t *testing.T) {
+	t.Setenv("OTP_SMS_PROVIDER", "off")
+	if got := getOTPChannels(t, newTestServer(t)); strings.Join(got, ",") != "whatsapp" {
+		t.Errorf("channels with SMS off = %v, want [whatsapp]", got)
+	}
+
+	t.Setenv("OTP_SMS_PROVIDER", "log")
+	if got := getOTPChannels(t, newTestServer(t)); strings.Join(got, ",") != "whatsapp,sms" {
+		t.Errorf("channels with SMS on = %v, want [whatsapp sms]", got)
+	}
+}
+
+// API.md §2.2: via "0" sends over SMS when it is enabled, and falls back to WhatsApp when it is not.
+func TestOTPRequestOverSMS(t *testing.T) {
+	t.Setenv("OTP_DEBUG_ECHO", "true")
+	for _, provider := range []string{"log", "off"} {
+		t.Run(provider, func(t *testing.T) {
+			t.Setenv("OTP_SMS_PROVIDER", provider)
+			srv := newTestServer(t)
+			phone := registerFreshUserOn(t, srv)
+			resp, body := postJSON(t, srv, "/api/auth/otp/request", fmt.Sprintf(
+				`{"for":"tenant_verification","via":"0","destination":"%s"}`, phone))
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("status = %d, body = %s", resp.StatusCode, body)
+			}
+		})
+	}
+}
+
+// API.md §2.2: past OTP_SMS_MAX_PER_DAY the SMS request is refused with messages.via so the client can switch to
+// WhatsApp, and the refusal leaves no cooldown behind.
+func TestOTPRequestSMSDailyLimitPointsToWhatsApp(t *testing.T) {
+	t.Setenv("OTP_DEBUG_ECHO", "true")
+	t.Setenv("OTP_SMS_PROVIDER", "log")
+	t.Setenv("OTP_SMS_MAX_PER_DAY", "1")
+	t.Setenv("OTP_MAX_PER_MINUTE", "10")
+	srv := newTestServer(t)
+
+	redisOptions, _ := redis.ParseURL(envOr("TEST_REDIS_URL", "redis://localhost:6379/0"))
+	client := redis.NewClient(redisOptions)
+	t.Cleanup(func() { _ = client.Close() })
+	dayKey := otp.ChannelDayKey(otp.ChannelSMS, time.Now())
+	client.Del(context.Background(), dayKey)
+	t.Cleanup(func() { client.Del(context.Background(), dayKey) })
+
+	first := registerFreshUserOn(t, srv)
+	resp, body := postJSON(t, srv, "/api/auth/otp/request", fmt.Sprintf(
+		`{"for":"tenant_verification","via":"0","destination":"%s"}`, first))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("first SMS: status = %d, body = %s", resp.StatusCode, body)
+	}
+
+	second := registerFreshUserOn(t, srv)
+	resp, body = postJSON(t, srv, "/api/auth/otp/request", fmt.Sprintf(
+		`{"for":"tenant_verification","via":"0","destination":"%s"}`, second))
+	if resp.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("second SMS: status = %d, body = %s", resp.StatusCode, body)
+	}
+	want := `{
+		"status": false,
+		"meta": { "response_code": 429, "code": 429, "severity": "WARNING",
+			"message": "Pengiriman kode lewat SMS sedang tidak tersedia. Silakan kirim lewat WhatsApp." },
+		"messages": { "via": ["Pengiriman kode lewat SMS sedang tidak tersedia. Silakan kirim lewat WhatsApp."] }
+	}`
+	AssertJSONMatches(t, body, []byte(want), nil)
+
+	resp, body = postJSON(t, srv, "/api/auth/otp/request", fmt.Sprintf(
+		`{"for":"tenant_verification","via":"1","destination":"%s"}`, second))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("WhatsApp right after the SMS refusal: status = %d, body = %s", resp.StatusCode, body)
 	}
 }

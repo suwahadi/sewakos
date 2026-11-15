@@ -20,7 +20,14 @@ export interface OtpRequestState {
   blockedMessage: string | null;
 }
 
-export function useOtpRequest(send: () => Promise<ApiResult<OtpRequestResponse>>): OtpRequestState {
+export interface OtpRequestOptions {
+  onChannelUnavailable?: (message: string) => void;
+}
+
+export function useOtpRequest(
+  send: () => Promise<ApiResult<OtpRequestResponse>>,
+  { onChannelUnavailable }: OtpRequestOptions = {},
+): OtpRequestState {
   const inFlight = useRef(false);
   const [sending, setSending] = useState(false);
   const [canResendAt, setCanResendAt] = useState(0);
@@ -51,6 +58,12 @@ export function useOtpRequest(send: () => Promise<ApiResult<OtpRequestResponse>>
     setSending(false);
 
     if (!result.ok) {
+      const channelMessage = result.messages?.via?.[0];
+      if (channelMessage) {
+        onChannelUnavailable?.(channelMessage);
+        toast.error(channelMessage);
+        return false;
+      }
       if (result.httpStatus === 429) {
         setBlockedMessage(result.meta.message);
       } else if (result.httpStatus === 503) {

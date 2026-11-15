@@ -674,14 +674,16 @@ Varian:
   `maxLength={4}`) di belakang 4 kotak visual. Ini membuat isi otomatis dari SMS dan tempel (paste) bekerja.
 - Kotak aktif: border `brand-600`. Error: semua kotak border `danger` + pesan di bawah.
 - Otomatis kirim saat 4 digit terisi.
-- Kode selalu dikirim lewat WhatsApp (§6.48).
+- Kanal pengiriman (WhatsApp atau SMS) dipilih sebelumnya (§6.48).
 - Di bawahnya: teks hitung mundur kirim ulang dari `verification_code.can_resend_at`
   ("Kirim ulang dalam 0:42"), lalu tombol `neutral` "Kirim ulang kode" saat habis, dengan keterangan `caption`
   "Sisa {n} kali kirim ulang".
 - Pengaman biaya (hook `useOtpRequest`): tombol kirim dan kirim ulang `loading` serta nonaktif selama request
   berjalan (klik ganda diabaikan); maksimal 3 kali kirim ulang per kunjungan halaman, lalu tombol diganti teks
   "Batas kirim ulang kode tercapai. Silakan coba lagi nanti."; respons 429 menghentikan pengiriman di halaman itu
-  dan menampilkan pesan server; respons 503 menunggu 60 detik sebelum boleh mencoba lagi.
+  dan menampilkan pesan server; respons 503 menunggu 60 detik sebelum boleh mencoba lagi. Respons yang membawa
+  `messages.via` (SMS penuh atau gagal) tidak memblokir: halaman kembali ke langkah pemilihan dengan WhatsApp terpilih
+  dan toast menampilkan pesan server.
 
 ### 6.5 Textarea
 
@@ -1240,12 +1242,19 @@ Urutan diubah dengan **seret pegangan**: ikon `GripVertical` (36px, pojok kiri-a
 berfungsi di luar pegangan. Saat dilepas: `PATCH /owner/photos/{id}` dengan `sort_order`. Keyboard: fokus pegangan lalu
 `Alt` + panah kiri/kanan. Ketuk petak membuka popup "Kelola foto" (tanpa tombol geser).
 
-### 6.48 Kanal OTP (WhatsApp)
+### 6.48 OtpChannelPicker
 
-Gateway OTP hanya WhatsApp, jadi tidak ada pilihan kanal dan SMS tidak ditampilkan. Langkah sebelum
-`POST /auth/otp/request` berisi teks `body` `neutral-600` "Kode verifikasi akan dikirim lewat WhatsApp ke {nomor}."
-dan tombol penuh "Kirim kode lewat WhatsApp" (`success`, `loading` selama request). Setelah terkirim, teks
-"Kode dikirim lewat WhatsApp ke {nomor}." Request selalu mengirim `via: "1"`.
+Kanal dari `GET /auth/otp/channels` (API.md §2.2a). Nama penyedia layanan tidak pernah ditampilkan.
+
+- Hanya WhatsApp tersedia: tidak ada pemilih; teks "Kode verifikasi akan dikirim lewat WhatsApp ke {nomor}."
+- WhatsApp dan SMS tersedia: dua kartu pilihan `role="radio"` dalam `role="radiogroup"` (`aria-label="Kirim kode
+  lewat"`), sebaris dan **sama lebar (50:50)**, tinggi 52px, label teks "WhatsApp" dan "SMS", border `neutral-300`;
+  terpilih: border 2px `brand-600`, latar `brand-50`. Default: WhatsApp. Teks di atasnya mengikuti pilihan.
+- Tombol penuh "Kirim kode lewat {WhatsApp|SMS}" (`success`, `loading` selama request). Request mengirim `via`
+  `"1"` (WhatsApp) atau `"0"` (SMS).
+- Setelah terkirim: "Kode dikirim lewat {kanal} ke {nomor}."; untuk SMS ditambah `caption` `neutral-500`
+  "SMS bisa tiba hingga 1–2 menit."
+- Bila daftar kanal gagal dimuat, anggap hanya WhatsApp.
 
 ---
 

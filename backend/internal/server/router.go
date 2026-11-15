@@ -64,7 +64,7 @@ func NewRouter(deps Deps) chi.Router {
 	tokens := auth.NewService(queries)
 	login := auth.NewLoginService(queries, tokens)
 	register := auth.NewRegisterService(queries)
-	otpService := otp.NewService(deps.Redis, otpSender(deps), otp.Config{
+	otpService := otp.NewService(deps.Redis, otpChannels(deps), otp.Config{
 		CodeLength:      deps.Config.OTPLength,
 		TTL:             time.Duration(deps.Config.OTPTTLSeconds) * time.Second,
 		ResendAfter:     time.Duration(deps.Config.OTPResendAfterSeconds) * time.Second,
@@ -132,6 +132,7 @@ func NewRouter(deps Deps) chi.Router {
 		api.Use(RateLimitAPI(deps.Redis))
 
 		api.Post("/auth/register", auth.RegisterHandler(register, queries))
+		api.Get("/auth/otp/channels", auth.OTPChannelsHandler(otpDeps))
 		api.Post("/auth/otp/request", auth.OTPRequestHandler(otpDeps))
 		api.Post("/auth/otp/check", auth.OTPCheckHandler(otpDeps))
 		api.Post("/auth/login", auth.LoginHandler(login))
@@ -287,9 +288,27 @@ func withOptionalAuthedUser[Deps any](deps Deps, handler func(Deps, *authctx.Use
 	}
 }
 
-func otpSender(deps Deps) otp.Sender {
-	if deps.Config.OTPProvider == "fazpass" {
-		return otp.NewFazpassSender(deps.Config.FazpassBaseURL, deps.Config.FazpassMerchantKey, deps.Config.FazpassGatewayKey)
+func otpChannels(deps Deps) map[otp.Channel]otp.ChannelConfig {
+	cfg := deps.Config
+	var whatsapp otp.Sender = otp.LogSender{Logger: deps.Logger, Channel: otp.ChannelWhatsApp}
+	if cfg.OTPWhatsAppProvider == "fazpass" {
+		whatsapp = otp.NewFazpassSender(cfg.FazpassBaseURL, cfg.FazpassMerchantKey, cfg.FazpassGatewayKey)
 	}
-	return otp.LogSender{Logger: deps.Logger}
+	channels := map[otp.Channel]otp.ChannelConfig{otp.ChannelWhatsApp: {Sender: whatsapp}}
+
+	var sms otp.Sender
+	switch cfg.OTPSMSProvider {
+	case "log":
+		sms = otp.LogSender{Logger: deps.Logger, Channel: otp.ChannelSMS}
+	case "smsgate":
+		sms = otp.NewSMSGateSender(otp.SMSGateConfig{
+			BaseURL: cfg.SMSGateBaseURL, Username: cfg.SMSGateUsername, Password: cfg.SMSGatePassword,
+			DeviceID: cfg.SMSGateDeviceID, SIMNumber: cfg.SMSGateSIMNumber,
+			CodeTTL: time.Duration(cfg.OTPTTLSeconds) * time.Second,
+		})
+	}
+	if sms != nil {
+		channels[otp.ChannelSMS] = otp.ChannelConfig{Sender: sms, MaxPerDay: cfg.OTPSMSMaxPerDay, ReleaseCooldownOnFailure: true}
+	}
+	return channels
 }

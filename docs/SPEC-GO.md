@@ -46,7 +46,8 @@ Respons harus **semantik JSON identik** dengan contoh di dokumen kontrak dan dok
 | OTP `for=login`, nomor belum terverifikasi | 422 |
 | Login password, nomor belum terverifikasi | Boleh, `is_verified: false` |
 | Minta OTP saat cooldown 60 detik | 422 `Silakan tunggu sebelum meminta kode baru.` |
-| Pengiriman OTP | WhatsApp lewat Fazpass (`OTP_PROVIDER=fazpass`) atau sandbox log (`OTP_PROVIDER=log`); SMS tidak tersedia |
+| Pengiriman OTP | WhatsApp lewat Fazpass (`OTP_WHATSAPP_PROVIDER=fazpass`); SMS lewat SMSGate cloud dengan HP Android sebagai pengirim (`OTP_SMS_PROVIDER=smsgate`); keduanya punya sandbox `log` |
+| Batas SMS global | Maks `OTP_SMS_MAX_PER_DAY` SMS OTP per hari (WIB) untuk semua pengguna → 429 dengan `messages.via` |
 | Batas biaya OTP | Maks `OTP_MAX_PER_DAY` kirim per nomor per 24 jam dan `OTP_MAX_PER_IP_PER_HOUR` per IP per jam → 429 |
 | Submit booking | **Tidak** mengunci kamar; hanya role `tenant` |
 | Alur booking | `pending` (bayar) → `paid` (tunggu owner) → `approved` / `rejected`; `cancelled` |
@@ -140,7 +141,7 @@ internal/
   response/          envelope, severity, helper error
   validation/        translator pesan
   auth/              handler, service, token
-  otp/               service, sender (interface, LogSender, FazpassSender)
+  otp/               service, kanal, sender (interface, LogSender, FazpassSender, SMSGateSender)
   area/  search/  listing/  booking/  notification/  abtest/
   payment/           checkout, webhook, midtrans client
   owner/             properti, kamar, foto, booking masuk, rekening, payout
@@ -181,7 +182,13 @@ di produksi memakai image dari `Dockerfile` lewat `deploy/install.sh`.
 | `OTP_RESEND_AFTER_SECONDS` | `60` | |
 | `OTP_MAX_PER_MINUTE` | `2` | |
 | `OTP_DEBUG_ECHO` | `false` | `true` hanya di dev. **Server menolak start jika `true` dan `APP_ENV=production`** |
-| `OTP_PROVIDER` | `log` | `log` = sandbox (kode hanya ditulis ke log, tidak ditagih) · `fazpass` = kirim WhatsApp sungguhan |
+| `OTP_WHATSAPP_PROVIDER` | `log` | `log` = sandbox (kode hanya ditulis ke log, tidak ditagih) · `fazpass` = kirim WhatsApp sungguhan. Bila kosong, nilai lama `OTP_PROVIDER` dipakai |
+| `OTP_SMS_PROVIDER` | `off` | `off` = SMS tidak ditawarkan · `log` = sandbox · `smsgate` = SMS sungguhan dari HP Android |
+| `OTP_SMS_MAX_PER_DAY` | `50` | Total SMS OTP per hari (WIB) untuk semua pengguna; `0` = nonaktif |
+| `SMSGATE_BASE_URL` | `https://api.sms-gate.app/3rdparty/v1` | |
+| `SMSGATE_USERNAME` / `SMSGATE_PASSWORD` | — | Wajib bila `OTP_SMS_PROVIDER=smsgate`; kredensial Cloud Server dari aplikasi di HP (Basic auth) |
+| `SMSGATE_DEVICE_ID` | — | Opsional: kunci ke satu HP; kosong = server memilih HP terdaftar |
+| `SMSGATE_SIM_NUMBER` | `0` | Slot SIM 1–3; `0` = SIM default HP |
 | `OTP_MAX_PER_DAY` | `5` | Kirim per nomor tujuan per 24 jam; `0` = nonaktif |
 | `OTP_MAX_PER_IP_PER_HOUR` | `10` | Kirim per IP klien per jam (semua nomor); `0` = nonaktif |
 | `FAZPASS_BASE_URL` | `https://api.fazpass.com` | |
@@ -654,7 +661,7 @@ Sukses → update `last_used_at`. Token tidak kedaluwarsa.
 | Field | Rule |
 |---|---|
 | for | required, in:tenant_verification,login,reset_password |
-| via | opsional, in:0,1 — diabaikan; kode selalu dikirim lewat WhatsApp |
+| via | opsional, in:0,1 — `"1"` WhatsApp (default); `"0"` SMS bila kanal SMS aktif, selain itu WhatsApp |
 | destination | required, regex `^08\d{7,12}$` |
 
 Urutan proses:
@@ -664,19 +671,28 @@ Urutan proses:
 4. `login`: user tidak ada → 404; user belum terverifikasi → 422,
    `meta.message` dan `messages.destination[0]` = `Nomor handphone belum terverifikasi.`
 5. Cooldown aktif → 422, `meta.message` dan `messages.destination[0]` = `Silakan tunggu sebelum meminta kode baru.`
-6. Batas biaya: naikkan `otp:sent:day:{destination}` (TTL 24 jam) dan `otp:sent:ip:{ip}` (TTL 1 jam); lewat
+6. Kanal: `via: "0"` memakai SMS bila `OTP_SMS_PROVIDER` bukan `off`, selain itu WhatsApp.
+   Batas biaya: naikkan `otp:sent:day:{destination}` (TTL 24 jam) dan `otp:sent:ip:{ip}` (TTL 1 jam); lewat
    `OTP_MAX_PER_DAY` / `OTP_MAX_PER_IP_PER_HOUR` → 429 `Batas pengiriman kode untuk nomor ini sudah tercapai. Silakan
    coba lagi nanti.` tanpa mengirim apa pun. Penghitung hanya naik untuk permintaan yang lolos cooldown.
 7. Buat kode 4 digit (`crypto/rand`, boleh diawali 0). Simpan di Redis:
    `otp:code:{for}:{destination}` TTL 300 detik, `otp:cooldown:{destination}` TTL 60 detik.
-8. Kirim lewat `otp.Sender` (sinkron, WhatsApp):
-   - `LogSender` (`OTP_PROVIDER=log`, sandbox): tulis `destination` dan pesan berisi kode ke log.
-   - `FazpassSender` (`OTP_PROVIDER=fazpass`): satu kali `POST {FAZPASS_BASE_URL}/v1/otp/send`, header
-     `Authorization: Bearer {FAZPASS_MERCHANT_KEY}`, body `{"phone": "62…", "otp": "{kode}", "gateway_key": "…"}`,
+8. Kirim lewat sender kanal yang dipilih (sinkron):
+   - `LogSender` (provider `log`, sandbox): tulis kanal, `destination`, dan pesan berisi kode ke log.
+   - WhatsApp, `FazpassSender` (`OTP_WHATSAPP_PROVIDER=fazpass`): satu kali `POST {FAZPASS_BASE_URL}/v1/otp/send`,
+     header `Authorization: Bearer {FAZPASS_MERCHANT_KEY}`, body `{"phone": "62…", "otp": "{kode}", "gateway_key": "…"}`,
      timeout 10 detik, **tanpa retry** (retry bisa mengirim dan menagih pesan dua kali). Sukses bila HTTP 2xx dan
-     `status: true`. Kode tetap diverifikasi lokal di Redis; endpoint verify Fazpass tidak dipakai.
-   - Gagal kirim → 503 `Kode verifikasi gagal dikirim. Silakan coba lagi dalam 1 menit.`; cooldown tetap berlaku
-     agar provider yang bermasalah tidak dipanggil berulang.
+     `status: true`. Kode tetap diverifikasi lokal di Redis; endpoint verify Fazpass tidak dipakai. Gagal → 503
+     `Kode verifikasi gagal dikirim. Silakan coba lagi dalam 1 menit.`; cooldown tetap berlaku.
+   - SMS, `SMSGateSender` (`OTP_SMS_PROVIDER=smsgate`): satu kali `POST {SMSGATE_BASE_URL}/messages` dengan Basic auth,
+     body `{"textMessage": {"text": "Kode verifikasi Sewa Kos: {kode}. Berlaku 5 menit. Jangan berikan kode ini kepada
+     siapa pun."}, "phoneNumbers": ["+62…"], "ttl": 300, "priority": 100, "withDeliveryReport": false}` plus
+     `deviceId`/`simNumber` bila diatur. `ttl` sama dengan masa berlaku kode sehingga SMS yang tertunda di HP tidak
+     terkirim setelah kodenya kedaluwarsa; `priority` 100 melewati jeda dan batas di HP. Sukses bila HTTP 2xx (gateway
+     menjawab `202`). Timeout 10 detik, tanpa retry. Gagal (400/401/403/409/5xx) → 503 dengan `messages.via`; kode,
+     cooldown, dan kuota yang terpakai dilepas agar pengguna bisa langsung memilih WhatsApp.
+   - Kanal SMS juga dibatasi `OTP_SMS_MAX_PER_DAY` lewat `otp:sent:channel:sms:{YYYY-MM-DD WIB}` (TTL 48 jam).
+     Lewat batas → 429 dengan `messages.via`; kuota per nomor dan per IP yang sudah terpotong dikembalikan.
 
 ```go
 type Sender interface {
@@ -687,6 +703,11 @@ type Sender interface {
 Respons sukses: pesan `Kode verifikasi telah dikirim.`,
 `verification_code{can_resend_at (unix detik = now+60), can_resend_after_seconds: 60}`, `data: null`,
 dan `debug_code` **hanya** jika `OTP_DEBUG_ECHO=true` (jika false, key tidak dikirim).
+
+### 6.3a `GET /auth/otp/channels` — limiter api
+
+Publik. Mengembalikan `channels`: `["whatsapp"]`, ditambah `"sms"` bila `OTP_SMS_PROVIDER` bukan `off`
+(API.md §2.2a). Frontend hanya menampilkan pilihan SMS bila `sms` ada di daftar.
 
 ### 6.4 `POST /auth/otp/check` — limiter otp (kuota sama dengan request)
 

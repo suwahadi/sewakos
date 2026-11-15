@@ -23,11 +23,28 @@ type Sender interface {
 	Send(ctx context.Context, destination, code string) error
 }
 
-var (
-	ErrCooldown   = errors.New("otp: cooldown active")
-	ErrSendLimit  = errors.New("otp: send limit reached")
-	ErrSendFailed = errors.New("otp: provider failed to send")
+type Channel string
+
+const (
+	ChannelWhatsApp Channel = "whatsapp"
+	ChannelSMS      Channel = "sms"
 )
+
+type ChannelConfig struct {
+	Sender                   Sender
+	MaxPerDay                int
+	ReleaseCooldownOnFailure bool
+}
+
+var (
+	ErrCooldown           = errors.New("otp: cooldown active")
+	ErrSendLimit          = errors.New("otp: send limit reached")
+	ErrSendFailed         = errors.New("otp: provider failed to send")
+	ErrChannelUnavailable = errors.New("otp: channel not configured")
+	ErrChannelLimit       = errors.New("otp: channel daily limit reached")
+)
+
+var wib = time.FixedZone("WIB", 7*60*60)
 
 // CodeKey builds the Redis key for a tenant_verification/login/reset_password
 // code (SPEC-GO.md §6.3: "otp:code:{for}:{destination}").
@@ -58,16 +75,32 @@ type Config struct {
 
 // Service generates, stores, sends, and verifies OTP codes.
 type Service struct {
-	rdb    *redis.Client
-	sender Sender
-	cfg    Config
+	rdb      *redis.Client
+	channels map[Channel]ChannelConfig
+	cfg      Config
 }
 
-func NewService(rdb *redis.Client, sender Sender, cfg Config) *Service {
-	return &Service{rdb: rdb, sender: sender, cfg: cfg}
+func NewService(rdb *redis.Client, channels map[Channel]ChannelConfig, cfg Config) *Service {
+	return &Service{rdb: rdb, channels: channels, cfg: cfg}
+}
+
+func (s *Service) Channels() []Channel {
+	ordered := make([]Channel, 0, len(s.channels))
+	for _, channel := range []Channel{ChannelWhatsApp, ChannelSMS} {
+		if _, ok := s.channels[channel]; ok {
+			ordered = append(ordered, channel)
+		}
+	}
+	return ordered
+}
+
+func (s *Service) HasChannel(channel Channel) bool {
+	_, ok := s.channels[channel]
+	return ok
 }
 
 type RequestParams struct {
+	Channel     Channel
 	CodeKey     string
 	CooldownKey string
 	Destination string
@@ -81,6 +114,11 @@ type RequestResult struct {
 }
 
 func (s *Service) Request(ctx context.Context, p RequestParams) (RequestResult, error) {
+	channel, ok := s.channels[p.Channel]
+	if !ok {
+		return RequestResult{}, ErrChannelUnavailable
+	}
+
 	exists, err := s.rdb.Exists(ctx, p.CooldownKey).Result()
 	if err != nil {
 		return RequestResult{}, fmt.Errorf("check otp cooldown: %w", err)
@@ -89,13 +127,17 @@ func (s *Service) Request(ctx context.Context, p RequestParams) (RequestResult, 
 		return RequestResult{}, ErrCooldown
 	}
 
-	if err := s.consumeSendBudget(ctx, "otp:sent:day:"+p.Destination, s.cfg.MaxPerDay, 24*time.Hour); err != nil {
-		return RequestResult{}, err
-	}
+	budgets := []sendBudget{{key: "otp:sent:day:" + p.Destination, limit: s.cfg.MaxPerDay, window: 24 * time.Hour, exceededErr: ErrSendLimit}}
 	if p.ClientIP != "" {
-		if err := s.consumeSendBudget(ctx, "otp:sent:ip:"+p.ClientIP, s.cfg.MaxPerIPPerHour, time.Hour); err != nil {
-			return RequestResult{}, err
-		}
+		budgets = append(budgets, sendBudget{key: "otp:sent:ip:" + p.ClientIP, limit: s.cfg.MaxPerIPPerHour, window: time.Hour, exceededErr: ErrSendLimit})
+	}
+	budgets = append(budgets, sendBudget{
+		key: ChannelDayKey(p.Channel, time.Now()), limit: channel.MaxPerDay, window: 48 * time.Hour, exceededErr: ErrChannelLimit,
+	})
+
+	consumed, err := s.consumeBudgets(ctx, budgets)
+	if err != nil {
+		return RequestResult{}, err
 	}
 
 	code, err := generateCode(s.cfg.CodeLength)
@@ -111,7 +153,11 @@ func (s *Service) Request(ctx context.Context, p RequestParams) (RequestResult, 
 	}
 	canResendAt := unixCeil(time.Now().Add(s.cfg.ResendAfter))
 
-	if err := s.sender.Send(ctx, p.Destination, code); err != nil {
+	if err := channel.Sender.Send(ctx, p.Destination, code); err != nil {
+		if channel.ReleaseCooldownOnFailure {
+			s.refund(ctx, consumed)
+			_ = s.rdb.Del(ctx, p.CooldownKey, p.CodeKey).Err()
+		}
 		return RequestResult{}, fmt.Errorf("%w: %w", ErrSendFailed, err)
 	}
 
@@ -129,23 +175,56 @@ func unixCeil(t time.Time) int64 {
 	return t.Unix()
 }
 
-func (s *Service) consumeSendBudget(ctx context.Context, key string, limit int, window time.Duration) error {
-	if limit <= 0 {
-		return nil
+func ChannelDayKey(channel Channel, at time.Time) string {
+	return "otp:sent:channel:" + string(channel) + ":" + at.In(wib).Format("2006-01-02")
+}
+
+type sendBudget struct {
+	key         string
+	limit       int
+	window      time.Duration
+	exceededErr error
+}
+
+func (s *Service) consumeBudgets(ctx context.Context, budgets []sendBudget) ([]string, error) {
+	var consumed []string
+	for _, budget := range budgets {
+		if budget.limit <= 0 {
+			continue
+		}
+		exceeded, err := s.consumeSendBudget(ctx, budget.key, budget.limit, budget.window)
+		if err != nil {
+			s.refund(ctx, consumed)
+			return nil, err
+		}
+		if exceeded {
+			if errors.Is(budget.exceededErr, ErrChannelLimit) {
+				s.refund(ctx, append(consumed, budget.key))
+			}
+			return nil, budget.exceededErr
+		}
+		consumed = append(consumed, budget.key)
 	}
+	return consumed, nil
+}
+
+func (s *Service) consumeSendBudget(ctx context.Context, key string, limit int, window time.Duration) (bool, error) {
 	count, err := s.rdb.Incr(ctx, key).Result()
 	if err != nil {
-		return fmt.Errorf("count otp sends: %w", err)
+		return false, fmt.Errorf("count otp sends: %w", err)
 	}
 	if count == 1 {
 		if err := s.rdb.Expire(ctx, key, window).Err(); err != nil {
-			return fmt.Errorf("expire otp send counter: %w", err)
+			return false, fmt.Errorf("expire otp send counter: %w", err)
 		}
 	}
-	if count > int64(limit) {
-		return ErrSendLimit
+	return count > int64(limit), nil
+}
+
+func (s *Service) refund(ctx context.Context, keys []string) {
+	for _, key := range keys {
+		_ = s.rdb.Decr(ctx, key).Err()
 	}
-	return nil
 }
 
 // Check compares code against the value stored at codeKey. On match, the key

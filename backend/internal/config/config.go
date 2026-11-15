@@ -24,13 +24,21 @@ type Config struct {
 	OTPResendAfterSeconds int
 	OTPMaxPerMinute       int
 	OTPDebugEcho          bool
-	OTPProvider           string
+	OTPWhatsAppProvider   string
+	OTPSMSProvider        string
 	OTPMaxPerDay          int
 	OTPMaxPerIPPerHour    int
+	OTPSMSMaxPerDay       int
 
 	FazpassBaseURL     string
 	FazpassMerchantKey string
 	FazpassGatewayKey  string
+
+	SMSGateBaseURL   string
+	SMSGateUsername  string
+	SMSGatePassword  string
+	SMSGateDeviceID  string
+	SMSGateSIMNumber int
 
 	MidtransServerKey    string
 	MidtransSignatureKey string
@@ -125,7 +133,18 @@ func Load() (Config, error) {
 	if cfg.OTPMaxPerIPPerHour, err = getInt("OTP_MAX_PER_IP_PER_HOUR", 10); err != nil {
 		return Config{}, err
 	}
-	cfg.OTPProvider = getString("OTP_PROVIDER", "log")
+	if cfg.OTPSMSMaxPerDay, err = getInt("OTP_SMS_MAX_PER_DAY", 50); err != nil {
+		return Config{}, err
+	}
+	if cfg.SMSGateSIMNumber, err = getInt("SMSGATE_SIM_NUMBER", 0); err != nil {
+		return Config{}, err
+	}
+	cfg.OTPWhatsAppProvider = getString("OTP_WHATSAPP_PROVIDER", getString("OTP_PROVIDER", "log"))
+	cfg.OTPSMSProvider = getString("OTP_SMS_PROVIDER", "off")
+	cfg.SMSGateBaseURL = getString("SMSGATE_BASE_URL", "https://api.sms-gate.app/3rdparty/v1")
+	cfg.SMSGateUsername = os.Getenv("SMSGATE_USERNAME")
+	cfg.SMSGatePassword = os.Getenv("SMSGATE_PASSWORD")
+	cfg.SMSGateDeviceID = os.Getenv("SMSGATE_DEVICE_ID")
 	cfg.FazpassBaseURL = getString("FAZPASS_BASE_URL", "https://api.fazpass.com")
 	cfg.FazpassMerchantKey = os.Getenv("FAZPASS_MERCHANT_KEY")
 	cfg.FazpassGatewayKey = os.Getenv("FAZPASS_GATEWAY_KEY")
@@ -187,14 +206,26 @@ func Load() (Config, error) {
 	if cfg.AppEnv == "production" && cfg.OTPDebugEcho {
 		return Config{}, fmt.Errorf("OTP_DEBUG_ECHO must be false when APP_ENV=production")
 	}
-	switch cfg.OTPProvider {
+	switch cfg.OTPWhatsAppProvider {
 	case "log":
 	case "fazpass":
 		if cfg.FazpassMerchantKey == "" || cfg.FazpassGatewayKey == "" {
-			return Config{}, fmt.Errorf("FAZPASS_MERCHANT_KEY and FAZPASS_GATEWAY_KEY are required when OTP_PROVIDER=fazpass")
+			return Config{}, fmt.Errorf("FAZPASS_MERCHANT_KEY and FAZPASS_GATEWAY_KEY are required when OTP_WHATSAPP_PROVIDER=fazpass")
 		}
 	default:
-		return Config{}, fmt.Errorf("OTP_PROVIDER must be log or fazpass, got %q", cfg.OTPProvider)
+		return Config{}, fmt.Errorf("OTP_WHATSAPP_PROVIDER must be log or fazpass, got %q", cfg.OTPWhatsAppProvider)
+	}
+	switch cfg.OTPSMSProvider {
+	case "off", "log":
+	case "smsgate":
+		if cfg.SMSGateUsername == "" || cfg.SMSGatePassword == "" {
+			return Config{}, fmt.Errorf("SMSGATE_USERNAME and SMSGATE_PASSWORD are required when OTP_SMS_PROVIDER=smsgate")
+		}
+	default:
+		return Config{}, fmt.Errorf("OTP_SMS_PROVIDER must be off, log or smsgate, got %q", cfg.OTPSMSProvider)
+	}
+	if cfg.SMSGateSIMNumber < 0 || cfg.SMSGateSIMNumber > 3 {
+		return Config{}, fmt.Errorf("SMSGATE_SIM_NUMBER must be 0 (default SIM) or 1-3, got %d", cfg.SMSGateSIMNumber)
 	}
 	// A base URL override points payments at a fake Midtrans that settles anything it is asked about.
 	if cfg.AppEnv == "production" && cfg.MidtransBaseURL != "" {

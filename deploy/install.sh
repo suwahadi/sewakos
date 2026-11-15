@@ -87,9 +87,12 @@ MIDTRANS_SERVER_KEY=
 MIDTRANS_CLIENT_KEY=
 MIDTRANS_SIGNATURE_KEY=
 MIDTRANS_IS_PRODUCTION=false
-OTP_PROVIDER=log
+OTP_WHATSAPP_PROVIDER=log
 FAZPASS_MERCHANT_KEY=
 FAZPASS_GATEWAY_KEY=
+OTP_SMS_PROVIDER=off
+SMSGATE_USERNAME=
+SMSGATE_PASSWORD=
 SMTP_HOST=
 SMTP_PORT=587
 SMTP_USERNAME=
@@ -124,8 +127,10 @@ Create the first admin (choose your own name, phone and password):
   cd $APP_DIR/deploy && sudo docker compose run --rm api admin create --name "Admin" --phone 08xxxxxxxxxx --email admin@example.com --password '<password>'
 Optionally load demo listings with Unsplash photos:
   cd $APP_DIR/deploy && sudo docker compose run --rm api demoseed --count 100
-Follow logs (OTP codes are written there while OTP_PROVIDER=log):
+Follow logs (OTP codes are written there while a provider is set to log):
   cd $APP_DIR/deploy && sudo docker compose logs -f api worker
-Send OTP over WhatsApp: set OTP_PROVIDER=fazpass, FAZPASS_MERCHANT_KEY and FAZPASS_GATEWAY_KEY in
+Send OTP over WhatsApp: set OTP_WHATSAPP_PROVIDER=fazpass, FAZPASS_MERCHANT_KEY and FAZPASS_GATEWAY_KEY in
+  $APP_DIR/deploy/.env, then run this script again.
+Send OTP over SMS from an Android phone: set OTP_SMS_PROVIDER=smsgate, SMSGATE_USERNAME and SMSGATE_PASSWORD in
   $APP_DIR/deploy/.env, then run this script again.
 EOF
