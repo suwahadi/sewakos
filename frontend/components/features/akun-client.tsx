@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialog";
+import { Tabs, type TabItem } from "@/components/ui/tabs";
 import { TextField } from "@/components/ui/text-field";
 import { callBff } from "@/lib/api/browser";
 import { formatPhoneDisplay } from "@/lib/format";
@@ -18,12 +19,30 @@ export interface AkunUser {
   is_verified: boolean;
 }
 
+type AkunTab = "profil" | "pengaturan";
+
+const AKUN_TABS: TabItem<AkunTab>[] = [
+  { value: "profil", label: "Profil" },
+  { value: "pengaturan", label: "Pengaturan" },
+];
+
 export function AkunClient({ user }: { user: AkunUser }) {
+  const [tab, setTab] = useState<AkunTab>("profil");
+
   return (
-    <main className="mx-auto flex max-w-[480px] flex-col gap-8 px-4 py-6">
-      <ProfileSection user={user} />
-      <PasswordSection />
-      <PhoneSection currentPhone={user.phone_number} />
+    <main className="mx-auto flex max-w-[480px] flex-col gap-6 px-4 py-6">
+      <div className="border-b border-neutral-200">
+        <Tabs items={AKUN_TABS} value={tab} onChange={setTab} aria-label="Bagian akun" idPrefix="akun" />
+      </div>
+      <div role="tabpanel" id="akun-panel-profil" aria-labelledby="akun-tab-profil" hidden={tab !== "profil"}>
+        <ProfileSection user={user} />
+      </div>
+      <div role="tabpanel" id="akun-panel-pengaturan" aria-labelledby="akun-tab-pengaturan" hidden={tab !== "pengaturan"}>
+        <div className="flex flex-col gap-8">
+          <PasswordSection />
+          <PhoneSection currentPhone={user.phone_number} />
+        </div>
+      </div>
       <LogoutSection />
     </main>
   );
@@ -31,7 +50,7 @@ export function AkunClient({ user }: { user: AkunUser }) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="flex flex-col gap-4 border-b border-neutral-200 pb-8 last:border-0">
+    <section className="flex flex-col gap-4 border-b border-neutral-200 pb-8">
       <p className="text-title-sm font-semibold text-neutral-900">{title}</p>
       {children}
     </section>
@@ -216,7 +235,7 @@ function LogoutSection() {
   }
 
   return (
-    <section>
+    <section className="pt-2">
       <Button variant="danger" fullWidth onClick={() => setOpen(true)}>
         Keluar
       </Button>
