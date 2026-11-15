@@ -67,7 +67,8 @@ describe("OwnerBookingDetail", () => {
 
   it("shows the phone link and no actions once approved", () => {
     render(<OwnerBookingDetail booking={{ ...booking, status: "approved", tenant: { ...booking.tenant, phone_number: "081200000002" } }} />);
-    expect(screen.getByRole("link", { name: "0812 0000 0002" })).toHaveAttribute("href", "tel:081200000002");
+    expect(screen.getByText("0812 0000 0002")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "0812 0000 0002" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Setujui booking" })).not.toBeInTheDocument();
   });
 

@@ -87,9 +87,7 @@ export function OwnerBookingDetail({ booking }: { booking: OwnerBooking }) {
           <DetailRow label="Nama">{booking.tenant.name}</DetailRow>
           <DetailRow label="Nomor HP">
             {booking.tenant.phone_number ? (
-              <a href={`tel:${booking.tenant.phone_number}`} className="text-brand-700 underline">
-                {formatPhoneDisplay(booking.tenant.phone_number)}
-              </a>
+              formatPhoneDisplay(booking.tenant.phone_number)
             ) : (
               <span className="text-neutral-600">Tampil setelah disetujui</span>
             )}
