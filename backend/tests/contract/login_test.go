@@ -69,6 +69,14 @@ func newTestServerAndPoolWithMidtrans(t *testing.T, midtransClient midtrans.Clie
 		t.Fatalf("load config: %v", err)
 	}
 	cfg.TrustedProxies = []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8"), netip.MustParsePrefix("::1/128")}
+	// Every contract test calls from 127.0.0.1 and many reuse numbers, so the OTP cost caps stay off unless a test
+	// sets them explicitly.
+	if os.Getenv("OTP_MAX_PER_DAY") == "" {
+		cfg.OTPMaxPerDay = 0
+	}
+	if os.Getenv("OTP_MAX_PER_IP_PER_HOUR") == "" {
+		cfg.OTPMaxPerIPPerHour = 0
+	}
 
 	deps := server.Deps{
 		Config:   cfg,

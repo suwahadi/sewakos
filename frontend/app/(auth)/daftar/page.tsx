@@ -2,7 +2,6 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { OtpChannelPicker, type OtpChannel } from "@/components/features/otp-channel-picker";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { InlineAlert } from "@/components/ui/inline-alert";
@@ -11,6 +10,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { TextField } from "@/components/ui/text-field";
 import { callBff } from "@/lib/api/browser";
 import { toast } from "@/lib/toast";
+import { useOtpRequest, type OtpRequestResponse } from "@/lib/use-otp-request";
 
 const PHONE_PATTERN = /^08\d{7,12}$/;
 
@@ -47,9 +47,13 @@ function DaftarForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [channel, setChannel] = useState<OtpChannel>("0");
-  const [canResendAt, setCanResendAt] = useState(0);
   const [otpError, setOtpError] = useState<string | undefined>();
+  const otp = useOtpRequest(() =>
+    callBff<OtpRequestResponse>("/api/auth/otp/request", {
+      method: "POST",
+      body: { for: "tenant_verification", via: "1", destination: phone },
+    }),
+  );
 
   function validate(): FieldErrors {
     const errors: FieldErrors = {};
@@ -94,16 +98,7 @@ function DaftarForm() {
 
   async function sendOtp() {
     setOtpError(undefined);
-    const result = await callBff<{ verification_code: { can_resend_at: number } }>("/api/auth/otp/request", {
-      method: "POST",
-      body: { for: "tenant_verification", via: channel, destination: phone },
-    });
-    if (!result.ok) {
-      toast.error(result.meta.message);
-      return;
-    }
-    setCanResendAt(result.data.verification_code.can_resend_at);
-    setStep("code");
+    if (await otp.request()) setStep("code");
   }
 
   async function checkOtp(code: string) {
@@ -125,11 +120,10 @@ function DaftarForm() {
       <div className="flex flex-col gap-6">
         <div className="text-center">
           <p className="text-title-lg font-semibold text-neutral-900">Verifikasi nomor HP</p>
-          <p className="mt-1 text-body text-neutral-600">Pilih kanal pengiriman kode verifikasi.</p>
+          <p className="mt-1 text-body text-neutral-600">Kode verifikasi akan dikirim lewat WhatsApp ke {phone}.</p>
         </div>
-        <OtpChannelPicker value={channel} onChange={setChannel} />
-        <Button fullWidth onClick={sendOtp}>
-          Kirim kode
+        <Button fullWidth onClick={sendOtp} loading={otp.sending}>
+          Kirim kode lewat WhatsApp
         </Button>
       </div>
     );
@@ -140,10 +134,16 @@ function DaftarForm() {
       <div className="flex flex-col items-center gap-6">
         <div className="text-center">
           <p className="text-title-lg font-semibold text-neutral-900">Masukkan kode verifikasi</p>
-          <p className="mt-1 text-body text-neutral-600">Kode dikirim ke {phone}.</p>
+          <p className="mt-1 text-body text-neutral-600">Kode dikirim lewat WhatsApp ke {phone}.</p>
         </div>
         <OtpInput onComplete={checkOtp} error={otpError} />
-        <OtpResendCountdown canResendAt={canResendAt} onResend={sendOtp} />
+        <OtpResendCountdown
+          canResendAt={otp.canResendAt}
+          onResend={otp.request}
+          sending={otp.sending}
+          resendsLeft={otp.resendsLeft}
+          blockedMessage={otp.blockedMessage}
+        />
       </div>
     );
   }

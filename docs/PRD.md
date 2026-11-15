@@ -83,7 +83,7 @@ Setiap kebutuhan merujuk ke dokumen yang mengatur detailnya. Kriteria penerimaan
 | ID | Kebutuhan | Rujukan | Kriteria tambahan |
 |---|---|---|---|
 | ACC-1 | Daftar sebagai penyewa atau pemilik dengan nomor HP | API.md §2.1 | Nomor wajib diverifikasi OTP sebelum dianggap terverifikasi |
-| ACC-2 | Kirim OTP via SMS atau WhatsApp, cooldown 60 detik, maks 2/menit per nomor | API.md §2.2 | Pilihan kanal sesuai DESIGN.md §6.48 |
+| ACC-2 | Kirim OTP via WhatsApp (Fazpass), cooldown 60 detik, maks 2/menit per nomor, batas biaya per nomor dan per IP | API.md §2.2 | SMS tidak tersedia; kanal ditampilkan sesuai DESIGN.md §6.48 |
 | ACC-3 | Masuk dengan password atau OTP | API.md §2.3–2.4 | Akun dinonaktifkan tidak bisa masuk |
 | ACC-4 | Keluar (perangkat ini) | API.md §11.1 | Token lain tetap berlaku |
 | ACC-5 | Lupa password via OTP | API.md §11.2 | Semua sesi dicabut |
@@ -183,7 +183,7 @@ Setiap kebutuhan merujuk ke dokumen yang mengatur detailnya. Kriteria penerimaan
 
 | # | Hal | Dampak bila belum diputuskan | Dibutuhkan sebelum |
 |---|---|---|---|
-| 1 | Penyedia **SMS & WhatsApp** untuk OTP | OTP hanya tertulis di log; pengguna nyata tidak bisa daftar/masuk | Rilis 1 publik |
+| 1 | Penyedia OTP — **diputuskan: WhatsApp lewat Fazpass**, SMS tidak dipakai | Kode sudah siap; pemilik mengisi `FAZPASS_MERCHANT_KEY` dan `FAZPASS_GATEWAY_KEY`, lalu `OTP_PROVIDER=fazpass`. Selama `log`, kode hanya tertulis di log | Rilis 1 publik |
 | 2 | Penyedia **object storage** produksi (S3-compatible) dan CDN | Foto tidak bisa diunggah di produksi | Rilis 1 publik |
 | 3 | Kunci **Midtrans** produksi & URL webhook terdaftar | Pembayaran hanya sandbox | Rilis 1 publik |
 | 4 | Penyedia **SMTP** | Email hanya tertulis di log | Rilis 3 |

@@ -24,6 +24,13 @@ type Config struct {
 	OTPResendAfterSeconds int
 	OTPMaxPerMinute       int
 	OTPDebugEcho          bool
+	OTPProvider           string
+	OTPMaxPerDay          int
+	OTPMaxPerIPPerHour    int
+
+	FazpassBaseURL     string
+	FazpassMerchantKey string
+	FazpassGatewayKey  string
 
 	MidtransServerKey    string
 	MidtransSignatureKey string
@@ -112,6 +119,16 @@ func Load() (Config, error) {
 	if cfg.OTPDebugEcho, err = getBool("OTP_DEBUG_ECHO", false); err != nil {
 		return Config{}, err
 	}
+	if cfg.OTPMaxPerDay, err = getInt("OTP_MAX_PER_DAY", 5); err != nil {
+		return Config{}, err
+	}
+	if cfg.OTPMaxPerIPPerHour, err = getInt("OTP_MAX_PER_IP_PER_HOUR", 10); err != nil {
+		return Config{}, err
+	}
+	cfg.OTPProvider = getString("OTP_PROVIDER", "log")
+	cfg.FazpassBaseURL = getString("FAZPASS_BASE_URL", "https://api.fazpass.com")
+	cfg.FazpassMerchantKey = os.Getenv("FAZPASS_MERCHANT_KEY")
+	cfg.FazpassGatewayKey = os.Getenv("FAZPASS_GATEWAY_KEY")
 	if cfg.MidtransIsProduction, err = getBool("MIDTRANS_IS_PRODUCTION", false); err != nil {
 		return Config{}, err
 	}
@@ -169,6 +186,15 @@ func Load() (Config, error) {
 	// OTP_DEBUG_ECHO must never leak real codes in production (API.md §2.2, SPEC-GO.md §3).
 	if cfg.AppEnv == "production" && cfg.OTPDebugEcho {
 		return Config{}, fmt.Errorf("OTP_DEBUG_ECHO must be false when APP_ENV=production")
+	}
+	switch cfg.OTPProvider {
+	case "log":
+	case "fazpass":
+		if cfg.FazpassMerchantKey == "" || cfg.FazpassGatewayKey == "" {
+			return Config{}, fmt.Errorf("FAZPASS_MERCHANT_KEY and FAZPASS_GATEWAY_KEY are required when OTP_PROVIDER=fazpass")
+		}
+	default:
+		return Config{}, fmt.Errorf("OTP_PROVIDER must be log or fazpass, got %q", cfg.OTPProvider)
 	}
 	// A base URL override points payments at a fake Midtrans that settles anything it is asked about.
 	if cfg.AppEnv == "production" && cfg.MidtransBaseURL != "" {

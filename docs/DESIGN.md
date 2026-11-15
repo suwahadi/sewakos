@@ -487,7 +487,7 @@ yang dirender dari SVG yang sama).
 
 | Merek | File | Dipakai di | Sumber |
 |---|---|---|---|
-| WhatsApp | `/public/brand/whatsapp.svg` | Pilihan kanal OTP (§6.48) | Halaman brand resources resmi WhatsApp |
+| WhatsApp | `/public/brand/whatsapp.svg` | Keterangan kanal OTP (§6.48) | Halaman brand resources resmi WhatsApp |
 
 Logo merek ditampilkan sebagai `<img src alt="WhatsApp">` (atau `alt=""` bila nama merek sudah tertulis di sebelahnya),
 ukuran 20px di dalam tombol, tidak diberi `currentColor`.
@@ -674,9 +674,14 @@ Varian:
   `maxLength={4}`) di belakang 4 kotak visual. Ini membuat isi otomatis dari SMS dan tempel (paste) bekerja.
 - Kotak aktif: border `brand-600`. Error: semua kotak border `danger` + pesan di bawah.
 - Otomatis kirim saat 4 digit terisi.
-- Kanal pengiriman dipilih sebelumnya lewat OtpChannelPicker (§6.48).
+- Kode selalu dikirim lewat WhatsApp (§6.48).
 - Di bawahnya: teks hitung mundur kirim ulang dari `verification_code.can_resend_at`
-  ("Kirim ulang dalam 0:42"), lalu tombol `neutral` "Kirim ulang kode" saat habis.
+  ("Kirim ulang dalam 0:42"), lalu tombol `neutral` "Kirim ulang kode" saat habis, dengan keterangan `caption`
+  "Sisa {n} kali kirim ulang".
+- Pengaman biaya (hook `useOtpRequest`): tombol kirim dan kirim ulang `loading` serta nonaktif selama request
+  berjalan (klik ganda diabaikan); maksimal 3 kali kirim ulang per kunjungan halaman, lalu tombol diganti teks
+  "Batas kirim ulang kode tercapai. Silakan coba lagi nanti."; respons 429 menghentikan pengiriman di halaman itu
+  dan menampilkan pesan server; respons 503 menunggu 60 detik sebelum boleh mencoba lagi.
 
 ### 6.5 Textarea
 
@@ -1235,19 +1240,12 @@ Urutan diubah dengan **seret pegangan**: ikon `GripVertical` (36px, pojok kiri-a
 berfungsi di luar pegangan. Saat dilepas: `PATCH /owner/photos/{id}` dengan `sort_order`. Keyboard: fokus pegangan lalu
 `Alt` + panah kiri/kanan. Ketuk petak membuka popup "Kelola foto" (tanpa tombol geser).
 
-### 6.48 OtpChannelPicker
+### 6.48 Kanal OTP (WhatsApp)
 
-Dua pilihan kanal OTP sebaris, **sama lebar (50:50)**, sebelum `POST /auth/otp/request` (`via`):
-
-| Pilihan | Ikon | Label | Nilai `via` |
-|---|---|---|---|
-| SMS | `MessageSquareText` (Lucide, 20px) | SMS | `"0"` |
-| WhatsApp | Logo resmi `/public/brand/whatsapp.svg` (20px) | WhatsApp | `"1"` |
-
-- Bentuk: dua kartu pilihan `role="radio"` dalam `role="radiogroup"` (`aria-label="Kirim kode lewat"`), tinggi 52px,
-  border `neutral-300`; terpilih: border 2px `brand-600`, latar `brand-50`. Default: WhatsApp.
-- Kedua pilihan sama-sama berikon (konsisten §0.1-B). Logo WhatsApp tidak diwarnai ulang mengikuti tema.
-- Saat cooldown aktif, pilihan tetap bisa diganti untuk pengiriman berikutnya.
+Gateway OTP hanya WhatsApp (Fazpass), jadi tidak ada pilihan kanal dan SMS tidak ditampilkan. Langkah sebelum
+`POST /auth/otp/request` berisi teks `body` `neutral-600` "Kode verifikasi akan dikirim lewat WhatsApp ke {nomor}."
+dan tombol penuh "Kirim kode lewat WhatsApp" (`success`, `loading` selama request). Setelah terkirim, teks
+"Kode dikirim lewat WhatsApp ke {nomor}." Request selalu mengirim `via: "1"`.
 
 ---
 

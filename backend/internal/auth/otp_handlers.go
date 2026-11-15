@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
+	"net"
 	"net/http"
 	"time"
 
@@ -23,7 +25,38 @@ const (
 	OTPForResetPassword      = "reset_password"
 )
 
-const msgOTPInvalid = "Kode verifikasi salah atau kedaluwarsa."
+const (
+	msgOTPInvalid    = "Kode verifikasi salah atau kedaluwarsa."
+	msgOTPCooldown   = "Silakan tunggu sebelum meminta kode baru."
+	msgOTPSendLimit  = "Batas pengiriman kode untuk nomor ini sudah tercapai. Silakan coba lagi nanti."
+	msgOTPSendFailed = "Kode verifikasi gagal dikirim. Silakan coba lagi dalam 1 menit."
+)
+
+func WriteOTPRequestError(w http.ResponseWriter, r *http.Request, logger *slog.Logger, err error) {
+	switch {
+	case errors.Is(err, otp.ErrCooldown):
+		response.Fail(w, http.StatusUnprocessableEntity, msgOTPCooldown, map[string][]string{"destination": {msgOTPCooldown}})
+	case errors.Is(err, otp.ErrSendLimit):
+		response.Fail(w, http.StatusTooManyRequests, msgOTPSendLimit, nil)
+	case errors.Is(err, otp.ErrSendFailed):
+		if logger != nil {
+			logger.Error("otp send failed", "error", err)
+		}
+		response.Fail(w, http.StatusServiceUnavailable, msgOTPSendFailed, nil)
+	default:
+		if logger != nil {
+			logger.Error("otp request failed", "error", err)
+		}
+		response.InternalErrorHandler(w, r)
+	}
+}
+
+func remoteIP(r *http.Request) string {
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
+}
 
 // OTPUserStore is the subset of dbgen.Querier the OTP handlers need.
 type OTPUserStore interface {
@@ -39,6 +72,7 @@ type OTPDeps struct {
 	Redis        *redis.Client
 	MaxPerMinute int
 	DebugEcho    bool
+	Logger       *slog.Logger
 }
 
 // OTPRequestHandler implements POST /auth/otp/request (API.md §2.2, SPEC-GO.md §6.3).
@@ -50,7 +84,7 @@ func OTPRequestHandler(deps OTPDeps) http.HandlerFunc {
 
 		v := validation.New()
 		v.Field("for", body["for"]).Required().In(OTPForTenantVerification, OTPForLogin, OTPForResetPassword)
-		v.Field("via", body["via"]).Required().In("0", "1")
+		v.Field("via", body["via"]).Optional().In("0", "1")
 		v.Field("destination", body["destination"]).Required().Regex(PhoneRegex)
 		if !v.Valid() {
 			response.Fail(w, http.StatusUnprocessableEntity, response.MsgValidationFailed, v.Errors())
@@ -58,7 +92,6 @@ func OTPRequestHandler(deps OTPDeps) http.HandlerFunc {
 		}
 
 		forType, _ := body["for"].(string)
-		via, _ := body["via"].(string)
 		destination, _ := body["destination"].(string)
 
 		if !ratelimit.EnforceHTTP(ctx, w, deps.Redis, "otp", destination, int64(deps.MaxPerMinute), time.Minute) {
@@ -95,19 +128,12 @@ func OTPRequestHandler(deps OTPDeps) http.HandlerFunc {
 			}
 		}
 
-		channel := otp.ChannelSMS
-		if via == "1" {
-			channel = otp.ChannelWhatsApp
-		}
-
-		result, err := deps.Service.Request(ctx, otp.CodeKey(forType, destination), otp.CooldownKey(destination), channel, destination)
-		if errors.Is(err, otp.ErrCooldown) {
-			const msg = "Silakan tunggu sebelum meminta kode baru."
-			response.Fail(w, http.StatusUnprocessableEntity, msg, map[string][]string{"destination": {msg}})
-			return
-		}
+		result, err := deps.Service.Request(ctx, otp.RequestParams{
+			CodeKey: otp.CodeKey(forType, destination), CooldownKey: otp.CooldownKey(destination),
+			Destination: destination, ClientIP: remoteIP(r),
+		})
 		if err != nil {
-			response.InternalErrorHandler(w, r)
+			WriteOTPRequestError(w, r, deps.Logger, err)
 			return
 		}
 

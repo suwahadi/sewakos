@@ -124,7 +124,7 @@ Membuat user (phone **belum** terverifikasi). Verifikasi lewat OTP (2.2 – 2.3)
 ```json
 {
   "for": "tenant_verification",   // tenant_verification | login | reset_password
-  "via": "0",                     // "0" = SMS, "1" = WhatsApp
+  "via": "1",                     // opsional; kode selalu dikirim lewat WhatsApp (SMS tidak tersedia)
   "destination": "081399900099"
 }
 ```
@@ -146,9 +146,14 @@ Membuat user (phone **belum** terverifikasi). Verifikasi lewat OTP (2.2 – 2.3)
 **Gagal:**
 - `404` — `tenant_verification`: nomor tidak ditemukan / sudah terverifikasi; `login`/`reset_password`: nomor tidak ditemukan
 - `422` — validasi gagal; `login` untuk nomor yang **belum** terverifikasi; minta ulang sebelum 60 detik (cooldown)
-- `429` — lewat batas 2/menit
+- `429` — lewat batas 2/menit; atau lewat batas kirim (default 5 per nomor per 24 jam, 10 per IP per jam) dengan pesan
+  `Batas pengiriman kode untuk nomor ini sudah tercapai. Silakan coba lagi nanti.`
+- `503` — penyedia WhatsApp gagal mengirim: `Kode verifikasi gagal dikirim. Silakan coba lagi dalam 1 menit.`
+  (cooldown 60 detik tetap berlaku)
 
-> Kode OTP: 4 digit, berlaku 300 detik, boleh kirim ulang setelah 60 detik. Saat ini pengiriman hanya ditulis ke log aplikasi.
+> Kode OTP: 4 digit, berlaku 300 detik, dikirim lewat WhatsApp, boleh kirim ulang setelah 60 detik. Di sandbox
+> (`OTP_PROVIDER=log`) kode hanya ditulis ke log aplikasi. Batas cooldown, 429, dan 503 juga berlaku untuk
+> `POST /me/phone/request`.
 
 ### 2.3 `POST /auth/otp/check` — verifikasi OTP `[throttle otp: 2/menit]`
 

@@ -41,3 +41,38 @@ func TestLoadFallsBackToServerKeyForSignatures(t *testing.T) {
 		t.Errorf("Load with signature key = %+v, %v", cfg.MidtransSignatureKey, err)
 	}
 }
+
+func TestLoadDefaultsToLogOTPProvider(t *testing.T) {
+	t.Setenv("OTP_PROVIDER", "")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.OTPProvider != "log" {
+		t.Errorf("OTPProvider = %q, want log", cfg.OTPProvider)
+	}
+}
+
+func TestLoadRequiresFazpassKeys(t *testing.T) {
+	t.Setenv("OTP_PROVIDER", "fazpass")
+	t.Setenv("FAZPASS_MERCHANT_KEY", "merchant")
+	t.Setenv("FAZPASS_GATEWAY_KEY", "")
+
+	if _, err := Load(); err == nil {
+		t.Fatal("Load accepted OTP_PROVIDER=fazpass without FAZPASS_GATEWAY_KEY")
+	}
+
+	t.Setenv("FAZPASS_GATEWAY_KEY", "gateway")
+	if _, err := Load(); err != nil {
+		t.Fatalf("Load with both Fazpass keys: %v", err)
+	}
+}
+
+func TestLoadRejectsUnknownOTPProvider(t *testing.T) {
+	t.Setenv("OTP_PROVIDER", "sms-gateway")
+
+	if _, err := Load(); err == nil {
+		t.Fatal("Load accepted an unknown OTP_PROVIDER")
+	}
+}

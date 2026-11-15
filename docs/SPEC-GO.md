@@ -46,7 +46,8 @@ Respons harus **semantik JSON identik** dengan contoh di dokumen kontrak dan dok
 | OTP `for=login`, nomor belum terverifikasi | 422 |
 | Login password, nomor belum terverifikasi | Boleh, `is_verified: false` |
 | Minta OTP saat cooldown 60 detik | 422 `Silakan tunggu sebelum meminta kode baru.` |
-| Pengiriman OTP | Hanya log (sender interface); provider SMS/WA menyusul |
+| Pengiriman OTP | WhatsApp lewat Fazpass (`OTP_PROVIDER=fazpass`) atau sandbox log (`OTP_PROVIDER=log`); SMS tidak tersedia |
+| Batas biaya OTP | Maks `OTP_MAX_PER_DAY` kirim per nomor per 24 jam dan `OTP_MAX_PER_IP_PER_HOUR` per IP per jam → 429 |
 | Submit booking | **Tidak** mengunci kamar; hanya role `tenant` |
 | Alur booking | `pending` (bayar) → `paid` (tunggu owner) → `approved` / `rejected`; `cancelled` |
 | Pembayaran | Midtrans **Snap**; yang dibayar = `price + deposit + admin_fee` |
@@ -139,7 +140,7 @@ internal/
   response/          envelope, severity, helper error
   validation/        translator pesan
   auth/              handler, service, token
-  otp/               service, sender (interface + LogSender)
+  otp/               service, sender (interface, LogSender, FazpassSender)
   area/  search/  listing/  booking/  notification/  abtest/
   payment/           checkout, webhook, midtrans client
   owner/             properti, kamar, foto, booking masuk, rekening, payout
@@ -180,6 +181,12 @@ di produksi memakai image dari `Dockerfile` lewat `deploy/install.sh`.
 | `OTP_RESEND_AFTER_SECONDS` | `60` | |
 | `OTP_MAX_PER_MINUTE` | `2` | |
 | `OTP_DEBUG_ECHO` | `false` | `true` hanya di dev. **Server menolak start jika `true` dan `APP_ENV=production`** |
+| `OTP_PROVIDER` | `log` | `log` = sandbox (kode hanya ditulis ke log, tidak ditagih) · `fazpass` = kirim WhatsApp sungguhan |
+| `OTP_MAX_PER_DAY` | `5` | Kirim per nomor tujuan per 24 jam; `0` = nonaktif |
+| `OTP_MAX_PER_IP_PER_HOUR` | `10` | Kirim per IP klien per jam (semua nomor); `0` = nonaktif |
+| `FAZPASS_BASE_URL` | `https://api.fazpass.com` | |
+| `FAZPASS_MERCHANT_KEY` | — | Wajib bila `OTP_PROVIDER=fazpass`; dipakai sebagai Bearer token |
+| `FAZPASS_GATEWAY_KEY` | — | Wajib bila `OTP_PROVIDER=fazpass`; key gateway WhatsApp dari dashboard Fazpass |
 | `MIDTRANS_SERVER_KEY` | — | Wajib, rahasia. Dipakai untuk memanggil API Midtrans (Snap, GET status, expire) |
 | `MIDTRANS_SIGNATURE_KEY` | = `MIDTRANS_SERVER_KEY` | Rahasia. "Signature Secret Key" dari dashboard Midtrans, dipakai **hanya** untuk memverifikasi `signature_key` webhook (§13.3). Kosong = pakai server key |
 | `MIDTRANS_CLIENT_KEY` | — | Untuk frontend (Snap.js) |
@@ -647,7 +654,7 @@ Sukses → update `last_used_at`. Token tidak kedaluwarsa.
 | Field | Rule |
 |---|---|
 | for | required, in:tenant_verification,login,reset_password |
-| via | required, in:0,1 (`"0"`=SMS, `"1"`=WhatsApp) |
+| via | opsional, in:0,1 — diabaikan; kode selalu dikirim lewat WhatsApp |
 | destination | required, regex `^08\d{7,12}$` |
 
 Urutan proses:
@@ -657,14 +664,23 @@ Urutan proses:
 4. `login`: user tidak ada → 404; user belum terverifikasi → 422,
    `meta.message` dan `messages.destination[0]` = `Nomor handphone belum terverifikasi.`
 5. Cooldown aktif → 422, `meta.message` dan `messages.destination[0]` = `Silakan tunggu sebelum meminta kode baru.`
-6. Buat kode 4 digit (`crypto/rand`, boleh diawali 0). Simpan di Redis:
+6. Batas biaya: naikkan `otp:sent:day:{destination}` (TTL 24 jam) dan `otp:sent:ip:{ip}` (TTL 1 jam); lewat
+   `OTP_MAX_PER_DAY` / `OTP_MAX_PER_IP_PER_HOUR` → 429 `Batas pengiriman kode untuk nomor ini sudah tercapai. Silakan
+   coba lagi nanti.` tanpa mengirim apa pun. Penghitung hanya naik untuk permintaan yang lolos cooldown.
+7. Buat kode 4 digit (`crypto/rand`, boleh diawali 0). Simpan di Redis:
    `otp:code:{for}:{destination}` TTL 300 detik, `otp:cooldown:{destination}` TTL 60 detik.
-7. Kirim lewat `otp.Sender` (sinkron). Saat ini hanya `LogSender` yang menulis ke log:
-   `channel`, `destination`, dan pesan berisi kode. Gagal kirim → 500.
+8. Kirim lewat `otp.Sender` (sinkron, WhatsApp):
+   - `LogSender` (`OTP_PROVIDER=log`, sandbox): tulis `destination` dan pesan berisi kode ke log.
+   - `FazpassSender` (`OTP_PROVIDER=fazpass`): satu kali `POST {FAZPASS_BASE_URL}/v1/otp/send`, header
+     `Authorization: Bearer {FAZPASS_MERCHANT_KEY}`, body `{"phone": "62…", "otp": "{kode}", "gateway_key": "…"}`,
+     timeout 10 detik, **tanpa retry** (retry bisa mengirim dan menagih pesan dua kali). Sukses bila HTTP 2xx dan
+     `status: true`. Kode tetap diverifikasi lokal di Redis; endpoint verify Fazpass tidak dipakai.
+   - Gagal kirim → 503 `Kode verifikasi gagal dikirim. Silakan coba lagi dalam 1 menit.`; cooldown tetap berlaku
+     agar provider yang bermasalah tidak dipanggil berulang.
 
 ```go
 type Sender interface {
-    Send(ctx context.Context, channel Channel, destination, message string) error
+    Send(ctx context.Context, destination, code string) error
 }
 ```
 

@@ -64,10 +64,12 @@ func NewRouter(deps Deps) chi.Router {
 	tokens := auth.NewService(queries)
 	login := auth.NewLoginService(queries, tokens)
 	register := auth.NewRegisterService(queries)
-	otpService := otp.NewService(deps.Redis, otp.LogSender{Logger: deps.Logger}, otp.Config{
-		CodeLength:  deps.Config.OTPLength,
-		TTL:         time.Duration(deps.Config.OTPTTLSeconds) * time.Second,
-		ResendAfter: time.Duration(deps.Config.OTPResendAfterSeconds) * time.Second,
+	otpService := otp.NewService(deps.Redis, otpSender(deps), otp.Config{
+		CodeLength:      deps.Config.OTPLength,
+		TTL:             time.Duration(deps.Config.OTPTTLSeconds) * time.Second,
+		ResendAfter:     time.Duration(deps.Config.OTPResendAfterSeconds) * time.Second,
+		MaxPerDay:       deps.Config.OTPMaxPerDay,
+		MaxPerIPPerHour: deps.Config.OTPMaxPerIPPerHour,
 	})
 	otpDeps := auth.OTPDeps{
 		Service:      otpService,
@@ -76,6 +78,7 @@ func NewRouter(deps Deps) chi.Router {
 		Redis:        deps.Redis,
 		MaxPerMinute: deps.Config.OTPMaxPerMinute,
 		DebugEcho:    deps.Config.OTPDebugEcho,
+		Logger:       deps.Logger,
 	}
 	accountDeps := account.Deps{
 		Store:        queries,
@@ -83,6 +86,7 @@ func NewRouter(deps Deps) chi.Router {
 		Redis:        deps.Redis,
 		MaxPerMinute: deps.Config.OTPMaxPerMinute,
 		DebugEcho:    deps.Config.OTPDebugEcho,
+		Logger:       deps.Logger,
 	}
 	notificationDeps := notification.Deps{Store: queries}
 	areaDeps := area.Deps{Store: queries}
@@ -281,4 +285,11 @@ func withOptionalAuthedUser[Deps any](deps Deps, handler func(Deps, *authctx.Use
 		}
 		handler(deps, user)(w, r)
 	}
+}
+
+func otpSender(deps Deps) otp.Sender {
+	if deps.Config.OTPProvider == "fazpass" {
+		return otp.NewFazpassSender(deps.Config.FazpassBaseURL, deps.Config.FazpassMerchantKey, deps.Config.FazpassGatewayKey)
+	}
+	return otp.LogSender{Logger: deps.Logger}
 }

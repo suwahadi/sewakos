@@ -6,6 +6,7 @@ package account
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
@@ -37,6 +38,7 @@ type Deps struct {
 	Redis        *redis.Client
 	MaxPerMinute int
 	DebugEcho    bool
+	Logger       *slog.Logger
 }
 
 // userResponse builds the {id,name,role,phone_number,email,is_verified}

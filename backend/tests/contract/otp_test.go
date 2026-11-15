@@ -1,12 +1,17 @@
 package contract
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"strings"
 	"testing"
+	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 // registerFreshUserOn registers a brand-new, unverified user on srv and
@@ -206,4 +211,82 @@ func TestOTPSharedRateLimitFixture(t *testing.T) {
 		          "message": "Terlalu banyak permintaan. Silakan coba lagi nanti." }
 	}`
 	AssertJSONMatches(t, body, []byte(want), nil)
+}
+
+// API.md §2.2: codes always go out over WhatsApp, so "via" may be omitted.
+func TestOTPRequestWithoutVia(t *testing.T) {
+	t.Setenv("OTP_DEBUG_ECHO", "true")
+	srv := newTestServer(t)
+	phone := registerFreshUserOn(t, srv)
+
+	resp, body := postJSON(t, srv, "/api/auth/otp/request", fmt.Sprintf(
+		`{"for":"tenant_verification","destination":"%s"}`, phone))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", resp.StatusCode, body)
+	}
+}
+
+// API.md §2.2: past OTP_MAX_PER_DAY sends to one number the request is refused without sending.
+func TestOTPRequestDailyLimitIs429(t *testing.T) {
+	t.Setenv("OTP_DEBUG_ECHO", "true")
+	t.Setenv("OTP_MAX_PER_DAY", "1")
+	t.Setenv("OTP_RESEND_AFTER_SECONDS", "1")
+	t.Setenv("OTP_MAX_PER_MINUTE", "10")
+	srv := newTestServer(t)
+	phone := registerFreshUserOn(t, srv)
+
+	requestOTPCode(t, srv, "tenant_verification", phone)
+	time.Sleep(1100 * time.Millisecond)
+
+	resp, body := postJSON(t, srv, "/api/auth/otp/request", fmt.Sprintf(
+		`{"for":"tenant_verification","via":"1","destination":"%s"}`, phone))
+	if resp.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, body = %s", resp.StatusCode, body)
+	}
+	want := `{
+		"status": false,
+		"meta": { "response_code": 429, "code": 429, "severity": "WARNING",
+			"message": "Batas pengiriman kode untuk nomor ini sudah tercapai. Silakan coba lagi nanti." }
+	}`
+	AssertJSONMatches(t, body, []byte(want), nil)
+}
+
+// API.md §2.2: one client IP may only trigger OTP_MAX_PER_IP_PER_HOUR sends, across different numbers.
+func TestOTPRequestClientIPLimitIs429(t *testing.T) {
+	t.Setenv("OTP_DEBUG_ECHO", "true")
+	t.Setenv("OTP_MAX_PER_IP_PER_HOUR", "1")
+	srv := newTestServer(t)
+	clientIP := fmt.Sprintf("203.0.113.%d", time.Now().UnixNano()%250+1)
+	first := registerFreshUserOn(t, srv)
+	second := registerFreshUserOn(t, srv)
+
+	send := func(phone string) int {
+		req, err := http.NewRequest(http.MethodPost, srv.URL+"/api/auth/otp/request", strings.NewReader(fmt.Sprintf(
+			`{"for":"tenant_verification","destination":"%s"}`, phone)))
+		if err != nil {
+			t.Fatalf("build request: %v", err)
+		}
+		req.Header.Set("x-api-client", "KOSAPI WEB:WEB")
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Forwarded-For", clientIP)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("do request: %v", err)
+		}
+		_ = resp.Body.Close()
+		return resp.StatusCode
+	}
+	t.Cleanup(func() {
+		redisOptions, _ := redis.ParseURL(envOr("TEST_REDIS_URL", "redis://localhost:6379/0"))
+		client := redis.NewClient(redisOptions)
+		defer func() { _ = client.Close() }()
+		client.Del(context.Background(), "otp:sent:ip:"+clientIP)
+	})
+
+	if status := send(first); status != http.StatusOK {
+		t.Fatalf("first number: status = %d", status)
+	}
+	if status := send(second); status != http.StatusTooManyRequests {
+		t.Fatalf("second number from the same IP: status = %d, want 429", status)
+	}
 }

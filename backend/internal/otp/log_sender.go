@@ -5,14 +5,11 @@ import (
 	"log/slog"
 )
 
-// LogSender writes the OTP message to a structured logger instead of
-// delivering it, used until a real SMS/WhatsApp provider is chosen
-// (PRD.md §8 #1; SPEC-GO.md §3: "Pengiriman OTP hanya log").
 type LogSender struct {
 	Logger *slog.Logger
 }
 
-func (s LogSender) Send(_ context.Context, channel Channel, destination, message string) error {
-	s.Logger.Info("otp", "channel", channel, "destination", destination, "message", message)
+func (s LogSender) Send(_ context.Context, destination, code string) error {
+	s.Logger.Info("otp", "channel", "whatsapp", "destination", destination, "message", "Kode verifikasi Sewa Kos kamu: "+code)
 	return nil
 }

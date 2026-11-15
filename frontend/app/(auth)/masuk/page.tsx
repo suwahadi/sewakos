@@ -2,7 +2,6 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { OtpChannelPicker, type OtpChannel } from "@/components/features/otp-channel-picker";
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { OtpInput, OtpResendCountdown } from "@/components/ui/otp-input";
@@ -10,6 +9,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { TextField } from "@/components/ui/text-field";
 import { callBff } from "@/lib/api/browser";
 import { toast } from "@/lib/toast";
+import { useOtpRequest, type OtpRequestResponse } from "@/lib/use-otp-request";
 
 const PHONE_PATTERN = /^08\d{7,12}$/;
 
@@ -37,9 +37,13 @@ function MasukForm() {
 
   const [otpStep, setOtpStep] = useState<OtpStep>("phone");
   const [phoneError, setPhoneError] = useState<string | undefined>();
-  const [channel, setChannel] = useState<OtpChannel>("0");
-  const [canResendAt, setCanResendAt] = useState(0);
   const [otpError, setOtpError] = useState<string | undefined>();
+  const otp = useOtpRequest(() =>
+    callBff<OtpRequestResponse>("/api/auth/otp/request", {
+      method: "POST",
+      body: { for: "login", via: "1", destination: phone },
+    }),
+  );
 
   async function handlePasswordLogin() {
     if (!PHONE_PATTERN.test(phone)) {
@@ -73,16 +77,7 @@ function MasukForm() {
   }
 
   async function requestOtp() {
-    const result = await callBff<{ verification_code: { can_resend_at: number } }>("/api/auth/otp/request", {
-      method: "POST",
-      body: { for: "login", via: channel, destination: phone },
-    });
-    if (!result.ok) {
-      toast.error(result.meta.message);
-      return;
-    }
-    setCanResendAt(result.data.verification_code.can_resend_at);
-    setOtpStep("code");
+    if (await otp.request()) setOtpStep("code");
   }
 
   async function checkOtp(code: string) {
@@ -166,17 +161,22 @@ function MasukForm() {
         </div>
       ) : otpStep === "channel" ? (
         <div className="flex flex-col gap-4">
-          <p className="text-body text-neutral-600">Pilih kanal pengiriman kode verifikasi.</p>
-          <OtpChannelPicker value={channel} onChange={setChannel} />
-          <Button fullWidth onClick={requestOtp}>
-            Kirim kode
+          <p className="text-body text-neutral-600">Kode verifikasi akan dikirim lewat WhatsApp ke {phone}.</p>
+          <Button fullWidth onClick={requestOtp} loading={otp.sending}>
+            Kirim kode lewat WhatsApp
           </Button>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-4">
-          <p className="text-body text-neutral-600">Kode dikirim ke {phone}.</p>
+          <p className="text-body text-neutral-600">Kode dikirim lewat WhatsApp ke {phone}.</p>
           <OtpInput onComplete={checkOtp} error={otpError} />
-          <OtpResendCountdown canResendAt={canResendAt} onResend={requestOtp} />
+          <OtpResendCountdown
+            canResendAt={otp.canResendAt}
+            onResend={otp.request}
+            sending={otp.sending}
+            resendsLeft={otp.resendsLeft}
+            blockedMessage={otp.blockedMessage}
+          />
         </div>
       )}
 

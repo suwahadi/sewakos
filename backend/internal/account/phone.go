@@ -2,7 +2,6 @@ package account
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"time"
 
@@ -15,10 +14,6 @@ import (
 	"github.com/suwahadi/sewakos/backend/internal/validation"
 )
 
-// PhoneRequestHandler sends an OTP to the new number, reusing the same
-// response shape as auth.OTPRequestHandler. There's no channel choice in
-// this endpoint's body, unlike the general OTP flow, so it always sends
-// over SMS.
 func PhoneRequestHandler(deps Deps, user authctx.User) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var body map[string]any
@@ -42,14 +37,12 @@ func PhoneRequestHandler(deps Deps, user authctx.User) http.HandlerFunc {
 			return
 		}
 
-		result, err := deps.OTP.Request(ctx, otp.ChangePhoneCodeKey(user.UserID, phone), otp.CooldownKey(phone), otp.ChannelSMS, phone)
-		if errors.Is(err, otp.ErrCooldown) {
-			const msg = "Silakan tunggu sebelum meminta kode baru."
-			response.Fail(w, http.StatusUnprocessableEntity, msg, map[string][]string{"destination": {msg}})
-			return
-		}
+		result, err := deps.OTP.Request(ctx, otp.RequestParams{
+			CodeKey: otp.ChangePhoneCodeKey(user.UserID, phone), CooldownKey: otp.CooldownKey(phone),
+			Destination: phone, ClientIP: user.IP,
+		})
 		if err != nil {
-			response.InternalErrorHandler(w, r)
+			auth.WriteOTPRequestError(w, r, deps.Logger, err)
 			return
 		}
 

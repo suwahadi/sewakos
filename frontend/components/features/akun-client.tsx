@@ -190,7 +190,7 @@ function PhoneSection({ currentPhone }: { currentPhone: string }) {
         </>
       ) : (
         <>
-          <p className="text-body text-neutral-600">Kode dikirim ke {newPhone}.</p>
+          <p className="text-body text-neutral-600">Kode dikirim lewat WhatsApp ke {newPhone}.</p>
           <TextField label="Kode verifikasi" inputMode="numeric" value={code} onChange={(event) => setCode(event.target.value)} error={error} />
           <Button onClick={verifyChange} loading={submitting}>
             Konfirmasi

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
+import { OTP_RESEND_LIMIT_MESSAGE } from "@/lib/use-otp-request";
 import { Button } from "./button";
 
 export interface OtpInputProps {
@@ -68,8 +69,22 @@ export function OtpInput({ length = 4, onComplete, error, disabled }: OtpInputPr
   );
 }
 
+export interface OtpResendCountdownProps {
+  canResendAt: number;
+  onResend: () => void;
+  sending?: boolean;
+  resendsLeft?: number;
+  blockedMessage?: string | null;
+}
+
 /** DESIGN.md §6.4 — countdown derived from `verification_code.can_resend_at` (unix seconds). */
-export function OtpResendCountdown({ canResendAt, onResend }: { canResendAt: number; onResend: () => void }) {
+export function OtpResendCountdown({
+  canResendAt,
+  onResend,
+  sending = false,
+  resendsLeft,
+  blockedMessage = null,
+}: OtpResendCountdownProps) {
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
 
   useEffect(() => {
@@ -77,12 +92,24 @@ export function OtpResendCountdown({ canResendAt, onResend }: { canResendAt: num
     return () => clearInterval(id);
   }, []);
 
+  if (blockedMessage) {
+    return <p className="text-center text-caption text-neutral-600">{blockedMessage}</p>;
+  }
+  if (resendsLeft === 0) {
+    return <p className="text-center text-caption text-neutral-600">{OTP_RESEND_LIMIT_MESSAGE}</p>;
+  }
+
   const remaining = Math.max(0, canResendAt - now);
   if (remaining <= 0) {
     return (
-      <Button variant="neutral" onClick={onResend}>
-        Kirim ulang kode
-      </Button>
+      <div className="flex flex-col items-center gap-1">
+        <Button variant="neutral" onClick={onResend} loading={sending}>
+          Kirim ulang kode
+        </Button>
+        {resendsLeft !== undefined && (
+          <p className="text-caption text-neutral-500">Sisa {resendsLeft} kali kirim ulang</p>
+        )}
+      </div>
     );
   }
 
